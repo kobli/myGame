@@ -127,7 +127,7 @@ void ClientApplication::run()
 void ClientApplication::createWorld()
 {
 	_worldMap.reset(new WorldMap(_device->getSceneManager()));
-	_gameWorld.reset(new World(*_worldMap, _device->getSceneManager()));
+	_gameWorld.reset(new World(*_worldMap));
 	_snmgr.reset(new SceneNodeManager(_device->getSceneManager(), *_gameWorld));
 	_animator.setEntityResolver(bind(&World::getEntityByID, ref(*_gameWorld), placeholders::_1));
 	_animator.observe(*_gameWorld);

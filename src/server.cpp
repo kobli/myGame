@@ -127,7 +127,7 @@ void Updater::onObservableRemove(EntityEvent&)
 
 
 ServerApplication::ServerApplication(IrrlichtDevice* irrDev)
-	: _irrDevice{irrDev}, _map{irrDev->getSceneManager()->createNewSceneManager()}, _gameWorld{_map, _irrDevice->getSceneManager()}
+	: _irrDevice{irrDev}, _map{irrDev->getSceneManager()->createNewSceneManager()}, _gameWorld{_map}
 	, _updater(std::bind(&ServerApplication::send, ref(*this), placeholders::_1, placeholders::_2))
 {
 	_listener.setBlocking(false);

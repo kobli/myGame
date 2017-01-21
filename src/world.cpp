@@ -596,8 +596,8 @@ u32 WizardComponent::launchSpell(float radius, float speed)
 
 ////////////////////////////////////////////////////////////
 
-World::World(WorldMap& wm, scene::ISceneManager* sceneManager): Observabler(EntityEvent(0, ComponentType::None, nullptr,  true)
-			, EntityEvent(0, ComponentType::None, nullptr, false, true)), _smgr{sceneManager}, _map{wm}, _nextEntityID{1}
+World::World(WorldMap& wm): Observabler(EntityEvent(0, ComponentType::None, nullptr,  true)
+			, EntityEvent(0, ComponentType::None, nullptr, false, true)), _map{wm}, _nextEntityID{1}
 {}
 
 WorldEntity& World::createEntity(u32 ID)
@@ -626,12 +626,12 @@ WorldEntity& World::createCharacter(vec3f position)
 {
 	WorldEntity& e = createEntity();
 	e.setBodyComponent(make_shared<BodyComponent>(e, position));
-	scene::IAnimatedMeshSceneNode* sceneNode = _smgr->addAnimatedMeshSceneNode(_smgr->getMesh("./media/ninja.b3d"));
+	//scene::IAnimatedMeshSceneNode* sceneNode = _smgr->addAnimatedMeshSceneNode(_smgr->getMesh("./media/ninja.b3d"));
 	//e.setGraphicsComponent(make_shared<GraphicsComponent>(e, sceneNode, vec3f(0), vec3f(0,90,0), vec3f(17), true));
 	e.setGraphicsComponent(make_shared<SphereGraphicsComponent>(e, 100));
-	vec3f colliderSize = sceneNode->getTransformedBoundingBox().MaxEdge - sceneNode->getTransformedBoundingBox().MinEdge;
-	colliderSize /= 2;
-	e.setCollisionComponent(make_shared<CollisionComponent>(e, colliderSize));
+	//vec3f colliderSize = sceneNode->getTransformedBoundingBox().MaxEdge - sceneNode->getTransformedBoundingBox().MinEdge;
+	//colliderSize /= 2;
+	//e.setCollisionComponent(make_shared<CollisionComponent>(e, colliderSize));
 	e.setInputComponent(make_shared<InputComponent>(e));
 	e.setWizardComponent(make_shared<WizardComponent>(e));
 	return e;

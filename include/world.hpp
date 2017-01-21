@@ -207,15 +207,13 @@ class WorldEntity: public Observabler<EntityEvent>
 class World: public Observabler<EntityEvent>
 {
 	public:
-		World(WorldMap& wm, scene::ISceneManager* sceneManager);
+		World(WorldMap& wm);
 		WorldEntity& createEntity(u32 ID = 0);
 		void removeEntity(WorldEntity& e);
 		WorldEntity& createCharacter(vec3f position);
 		WorldMap& getMap();
 		void update(float timeDelta);
 		WorldEntity* getEntityByID(u32 ID);
-
-		scene::ISceneManager* const _smgr;
 
 	private:
 		WorldMap& _map;
