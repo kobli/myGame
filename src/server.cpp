@@ -107,7 +107,7 @@ void Updater::onObservableUpdate(EntityEvent& m)
 	// do not send position and rotation updates
 	if(m._componentModifiedType == ComponentType::Body && m._componentModified && !m._destroyed
 			&& static_cast<BodyComponent*>(m._componentModified)->posOrRotChanged())
-		return;
+		;//TODO return;
 	//TODO send destroy updates
 	sf::Packet p;
 	p << PacketType::WorldUpdate << m;
@@ -128,7 +128,7 @@ void Updater::onObservableRemove(EntityEvent&)
 
 ServerApplication::ServerApplication(IrrlichtDevice* irrDev)
 	: _irrDevice{irrDev}, _map{irrDev->getSceneManager()->createNewSceneManager()}, _gameWorld{_map}
-	, _updater(std::bind(&ServerApplication::send, ref(*this), placeholders::_1, placeholders::_2))
+	, _snmgr{_irrDevice->getSceneManager(), _gameWorld}, _updater(std::bind(&ServerApplication::send, ref(*this), placeholders::_1, placeholders::_2))
 {
 	_listener.setBlocking(false);
 	_updater.observe(_gameWorld);
@@ -145,7 +145,9 @@ void ServerApplication::run()
 	sf::Clock c;
 	while(true)
 	{
-		//driver->beginScene();
+		_irrDevice->run();
+		_irrDevice->getVideoDriver()->beginScene();
+		_irrDevice->getSceneManager()->drawAll();
 		acceptClient();
 		for(auto& s : _sessions)
 		{
@@ -157,9 +159,26 @@ void ServerApplication::run()
 			}
 		}
 		//_gameWorld.update(1./driver->getFPS());
-		_gameWorld.update(c.restart().asSeconds());
+		float timeDelta = c.restart().asSeconds();
+		for(WorldEntity& e : _gameWorld.getEntities())
+		{
+			auto bc = e.getBodyComponent();
+			if(bc)
+			{
+				float rotSpeed = 180; // degrees per second
+				vec3f rot = bc->getRotation(),
+							posDiff = bc->getPosition();
+				rot.Y = fmod(rot.Y+(rotSpeed*bc->getRotDir()*timeDelta), 360);
+				bc->setRotation(rot);
+				posDiff = bc->getTotalVelocity()*timeDelta;
+				bc->setPosition(_snmgr.getEntityResultPos(e, posDiff));
+			}
+		}
+		WizardComponent::update(timeDelta);
+
+
 		sf::sleep(sf::milliseconds(40));
-		//driver->endScene();
+		_irrDevice->getVideoDriver()->endScene();
 	}
 }
 

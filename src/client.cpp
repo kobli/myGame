@@ -101,8 +101,11 @@ void ClientApplication::run()
 			if(ar && _camera)
 				_camera->setAspectRatio(ar);
 
-			if(_gameWorld)
-				_gameWorld->update(1./lastFPS);
+			//if(_gameWorld)
+				//_gameWorld->update(1./lastFPS);
+				
+
+
 			_device->getSceneManager()->drawAll();
 			//_device->getGUIEnvironment()->drawAll();
 

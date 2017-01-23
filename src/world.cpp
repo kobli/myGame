@@ -159,9 +159,10 @@ shared_ptr<WizardComponent> WorldEntity::getWizardComponent()
 
 BodyComponent::BodyComponent(WorldEntity& parent, vec3f position, vec3f rotation, vec3f velocity)
 	: WorldEntityComponent{parent, ComponentType::Body}, _position{position}, _rotation{rotation}, _velocity{velocity}
-	, _strafeDir{vec2f(0,0)}, _strafeSpeed{120}, _rotDir{0}, _rotSpeed{180}, _posRotChanged{false}
+	, _strafeDir{vec2f(0,0)}, _strafeSpeed{120}, _rotDir{0}, _posRotChanged{false}
 {}
 	
+/*
 void BodyComponent::update(float timeDelta)
 {
 	vec3f newRot = _rotation,
@@ -175,6 +176,7 @@ void BodyComponent::update(float timeDelta)
 		newPos += getTotalVelocity()*timeDelta;
 	setPosition(newPos);
 }
+*/
 
 vec3f BodyComponent::getPosition() const
 {
@@ -377,6 +379,7 @@ CollisionComponent::CollisionComponent(WorldEntity& parent, vec3f ellipsoidRadiu
 	: WorldEntityComponent(parent, ComponentType::Collision), _ellipsoidRadius{ellipsoidRadius}
 {}
 
+/*
 vec3f CollisionComponent::getCollisionResultPosition(float timeDelta)
 {
 	auto b = _parent.getBodyComponent();
@@ -403,6 +406,7 @@ vec3f CollisionComponent::getCollisionResultPosition(float timeDelta)
 			);
 	return r+vec3f(0,1,0);
 }
+*/
 
 vec3f CollisionComponent::getColliderRadius() const
 {
@@ -631,7 +635,7 @@ WorldEntity& World::createCharacter(vec3f position)
 	e.setGraphicsComponent(make_shared<SphereGraphicsComponent>(e, 100));
 	//vec3f colliderSize = sceneNode->getTransformedBoundingBox().MaxEdge - sceneNode->getTransformedBoundingBox().MinEdge;
 	//colliderSize /= 2;
-	//e.setCollisionComponent(make_shared<CollisionComponent>(e, colliderSize));
+	e.setCollisionComponent(make_shared<CollisionComponent>(e));
 	e.setInputComponent(make_shared<InputComponent>(e));
 	e.setWizardComponent(make_shared<WizardComponent>(e));
 	return e;
@@ -642,13 +646,35 @@ WorldMap& World::getMap()
 	return _map;
 }
 
+std::list<WorldEntity>& World::getEntities()
+{
+	return _entities;
+}
+
+/*
 void World::update(float timeDelta)
 {
 	for(WorldEntity& e : _entities)
 	{
 		auto bc = e.getBodyComponent();
+
 		if(bc)
-			bc->update(timeDelta);
+		{
+			float rotSpeed = 180; // degrees per second
+			vec3f rot = bc->getRotation(),
+						pos = bc->getPosition();
+			rot.Y = fmod(rot.Y+(rotSpeed*bc->getRotDir()*timeDelta), 360);
+			bc->setRotation(rot);
+			auto cc = e.getCollisionComponent();
+			if(cc)
+				;//TODO pos = cc->getCollisionResultPosition(timeDelta);
+			else
+				pos += bc->getTotalVelocity()*timeDelta;
+			bc->setPosition(pos);
+		}
+
+		//if(bc)
+			//bc->update(timeDelta);
 		//TODO no need to update graphics component on server
 		//auto gc = e.getGraphicsComponent();
 		//if(gc)
@@ -656,6 +682,7 @@ void World::update(float timeDelta)
 	}
 	WizardComponent::update(timeDelta);
 }
+*/
 
 WorldEntity* World::getEntityByID(u32 ID)
 {

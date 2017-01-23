@@ -93,7 +93,6 @@ class BodyComponent: public WorldEntityComponent
 		vec2f _strafeDir; 
 		float _strafeSpeed;
 		i32 _rotDir; // around Y axis: left = -1, stop = 0, right = 1
-		float _rotSpeed; // degrees per second
 		bool _posRotChanged; // is set during notifyObservers call when the call is caused by change of position or rotation
 };
 
@@ -134,7 +133,7 @@ class CollisionComponent: public WorldEntityComponent
 {
 	public:
 		CollisionComponent(WorldEntity& parent, vec3f ellipsoidRadius = vec3f(0,0,0));
-		vec3f getCollisionResultPosition(float timeDelta);
+		//vec3f getCollisionResultPosition(float timeDelta);
 		vec3f getColliderRadius() const;
 		void setColliderRadius(vec3f);
 
@@ -212,7 +211,8 @@ class World: public Observabler<EntityEvent>
 		void removeEntity(WorldEntity& e);
 		WorldEntity& createCharacter(vec3f position);
 		WorldMap& getMap();
-		void update(float timeDelta);
+		std::list<WorldEntity>& getEntities();
+		//void update(float timeDelta);
 		WorldEntity* getEntityByID(u32 ID);
 
 	private:
