@@ -100,10 +100,13 @@ void ClientApplication::run()
 			f32 ar = (float)driver->getScreenSize().Width/(float)driver->getScreenSize().Height;
 			if(ar && _camera)
 				_camera->setAspectRatio(ar);
+			float timeDelta = 1./lastFPS;
 
 			//if(_gameWorld)
 				//_gameWorld->update(1./lastFPS);
 				
+			if(_physics)
+				_physics->update(timeDelta);
 
 
 			_device->getSceneManager()->drawAll();
@@ -129,9 +132,10 @@ void ClientApplication::run()
 
 void ClientApplication::createWorld()
 {
-	_worldMap.reset(new WorldMap(_device->getSceneManager()));
+	_worldMap.reset(new WorldMap(200, _device->getSceneManager()));
 	_gameWorld.reset(new World(*_worldMap));
-	_snmgr.reset(new SceneNodeManager(_device->getSceneManager(), *_gameWorld));
+	_vs.reset(new ViewSystem(_device->getSceneManager(), *_gameWorld));
+	_physics.reset(new Physics(*_gameWorld, _device->getSceneManager()));
 	_animator.setEntityResolver(bind(&World::getEntityByID, ref(*_gameWorld), placeholders::_1));
 	_animator.observe(*_gameWorld);
 }
@@ -157,23 +161,25 @@ void ClientApplication::createCamera()
 	keyMap[7].KeyCode = KEY_KEY_D;
 	keyMap[8].Action = EKA_JUMP_UP;
 	keyMap[8].KeyCode = KEY_SPACE;
-	f32 camWalkSpeed = 0.4f;
+	f32 camWalkSpeed = 0.2f;
 	_camera = 
-		_device->getSceneManager()->addCameraSceneNodeFPS(0,100.0f,camWalkSpeed,0,keyMap,9,true,10.f);
+		_device->getSceneManager()->addCameraSceneNodeFPS(0,100.0f,camWalkSpeed,0,keyMap,9,false);
 	
-	_camera->setPosition(core::vector3df(2700*2,255*2,2600*2));
-	_camera->setTarget(core::vector3df(2397*2,343*2,2700*2));
+	_camera->setPosition(core::vector3df(0,100,0));
+	//_camera->setTarget(core::vector3df(2397*2,343*2,2700*2));
 	_camera->setFarValue(42000.0f);
 
 	if(!_worldMap)
 		return;
 	// create collision response animator and attach it to the camera
+	/*
 	scene::ISceneNodeAnimatorCollisionResponse* anim = _device->getSceneManager()->createCollisionResponseAnimator(
 		_worldMap->getMetaTriangleSelector(), _camera, core::vector3df(40,100,40),
 		core::vector3df(0,-50,0),
 		core::vector3df(0,50,0),
 		0.1);
 	_camera->addAnimator(anim);
+	*/
 }
 
 void ClientApplication::sendCommand(Command& c)
@@ -231,6 +237,7 @@ void ClientApplication::handlePacket(sf::Packet& p)
 				if(e._componentModified != nullptr)
 				{
 					p >> Deserializer<sf::Packet>(*e._componentModified);
+					e._componentModified->notifyObservers();
 					cout << "updated component: " << Serializer<ostream>(*e._componentModified) << endl;
 					if(e._created)
 						cout << "CREATED!\n";

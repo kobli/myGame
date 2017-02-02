@@ -1,7 +1,7 @@
 #include <main.hpp>
 #include <SFML/Network.hpp>
 #include <world.hpp>
-#include <sceneNodeManager.hpp>
+#include <system.hpp>
 
 #ifndef CLIENT_HPP_16_11_26_10_46_45
 
@@ -36,7 +36,8 @@ class ClientApplication
 		unique_ptr<IrrlichtDevice, void(*)(IrrlichtDevice*)> _device;
 		unique_ptr<WorldMap> _worldMap;
 		unique_ptr<World> _gameWorld;
-		unique_ptr<SceneNodeManager> _snmgr;
+		unique_ptr<ViewSystem> _vs;
+		unique_ptr<Physics> _physics;
 		Animator _animator;
 		scene::ICameraSceneNode* _camera;
 

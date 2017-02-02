@@ -38,14 +38,18 @@ class WorldEntity;
 class WorldMap
 {
 	public:
-		WorldMap(scene::ISceneManager* scene);
-		scene::IMetaTriangleSelector* getMetaTriangleSelector();
-		scene::ISceneManager* getSceneManager();
-		~WorldMap();
+		WorldMap(unsigned patchSize, scene::ISceneManager* scene);
+		float* getHeightMap();
+		unsigned getVertexCount();
+		float getPatchSize();
+		float getHeightScale();
 
 	private:
+		const float _patchSize;
 		scene::ISceneManager* _scene;
-		scene::IMetaTriangleSelector* _mts;
+		std::unique_ptr<float[]> _heightMap;
+		float _heightScale;
+		unsigned _vertexC;
 };
 
 ////////////////////////////////////////////////////////////
@@ -81,8 +85,16 @@ class BodyComponent: public WorldEntityComponent
 		vec3f getTotalVelocity() const;
 		vec2f getStrafeDir() const;
 		float getStrafeSpeed() const;
-		virtual void serialize(SerializerBase& s);
-		virtual void deserialize(DeserializerBase& s);
+		virtual void serDes(SerDesBase& s);
+		template <typename T>
+			void doSerDes(T& t)
+			{
+				t & _strafeDir;
+				t & _rotDir;
+				t & _position;
+				t & _rotation;
+				t & _velocity;
+			}
 
 	private:
 		vec3f _position;
@@ -106,8 +118,14 @@ class GraphicsComponent: public WorldEntityComponent
 		vec3f getRotOffset();
 		void setPosOffset(vec3f);
 		void setRotOffset(vec3f);
-		virtual void serialize(SerializerBase& s);
-		virtual void deserialize(DeserializerBase& s);
+		virtual void serDes(SerDesBase& s);
+		template <typename T>
+			void doSerDes(T& t)
+			{
+				t & _posOff;
+				t & _rotOff;
+			}
+
 
 	private:
 		vec3f _posOff;
@@ -118,8 +136,12 @@ class SphereGraphicsComponent: public GraphicsComponent
 {
 	public:
 		SphereGraphicsComponent(WorldEntity& parent, float radius = 0, vec3f posOffset = vec3f(0), vec3f rotOffset = vec3f(0));
-		virtual void serialize(SerializerBase& s);
-		virtual void deserialize(DeserializerBase& s);
+		virtual void serDes(SerDesBase& s);
+		template <typename T>
+			void doSerDes(T& t)
+			{
+				t & _radius;
+			}
 		float getRadius();
 		void setRadius(float radius);
 
@@ -137,8 +159,13 @@ class CollisionComponent: public WorldEntityComponent
 		vec3f getColliderRadius() const;
 		void setColliderRadius(vec3f);
 
-		virtual void serialize(SerializerBase& s);
-		virtual void deserialize(DeserializerBase& s);
+		virtual void serDes(SerDesBase& s);
+		template <typename T>
+			void doSerDes(T& t)
+			{
+				t & _ellipsoidRadius;
+			}
+
 
 		vec3f _ellipsoidRadius;
 };
@@ -150,8 +177,12 @@ class InputComponent: public WorldEntityComponent
 	public:
 		InputComponent(WorldEntity& parent);
 		void handleCommand(Command& c);
-		virtual void serialize(SerializerBase& s);
-		virtual void deserialize(DeserializerBase& s);
+		virtual void serDes(SerDesBase& s);
+		template <typename T>
+			void doSerDes(T&)
+			{
+			}
+
 };
 
 ////////////////////////////////////////////////////////////
@@ -163,8 +194,12 @@ class WizardComponent: public WorldEntityComponent
 		~WizardComponent();
 		void cast(std::string& incantation);
 		static void update(float timeDelta);
-		virtual void serialize(SerializerBase& s);
-		virtual void deserialize(DeserializerBase& s);
+		virtual void serDes(SerDesBase& s);
+		template <typename T>
+			void doSerDes(T&)
+			{
+			}
+
 
 	private:
 		static std::shared_ptr<lua_State> _luaState;

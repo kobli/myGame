@@ -3,7 +3,7 @@
 #include <SFML/Network.hpp>
 #include <controller.hpp>
 #include <world.hpp>
-#include <sceneNodeManager.hpp>
+#include <system.hpp>
 
 #ifndef SERVER_HPP_16_11_26_09_22_02
 #define SERVER_HPP_16_11_26_09_22_02 
@@ -70,7 +70,7 @@ class ServerApplication
 		IrrlichtDevice* _irrDevice;
 		WorldMap _map;
 		World _gameWorld;
-		SceneNodeManager _snmgr;
+		Physics _physics;
 		Updater _updater;
 };
 

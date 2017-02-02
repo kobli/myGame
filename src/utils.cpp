@@ -15,4 +15,3 @@ ostream& operator<<(ostream& os, vec2i v) {
 ostream& operator<<(ostream& os, vec3i v) {
 	return os << v.X << " " << v.Y << " " << v.Z;
 }
-

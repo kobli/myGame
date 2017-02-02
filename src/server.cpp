@@ -127,8 +127,8 @@ void Updater::onObservableRemove(EntityEvent&)
 
 
 ServerApplication::ServerApplication(IrrlichtDevice* irrDev)
-	: _irrDevice{irrDev}, _map{irrDev->getSceneManager()->createNewSceneManager()}, _gameWorld{_map}
-	, _snmgr{_irrDevice->getSceneManager(), _gameWorld}, _updater(std::bind(&ServerApplication::send, ref(*this), placeholders::_1, placeholders::_2))
+	: _irrDevice{irrDev}, _map{200, irrDev->getSceneManager()->createNewSceneManager()}, _gameWorld{_map}
+	, _physics{_gameWorld}, _updater(std::bind(&ServerApplication::send, ref(*this), placeholders::_1, placeholders::_2))
 {
 	_listener.setBlocking(false);
 	_updater.observe(_gameWorld);
@@ -160,6 +160,8 @@ void ServerApplication::run()
 		}
 		//_gameWorld.update(1./driver->getFPS());
 		float timeDelta = c.restart().asSeconds();
+		_physics.update(timeDelta);
+		/*
 		for(WorldEntity& e : _gameWorld.getEntities())
 		{
 			auto bc = e.getBodyComponent();
@@ -174,6 +176,7 @@ void ServerApplication::run()
 				bc->setPosition(_snmgr.getEntityResultPos(e, posDiff));
 			}
 		}
+		*/
 		WizardComponent::update(timeDelta);
 
 

@@ -9,50 +9,70 @@ EntityEvent::EntityEvent(u32 entityID, ComponentType componentModifiedType
 
 ////////////////////////////////////////////////////////////
 
-WorldMap::WorldMap(scene::ISceneManager* scene): _scene{scene}
+WorldMap::WorldMap(unsigned patchSize, scene::ISceneManager* scene): _patchSize{patchSize}, _scene{scene}, _heightScale{0.1}
 {
-	_mts = _scene->createMetaTriangleSelector();
-
 	scene::ITerrainSceneNode* terrain = _scene->addTerrainSceneNode(
 		"./media/terrain-heightmap.bmp",
 		0,					// parent node
 		-1,					// node id
-		core::vector3df(0.f, 0.f, 0.f),		// position
-		core::vector3df(0.f, 0.f, 0.f),		// rotation
-		core::vector3df(40.f, 4.4f, 40.f),	// scale
-		video::SColor ( 255, 255, 255, 255),	// vertexColor
-		1,					// maxLOD
-		scene::ETPS_17,				// patchSize
-		4					// smoothFactor
+		core::vector3df(0),		// position
+		core::vector3df(0),		// rotation
+		core::vector3df(1)		// scale
 		);
+	terrain->setScale(core::vector3df(_patchSize/terrain->getBoundingBox().getExtent().X, 
+				_heightScale,
+				_patchSize/terrain->getBoundingBox().getExtent().Z));
+	terrain->setPosition(terrain->getBoundingBox().getCenter()*core::vector3df(-1,0,-1));
+
 
 	terrain->setMaterialFlag(video::EMF_LIGHTING, false);
-	
 	terrain->setMaterialTexture(0, _scene->getVideoDriver()->getTexture("./media/terrain-texture.jpg"));
 	terrain->setMaterialTexture(1, _scene->getVideoDriver()->getTexture("./media/detailmap3.jpg"));
-	
 	terrain->setMaterialType(video::EMT_DETAIL_MAP);
-
 	terrain->scaleTexture(1.0f, 20.0f);
 
-	auto ts = _scene->createTerrainTriangleSelector(terrain);
-	_mts->addTriangleSelector(ts);
-	ts->drop();
+	scene::CDynamicMeshBuffer* buffer = new scene::CDynamicMeshBuffer(video::EVT_2TCOORDS, video::EIT_16BIT);
+	terrain->getMeshBufferForLOD(*buffer, 0);
+	video::S3DVertex2TCoords* data = (video::S3DVertex2TCoords*)buffer->getVertexBuffer().getData();
+	_vertexC = buffer->getVertexBuffer().size();
+	unsigned w = sqrt(_vertexC);
+	_heightMap.reset(new float[_vertexC]);
+	assert((((w-1) & ((w-1)-1)) == 0) && "heightmap size must be 2^n+1");
+	float min = data[0].Pos.Y;
+	float max = data[0].Pos.Y;
+	for(unsigned y = 0; y<w; y++)
+	{
+		for(unsigned x = 0; x<w; x++)
+		{
+			core::vector3df p = data[x*w + y].Pos; // data is stored top-to-bottom, right-to-left
+			(_heightMap.get())[x + y*w] = p.Y; // need to remap it back to left-to-right, top-to-bottom
+
+			if(p.Y > max)
+				max = p.Y;
+			if(p.Y < min)
+				min = p.Y;
+		}
+	}
 }
 
-scene::IMetaTriangleSelector* WorldMap::getMetaTriangleSelector()
+float WorldMap::getPatchSize()
 {
-	return _mts;
+	return _patchSize;
 }
 
-scene::ISceneManager* WorldMap::getSceneManager()
+float WorldMap::getHeightScale()
 {
-	return _scene;
+	return _heightScale;
 }
 
-WorldMap::~WorldMap()
+float* WorldMap::getHeightMap()
 {
-	_mts->drop();
+	return _heightMap.get();
+}
+
+unsigned WorldMap::getVertexCount()
+{
+	return _vertexC;
 }
 
 ////////////////////////////////////////////////////////////
@@ -273,14 +293,9 @@ float BodyComponent::getStrafeSpeed() const
 	return _strafeSpeed;
 }
 
-void BodyComponent::serialize(SerializerBase& s)
+void BodyComponent::serDes(SerDesBase& s)
 {
-	s.serialize(*this);
-}
-
-void BodyComponent::deserialize(DeserializerBase& s)
-{
-	s.deserialize(*this);
+	s.serDes(*this);
 }
 
 ////////////////////////////////////////////////////////////
@@ -333,14 +348,9 @@ void GraphicsComponent::setRotOffset(vec3f r)
 	notifyObservers();
 }
 
-void GraphicsComponent::serialize(SerializerBase& s)
+void GraphicsComponent::serDes(SerDesBase& s)
 {
-	s.serialize(*this);
-}
-
-void GraphicsComponent::deserialize(DeserializerBase& s)
-{
-	s.deserialize(*this);
+	s.serDes(*this);
 }
 
 // // // // // // // // // // // // // // // // // // // //
@@ -362,15 +372,9 @@ void SphereGraphicsComponent::setRadius(float radius)
 	notifyObservers();
 }
 
-void SphereGraphicsComponent::serialize(SerializerBase& s)
+void SphereGraphicsComponent::serDes(SerDesBase& s)
 {
-	s.serialize(*(GraphicsComponent*)this);
-	s.serialize(*this);
-}
-void SphereGraphicsComponent::deserialize(DeserializerBase& s)
-{
-	s.deserialize(*(GraphicsComponent*)this);
-	s.deserialize(*this);
+	s.serDes(*this);
 }
 
 ////////////////////////////////////////////////////////////
@@ -418,14 +422,9 @@ void CollisionComponent::setColliderRadius(vec3f ellipsoidRadius)
 	_ellipsoidRadius = ellipsoidRadius;
 }
 
-void CollisionComponent::serialize(SerializerBase& s)
+void CollisionComponent::serDes(SerDesBase& s)
 {
-	s.serialize(*this);
-}
-
-void CollisionComponent::deserialize(DeserializerBase& s)
-{
-	s.deserialize(*this);
+	s.serDes(*this);
 }
 
 ////////////////////////////////////////////////////////////
@@ -466,14 +465,9 @@ void InputComponent::handleCommand(Command& c)
 	}
 }
 
-void InputComponent::serialize(SerializerBase& s)
+void InputComponent::serDes(SerDesBase& s)
 {
-	s.serialize(*this);
-}
-
-void InputComponent::deserialize(DeserializerBase& s)
-{
-	s.deserialize(*this);
+	s.serDes(*this);
 }
 
 ////////////////////////////////////////////////////////////
@@ -570,14 +564,9 @@ void WizardComponent::cast(std::string& incantation)
 	}
 }
 	
-void WizardComponent::serialize(SerializerBase& s)
+void WizardComponent::serDes(SerDesBase& s)
 {
-	//s.serialize(*this);
-}
-
-void WizardComponent::deserialize(DeserializerBase& s)
-{
-	//s.deserialize(*this);
+	//s.serDes(*this);
 }
 
 u32 WizardComponent::launchSpell(float radius, float speed)

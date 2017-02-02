@@ -1,3 +1,4 @@
+/*
 #include <sceneNodeManager.hpp>
 
 SceneNodeManager::SceneNodeManager(irr::scene::ISceneManager* smgr, World& world): _smgr{smgr}, _world{world}
@@ -13,7 +14,12 @@ vec3f SceneNodeManager::getEntityResultPos(WorldEntity& e, vec3f posDiff)
 	{
 		// try to set position of the entitys sceneNode to the requested position
 		// it will adjust itself depending on the collision component and callback
-		sn->setPosition(sn->getPosition()+posDiff);
+		auto oldP = e.getBodyComponent()->getPosition();
+		auto newP = oldP*vec3f(1,0,1) + sn->getPosition()*vec3f(0,1,0) + posDiff;
+		//std::cout << "delta: " << abs(newP.getDistanceFrom(oldP)) << std::endl;
+		if(abs(newP.getDistanceFrom(oldP)) < 0.1)
+			newP = oldP;
+		sn->setPosition(newP);
 		
 		return sn->getPosition();
 	}
@@ -87,6 +93,7 @@ void SceneNodeManager::onObservableUpdate(EntityEvent& m)
 				{
 					colliderSize = gsn->getTransformedBoundingBox().MaxEdge - gsn->getTransformedBoundingBox().MinEdge;
 					colliderSize /= 2;
+					cc->setColliderRadius(colliderSize);
 				}
 				auto cra = _smgr->createCollisionResponseAnimator(_world.getMap().getMetaTriangleSelector(), bsn, colliderSize, vec3f(0,-10,0));
 				cra->setCollisionCallback(this);
@@ -106,6 +113,8 @@ void SceneNodeManager::onObservableRemove(EntityEvent&)
 
 bool SceneNodeManager::onCollision(const scene::ISceneNodeAnimatorCollisionResponse& animator)
 {
-	std::cout << "BOOOOOOOOOOOOOOOOOOOOOOOOOOO\n";
+	//std::cout << "COLLISION\n";
+	std::cout << "COL: " << animator.getCollisionNode()->getID() << std::endl;
 	return false;
 }
+*/
