@@ -29,7 +29,7 @@ WorldMap::WorldMap(unsigned patchSize, scene::ISceneManager* scene): _patchSize{
 	terrain->setMaterialTexture(0, _scene->getVideoDriver()->getTexture("./media/terrain-texture.jpg"));
 	terrain->setMaterialTexture(1, _scene->getVideoDriver()->getTexture("./media/detailmap3.jpg"));
 	terrain->setMaterialType(video::EMT_DETAIL_MAP);
-	terrain->scaleTexture(1.0f, 20.0f);
+	terrain->scaleTexture(1.0f, 40.0f);
 
 	scene::CDynamicMeshBuffer* buffer = new scene::CDynamicMeshBuffer(video::EVT_2TCOORDS, video::EIT_16BIT);
 	terrain->getMeshBufferForLOD(*buffer, 0);
@@ -301,26 +301,10 @@ void BodyComponent::serDes(SerDesBase& s)
 ////////////////////////////////////////////////////////////
 
 GraphicsComponent::GraphicsComponent(ComponentType t, WorldEntity& parent
-		, vec3f posOffset, vec3f rotOffset)
+		, vec3f posOffset, vec3f rotOffset, vec3f scale)
 	: WorldEntityComponent(parent, t)
-	, _posOff{posOffset}, _rotOff{rotOffset}
-{
-	//_sceneNode->setMaterialFlag(video::EMF_LIGHTING, false);
-	//_sceneNode->setScale(scale);
-	//update();
-}
-
-/*
-void GraphicsComponent::update()
-{
-	auto b = _parent.getBodyComponent();
-	if(b)
-	{
-		_sceneNode->setPosition(b->getPosition() + _posOff);
-		_sceneNode->setRotation(b->getRotation() + _rotOff);
-	}
-}
-*/
+	, _posOff{posOffset}, _rotOff{rotOffset}, _scale{scale}
+{}
 
 vec3f GraphicsComponent::getPosOffset()
 {
@@ -330,6 +314,11 @@ vec3f GraphicsComponent::getPosOffset()
 vec3f GraphicsComponent::getRotOffset()
 {
 	return _rotOff;
+}
+
+vec3f GraphicsComponent::getScale()
+{
+	return _scale;
 }
 
 void GraphicsComponent::setPosOffset(vec3f p)
@@ -348,6 +337,14 @@ void GraphicsComponent::setRotOffset(vec3f r)
 	notifyObservers();
 }
 
+void GraphicsComponent::setScale(vec3f s)
+{
+	if(_scale == s)
+		return;
+	_scale = s;
+	notifyObservers();
+}
+
 void GraphicsComponent::serDes(SerDesBase& s)
 {
 	s.serDes(*this);
@@ -355,8 +352,8 @@ void GraphicsComponent::serDes(SerDesBase& s)
 
 // // // // // // // // // // // // // // // // // // // //
 
-SphereGraphicsComponent::SphereGraphicsComponent(WorldEntity& parent, float radius, vec3f posOffset, vec3f rotOffset)
-	: GraphicsComponent{ComponentType::GraphicsSphere, parent, posOffset, rotOffset}, _radius{radius}
+SphereGraphicsComponent::SphereGraphicsComponent(WorldEntity& parent, float radius, vec3f posOffset, vec3f rotOffset, vec3f scale)
+	: GraphicsComponent{ComponentType::GraphicsSphere, parent, posOffset, rotOffset, scale}, _radius{radius}
 {}
 
 float SphereGraphicsComponent::getRadius()
@@ -374,52 +371,56 @@ void SphereGraphicsComponent::setRadius(float radius)
 
 void SphereGraphicsComponent::serDes(SerDesBase& s)
 {
+	s.serDes(*static_cast<GraphicsComponent*>(this));
 	s.serDes(*this);
+}
+
+// // // // // // // // // // // // // // // // // // // //
+
+MeshGraphicsComponent::MeshGraphicsComponent(WorldEntity& parent, string fileName, bool animated, vec3f posOffset, vec3f rotOffset, vec3f scale)
+	: GraphicsComponent{ComponentType::GraphicsMesh, parent, posOffset, rotOffset, scale}, _fileName{fileName}, _animated{animated}
+{}
+
+void MeshGraphicsComponent::serDes(SerDesBase& s)
+{
+	s.serDes(*static_cast<GraphicsComponent*>(this));
+	s.serDes(*this);
+}
+
+string MeshGraphicsComponent::getFileName()
+{
+	return _fileName;
+}
+
+bool MeshGraphicsComponent::isAnimated()
+{
+	return _animated;
 }
 
 ////////////////////////////////////////////////////////////
 
-CollisionComponent::CollisionComponent(WorldEntity& parent, vec3f ellipsoidRadius)
-	: WorldEntityComponent(parent, ComponentType::Collision), _ellipsoidRadius{ellipsoidRadius}
+CollisionComponent::CollisionComponent(WorldEntity& parent, float radius, float height)
+	: WorldEntityComponent(parent, ComponentType::Collision), _radius{radius}, _height{height}
 {}
 
-/*
-vec3f CollisionComponent::getCollisionResultPosition(float timeDelta)
+float CollisionComponent::getRadius() const
 {
-	auto b = _parent.getBodyComponent();
-	if(!b)
-		assert(false);
-	WorldMap& m = _parent._world.getMap();
-	core::triangle3df colTriangle;
-	vec3f colPos;
-	bool isFalling;
-	scene::ISceneNode* colNode = nullptr;
-	float slidingSpeed = 1;
-	vec3f gravity(0,-10,0);
-	auto r = m.getSceneManager()->getSceneCollisionManager()->getCollisionResultPosition(
-			m.getMetaTriangleSelector(),
-			b->getPosition(),
-			_ellipsoidRadius,
-			b->getTotalVelocity()*timeDelta,
-			colTriangle,
-			colPos,
-			isFalling,
-			colNode,
-			slidingSpeed,
-			gravity
-			);
-	return r+vec3f(0,1,0);
-}
-*/
-
-vec3f CollisionComponent::getColliderRadius() const
-{
-	return _ellipsoidRadius;
+	return _radius;
 }
 
-void CollisionComponent::setColliderRadius(vec3f ellipsoidRadius)
+void CollisionComponent::setRadius(float radius)
 {
-	_ellipsoidRadius = ellipsoidRadius;
+	_radius = radius;
+}
+
+float CollisionComponent::getHeight() const
+{
+	return _height;
+}
+
+void CollisionComponent::setHeight(float height)
+{
+	_height = height;
 }
 
 void CollisionComponent::serDes(SerDesBase& s)
@@ -477,7 +478,7 @@ WizardComponent::WizardComponent(WorldEntity& parent): WorldEntityComponent(pare
 {
 	if(true)//TODO _luaState == nullptr)
 	{
-		_luaState.reset(luaL_newstate(), [](auto luaState){ lua_close(luaState); });
+		_luaState.reset(luaL_newstate(), [](lua_State* luaState){ lua_close(luaState); });
 		luaL_openlibs(_luaState.get());
 		luaL_dofile(_luaState.get(), "lua/spellSystem.lua");
 
@@ -621,10 +622,11 @@ WorldEntity& World::createCharacter(vec3f position)
 	e.setBodyComponent(make_shared<BodyComponent>(e, position));
 	//scene::IAnimatedMeshSceneNode* sceneNode = _smgr->addAnimatedMeshSceneNode(_smgr->getMesh("./media/ninja.b3d"));
 	//e.setGraphicsComponent(make_shared<GraphicsComponent>(e, sceneNode, vec3f(0), vec3f(0,90,0), vec3f(17), true));
-	e.setGraphicsComponent(make_shared<SphereGraphicsComponent>(e, 100));
+	e.setGraphicsComponent(make_shared<MeshGraphicsComponent>(e, "ninja.b3d", true, vec3f(0), vec3f(0,90,0), vec3f(0.4)));
+	//e.setGraphicsComponent(make_shared<SphereGraphicsComponent>(e, 1));
 	//vec3f colliderSize = sceneNode->getTransformedBoundingBox().MaxEdge - sceneNode->getTransformedBoundingBox().MinEdge;
 	//colliderSize /= 2;
-	e.setCollisionComponent(make_shared<CollisionComponent>(e));
+	e.setCollisionComponent(make_shared<CollisionComponent>(e, 0.4, 1.8));
 	e.setInputComponent(make_shared<InputComponent>(e));
 	e.setWizardComponent(make_shared<WizardComponent>(e));
 	return e;
@@ -639,39 +641,6 @@ std::list<WorldEntity>& World::getEntities()
 {
 	return _entities;
 }
-
-/*
-void World::update(float timeDelta)
-{
-	for(WorldEntity& e : _entities)
-	{
-		auto bc = e.getBodyComponent();
-
-		if(bc)
-		{
-			float rotSpeed = 180; // degrees per second
-			vec3f rot = bc->getRotation(),
-						pos = bc->getPosition();
-			rot.Y = fmod(rot.Y+(rotSpeed*bc->getRotDir()*timeDelta), 360);
-			bc->setRotation(rot);
-			auto cc = e.getCollisionComponent();
-			if(cc)
-				;//TODO pos = cc->getCollisionResultPosition(timeDelta);
-			else
-				pos += bc->getTotalVelocity()*timeDelta;
-			bc->setPosition(pos);
-		}
-
-		//if(bc)
-			//bc->update(timeDelta);
-		//TODO no need to update graphics component on server
-		//auto gc = e.getGraphicsComponent();
-		//if(gc)
-			//gc->update();
-	}
-	WizardComponent::update(timeDelta);
-}
-*/
 
 WorldEntity* World::getEntityByID(u32 ID)
 {

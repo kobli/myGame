@@ -107,7 +107,7 @@ void Updater::onObservableUpdate(EntityEvent& m)
 	// do not send position and rotation updates
 	if(m._componentModifiedType == ComponentType::Body && m._componentModified && !m._destroyed
 			&& static_cast<BodyComponent*>(m._componentModified)->posOrRotChanged())
-		;//TODO return;
+		return;
 	//TODO send destroy updates
 	sf::Packet p;
 	p << PacketType::WorldUpdate << m;
@@ -127,7 +127,7 @@ void Updater::onObservableRemove(EntityEvent&)
 
 
 ServerApplication::ServerApplication(IrrlichtDevice* irrDev)
-	: _irrDevice{irrDev}, _map{200, irrDev->getSceneManager()->createNewSceneManager()}, _gameWorld{_map}
+	: _irrDevice{irrDev}, _map{100, irrDev->getSceneManager()->createNewSceneManager()}, _gameWorld{_map}
 	, _physics{_gameWorld}, _updater(std::bind(&ServerApplication::send, ref(*this), placeholders::_1, placeholders::_2))
 {
 	_listener.setBlocking(false);
@@ -145,9 +145,11 @@ void ServerApplication::run()
 	sf::Clock c;
 	while(true)
 	{
+		/*
 		_irrDevice->run();
 		_irrDevice->getVideoDriver()->beginScene();
 		_irrDevice->getSceneManager()->drawAll();
+		*/
 		acceptClient();
 		for(auto& s : _sessions)
 		{
@@ -208,7 +210,7 @@ void ServerApplication::onClientConnect(std::unique_ptr<sf::TcpSocket>&& sock)
 	cout << "Client connected from " << sock->getRemoteAddress() << endl;
 	//TODO flip following lines!!
 	_sessions.emplace_back(std::move(sock));
-	auto& e = _gameWorld.createCharacter(vec3f(2700*2,255*2,2600*2)+vec3f(50,200,0));
+	auto& e = _gameWorld.createCharacter(vec3f(0,100,0));
 	_sessions.back().setControlledCharacter(&e);
 	_gameWorld.sendAddMsg(_updater); // TODO send updates only to newly connected client
 }

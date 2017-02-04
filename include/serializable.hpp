@@ -4,6 +4,7 @@
 class BodyComponent;
 class GraphicsComponent;
 class SphereGraphicsComponent;
+class MeshGraphicsComponent;
 class CollisionComponent;
 class InputComponent;
 
@@ -14,6 +15,7 @@ class SerDesBase
 		virtual void serDes(BodyComponent&) = 0;
 		virtual void serDes(GraphicsComponent&) = 0;
 		virtual void serDes(SphereGraphicsComponent&) = 0;
+		virtual void serDes(MeshGraphicsComponent&) = 0;
 		virtual void serDes(CollisionComponent&) = 0;
 		virtual void serDes(InputComponent&) = 0;
 };

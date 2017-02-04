@@ -3,12 +3,23 @@
 #include <network.hpp>
 #include <serdes.hpp>
 
-Animator::Animator(function<WorldEntity*(u32)> entityResolver): _entityResolver{entityResolver}
+Animator::Animator(scene::ISceneManager* smgr, function<WorldEntity*(u32)> entityResolver, function<vec3f(u32)> entityVelocityGetter)
+	: _smgr{smgr}, _entityResolver{entityResolver}, _velGetter{entityVelocityGetter}
 {}
 
 void Animator::setEntityResolver(std::function<WorldEntity*(u32 ID)> entityResolver)
 {
 	_entityResolver = entityResolver;
+}
+
+void Animator::setEntityVelocityGetter(std::function<vec3f(u32 ID)> entityVelocityGetter)
+{
+	_velGetter = entityVelocityGetter;
+}
+
+void Animator::setSceneManager(scene::ISceneManager* smgr)
+{
+	_smgr = smgr;
 }
 
 void Animator::onObservableAdd(EntityEvent& m)
@@ -18,36 +29,56 @@ void Animator::onObservableAdd(EntityEvent& m)
 
 void Animator::onObservableUpdate(EntityEvent& m)
 {
+	if(m._componentModifiedType != ComponentType::Body)
+		return;
 	WorldEntity* ePtr = _entityResolver(m._entityID);
 	if(!ePtr)
 		return;
 	WorldEntity& e = *ePtr;
-	//TODO if(e.getGraphicsComponent() == nullptr || !e.getGraphicsComponent()->isAnimated())
+	if(e.getGraphicsComponent() == nullptr)
+		return;
+	auto b = e.getBodyComponent();
+	if(!b)
+		return;
+	MeshGraphicsComponent* mgc = dynamic_cast<MeshGraphicsComponent*>(e.getGraphicsComponent().get());
+	if(!mgc || !mgc->isAnimated())
 		return;
 	// play idle anim
 	unsigned firstFrame = 190;
 	unsigned lastFrame = 290;
-	float animSpeed = 1;
-	if(m._componentModifiedType == ComponentType::Body)
+	float animSpeed = 2.4;
+	float speed = _velGetter(m._entityID).getLength();
+	std::cout << "speed: " << speed << endl;
 	{
-		auto b = e.getBodyComponent();
-		assert(b != nullptr);
 		if(b->getStrafeDir().X == 1) {
 			// play walk forward anim
 			firstFrame = 0;
 			lastFrame = 13;
-			animSpeed *= b->getStrafeSpeed()/10;
+			animSpeed *= speed;
 		}
 		else if(b->getStrafeDir().X == -1) {
 			// play walk forward anim with reverse speed (speed 15 at strafeSpeed 3)
 			firstFrame = 0;
 			lastFrame = 13;
-			animSpeed *= -b->getStrafeSpeed()/10;
+			animSpeed *= -speed;
 		}
 	}
-	scene::IAnimatedMeshSceneNode* n = nullptr;//TODO static_cast<scene::IAnimatedMeshSceneNode*>(e.getGraphicsComponent()->getSceneNode());
-	n->setFrameLoop(firstFrame, lastFrame);
-	n->setAnimationSpeed(animSpeed);
+	if(!_smgr)
+		return;
+	scene::ISceneNode* bsn = _smgr->getSceneNodeFromId(m._entityID);
+	if(!bsn)
+		return;
+	scene::ISceneNode* sn = _smgr->getSceneNodeFromName("graphics", bsn);
+	if(!sn)
+		return;
+	if(sn->getType() != scene::ESCENE_NODE_TYPE::ESNT_ANIMATED_MESH)
+		return;
+	scene::IAnimatedMeshSceneNode* asn = static_cast<scene::IAnimatedMeshSceneNode*>(sn);
+	if(!asn)
+		return;
+	if(!b->posOrRotChanged())
+		asn->setFrameLoop(firstFrame, lastFrame);
+	asn->setAnimationSpeed(animSpeed);
 }
 
 void Animator::onObservableRemove(EntityEvent&)
@@ -90,17 +121,18 @@ void ClientApplication::run()
 	int lastFPS = -1;
 	auto driver = _device->getVideoDriver();
 
+	sf::Clock c;
 	while(_device->run())
 	{
 		while(receive());		
-		//TODO fix frameLen spike after win inactivity
+		//TODO fix frameLen spike after win inactivity (mind the physics)
 		if(true)//if(_device->isWindowActive())
 		{
 			driver->beginScene(true, true, 0 );
 			f32 ar = (float)driver->getScreenSize().Width/(float)driver->getScreenSize().Height;
 			if(ar && _camera)
 				_camera->setAspectRatio(ar);
-			float timeDelta = 1./lastFPS;
+			float timeDelta = c.restart().asSeconds();
 
 			//if(_gameWorld)
 				//_gameWorld->update(1./lastFPS);
@@ -132,11 +164,13 @@ void ClientApplication::run()
 
 void ClientApplication::createWorld()
 {
-	_worldMap.reset(new WorldMap(200, _device->getSceneManager()));
+	_worldMap.reset(new WorldMap(100, _device->getSceneManager()));
 	_gameWorld.reset(new World(*_worldMap));
 	_vs.reset(new ViewSystem(_device->getSceneManager(), *_gameWorld));
 	_physics.reset(new Physics(*_gameWorld, _device->getSceneManager()));
 	_animator.setEntityResolver(bind(&World::getEntityByID, ref(*_gameWorld), placeholders::_1));
+	_animator.setSceneManager(_device->getSceneManager());
+	_animator.setEntityVelocityGetter([this](u32 ID)->vec3f {	return _physics->getObjVelocity(ID); });
 	_animator.observe(*_gameWorld);
 }
 
@@ -263,7 +297,7 @@ void ClientApplication::handleEntityEvent(EntityEvent& e)
 		cerr << "ENTITY IDs DO NOT MATCH\n";
 	switch(e._componentModifiedType)
 	{
-		case ComponentType::Collision: // TODO collider radius not synced, gravity not synced
+		case ComponentType::Collision:
 			e._componentModified = entity->getCollisionComponent().get();
 			if(!e._componentModified)
 				e._componentModified = entity->setCollisionComponent(make_shared<CollisionComponent>(*entity)).get();
@@ -278,13 +312,15 @@ void ClientApplication::handleEntityEvent(EntityEvent& e)
 			if(!e._componentModified)
 				e._componentModified = entity->setBodyComponent(make_shared<BodyComponent>(*entity)).get();
 			break;
-		case ComponentType::GraphicsSphere: // TODO sync _animated (and ...?)
+		case ComponentType::GraphicsSphere:
 			e._componentModified = entity->getGraphicsComponent().get();
 			if(!e._componentModified)
-			{
-				//scene::IAnimatedMeshSceneNode* sceneNode = _device->getSceneManager()->addAnimatedMeshSceneNode(_device->getSceneManager()->getMesh("./media/ninja.b3d"));
 				e._componentModified = entity->setGraphicsComponent(make_shared<SphereGraphicsComponent>(*entity)).get();
-			}
+			break;
+		case ComponentType::GraphicsMesh:
+			e._componentModified = entity->getGraphicsComponent().get();
+			if(!e._componentModified)
+				e._componentModified = entity->setGraphicsComponent(make_shared<MeshGraphicsComponent>(*entity)).get();
 			break;
 		case ComponentType::Wizard:
 			cout << "someone has become a wizard\n";

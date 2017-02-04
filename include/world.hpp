@@ -14,6 +14,7 @@ enum ComponentType: u8
 	None, 
 	Body,
 	GraphicsSphere,
+	GraphicsMesh,
 	Collision,
 	Input,
 	Wizard,
@@ -113,29 +114,32 @@ class BodyComponent: public WorldEntityComponent
 class GraphicsComponent: public WorldEntityComponent
 {
 	public:
-		GraphicsComponent(ComponentType t, WorldEntity& parent, vec3f posOffset = vec3f(0), vec3f rotOffset = vec3f(0));
+		GraphicsComponent(ComponentType t, WorldEntity& parent, vec3f posOffset = vec3f(0), vec3f rotOffset = vec3f(0), vec3f scale = vec3f(1));
 		vec3f getPosOffset();
 		vec3f getRotOffset();
+		vec3f getScale();
 		void setPosOffset(vec3f);
 		void setRotOffset(vec3f);
+		void setScale(vec3f);
 		virtual void serDes(SerDesBase& s);
 		template <typename T>
 			void doSerDes(T& t)
 			{
 				t & _posOff;
 				t & _rotOff;
+				t & _scale;
 			}
-
 
 	private:
 		vec3f _posOff;
 		vec3f _rotOff; // degrees
+		vec3f _scale;
 };
 
 class SphereGraphicsComponent: public GraphicsComponent 
 {
 	public:
-		SphereGraphicsComponent(WorldEntity& parent, float radius = 0, vec3f posOffset = vec3f(0), vec3f rotOffset = vec3f(0));
+		SphereGraphicsComponent(WorldEntity& parent, float radius = 0, vec3f posOffset = vec3f(0), vec3f rotOffset = vec3f(0), vec3f scale = vec3f(1));
 		virtual void serDes(SerDesBase& s);
 		template <typename T>
 			void doSerDes(T& t)
@@ -149,25 +153,47 @@ class SphereGraphicsComponent: public GraphicsComponent
 		float _radius;
 };
 
+class MeshGraphicsComponent: public GraphicsComponent
+{
+	public:
+		MeshGraphicsComponent(WorldEntity& parent, string fileName = "", bool animated = false, vec3f posOffset = vec3f(0), vec3f rotOffset = vec3f(0), vec3f scale = vec3f(1));
+		virtual void serDes(SerDesBase& s);
+		template <typename T>
+			void doSerDes(T& t)
+			{
+				t & _fileName;
+				t & _animated;
+			}
+		string getFileName();
+		bool isAnimated();
+
+	private:
+		string _fileName;
+		bool _animated;
+};
+
 ////////////////////////////////////////////////////////////
 
 class CollisionComponent: public WorldEntityComponent
 {
 	public:
-		CollisionComponent(WorldEntity& parent, vec3f ellipsoidRadius = vec3f(0,0,0));
-		//vec3f getCollisionResultPosition(float timeDelta);
-		vec3f getColliderRadius() const;
-		void setColliderRadius(vec3f);
+		CollisionComponent(WorldEntity& parent, float radius = 1, float height = 0);
+		float getRadius() const;
+		void setRadius(float);
+		float getHeight() const;
+		void setHeight(float);
 
 		virtual void serDes(SerDesBase& s);
 		template <typename T>
 			void doSerDes(T& t)
 			{
-				t & _ellipsoidRadius;
+				t & _radius;
+				t & _height;
 			}
 
-
-		vec3f _ellipsoidRadius;
+	private:
+		float _radius;
+		float _height;
 };
 
 ////////////////////////////////////////////////////////////

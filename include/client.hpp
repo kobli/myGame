@@ -8,15 +8,20 @@
 class Animator: public Observer<EntityEvent>
 {
 	public:
-		Animator(std::function<WorldEntity*(u32 ID)> entityResolver = [](u32){ return nullptr; });
+		Animator(scene::ISceneManager* smgr = nullptr, function<WorldEntity*(u32)> entityResolver = [](u32){ return nullptr; }
+				, function<vec3f(u32)> entityVelocityGetter = function<vec3f(u32)>());
 		void setEntityResolver(std::function<WorldEntity*(u32 ID)> entityResolver);
+		void setEntityVelocityGetter(std::function<vec3f(u32 ID)> entityVelocityGetter);
+		void setSceneManager(scene::ISceneManager* smgr);
 
 	private:
+		scene::ISceneManager* _smgr;
+		function<WorldEntity*(u32)> _entityResolver;
+		std::function<vec3f(u32 ID)> _velGetter;
 		void onObservableAdd(EntityEvent& m);
 		void onObservableUpdate(EntityEvent& m);
 		void onObservableRemove(EntityEvent& m);
 
-		function<WorldEntity*(u32)> _entityResolver;
 };
 
 ////////////////////////////////////////////////////////////
