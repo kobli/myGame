@@ -9,7 +9,7 @@ SRCS = $(shell cd $(SRCDIR)>/dev/null && ls *.cpp && cd - >/dev/null)
 OBJS = $(subst .cpp,.o,$(SRCS))
 
 run: $(TARGET)
-	./$(TARGET)
+#./$(TARGET)
 
 test: tests
 	./test

@@ -9,7 +9,7 @@ EntityEvent::EntityEvent(u32 entityID, ComponentType componentModifiedType
 
 ////////////////////////////////////////////////////////////
 
-WorldMap::WorldMap(unsigned patchSize, scene::ISceneManager* scene): _patchSize{patchSize}, _scene{scene}, _heightScale{0.1}
+WorldMap::WorldMap(unsigned patchSize, scene::ISceneManager* scene): _patchSize{patchSize}, _scene{scene}, _heightScale{0.05}
 {
 	scene::ITerrainSceneNode* terrain = _scene->addTerrainSceneNode(
 		"./media/terrain-heightmap.bmp",
@@ -399,8 +399,8 @@ bool MeshGraphicsComponent::isAnimated()
 
 ////////////////////////////////////////////////////////////
 
-CollisionComponent::CollisionComponent(WorldEntity& parent, float radius, float height)
-	: WorldEntityComponent(parent, ComponentType::Collision), _radius{radius}, _height{height}
+CollisionComponent::CollisionComponent(WorldEntity& parent, float radius, float height, vec3f posOffset)
+	: WorldEntityComponent(parent, ComponentType::Collision), _radius{radius}, _height{height}, _posOff{posOffset}
 {}
 
 float CollisionComponent::getRadius() const
@@ -421,6 +421,16 @@ float CollisionComponent::getHeight() const
 void CollisionComponent::setHeight(float height)
 {
 	_height = height;
+}
+
+vec3f CollisionComponent::getPosOffset() const
+{
+	return _posOff;
+}
+
+void CollisionComponent::setPosOffset(vec3f pO)
+{
+	_posOff = pO;
 }
 
 void CollisionComponent::serDes(SerDesBase& s)
@@ -622,11 +632,11 @@ WorldEntity& World::createCharacter(vec3f position)
 	e.setBodyComponent(make_shared<BodyComponent>(e, position));
 	//scene::IAnimatedMeshSceneNode* sceneNode = _smgr->addAnimatedMeshSceneNode(_smgr->getMesh("./media/ninja.b3d"));
 	//e.setGraphicsComponent(make_shared<GraphicsComponent>(e, sceneNode, vec3f(0), vec3f(0,90,0), vec3f(17), true));
-	e.setGraphicsComponent(make_shared<MeshGraphicsComponent>(e, "ninja.b3d", true, vec3f(0), vec3f(0,90,0), vec3f(0.4)));
+	e.setGraphicsComponent(make_shared<MeshGraphicsComponent>(e, "ninja.b3d", true, vec3f(0), vec3f(0,90,0), vec3f(0.2)));
 	//e.setGraphicsComponent(make_shared<SphereGraphicsComponent>(e, 1));
 	//vec3f colliderSize = sceneNode->getTransformedBoundingBox().MaxEdge - sceneNode->getTransformedBoundingBox().MinEdge;
 	//colliderSize /= 2;
-	e.setCollisionComponent(make_shared<CollisionComponent>(e, 0.4, 1.8));
+	e.setCollisionComponent(make_shared<CollisionComponent>(e, 0.4, 1, vec3f(0, -0.9, 0)));
 	e.setInputComponent(make_shared<InputComponent>(e));
 	e.setWizardComponent(make_shared<WizardComponent>(e));
 	return e;

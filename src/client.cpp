@@ -44,11 +44,10 @@ void Animator::onObservableUpdate(EntityEvent& m)
 	if(!mgc || !mgc->isAnimated())
 		return;
 	// play idle anim
-	unsigned firstFrame = 190;
-	unsigned lastFrame = 290;
-	float animSpeed = 2.4;
+	int firstFrame = 190;
+	int lastFrame = 290;
+	float animSpeed = 7;
 	float speed = _velGetter(m._entityID).getLength();
-	std::cout << "speed: " << speed << endl;
 	{
 		if(b->getStrafeDir().X == 1) {
 			// play walk forward anim
@@ -76,7 +75,7 @@ void Animator::onObservableUpdate(EntityEvent& m)
 	scene::IAnimatedMeshSceneNode* asn = static_cast<scene::IAnimatedMeshSceneNode*>(sn);
 	if(!asn)
 		return;
-	if(!b->posOrRotChanged())
+	if(firstFrame != asn->getStartFrame() || lastFrame != asn->getEndFrame())
 		asn->setFrameLoop(firstFrame, lastFrame);
 	asn->setAnimationSpeed(animSpeed);
 }
@@ -164,7 +163,7 @@ void ClientApplication::run()
 
 void ClientApplication::createWorld()
 {
-	_worldMap.reset(new WorldMap(100, _device->getSceneManager()));
+	_worldMap.reset(new WorldMap(70, _device->getSceneManager()));
 	_gameWorld.reset(new World(*_worldMap));
 	_vs.reset(new ViewSystem(_device->getSceneManager(), *_gameWorld));
 	_physics.reset(new Physics(*_gameWorld, _device->getSceneManager()));
@@ -195,11 +194,11 @@ void ClientApplication::createCamera()
 	keyMap[7].KeyCode = KEY_KEY_D;
 	keyMap[8].Action = EKA_JUMP_UP;
 	keyMap[8].KeyCode = KEY_SPACE;
-	f32 camWalkSpeed = 0.2f;
+	f32 camWalkSpeed = 0.05f;
 	_camera = 
 		_device->getSceneManager()->addCameraSceneNodeFPS(0,100.0f,camWalkSpeed,0,keyMap,9,false);
 	
-	_camera->setPosition(core::vector3df(0,100,0));
+	_camera->setPosition(core::vector3df(0,10,50));
 	//_camera->setTarget(core::vector3df(2397*2,343*2,2700*2));
 	_camera->setFarValue(42000.0f);
 

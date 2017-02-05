@@ -73,13 +73,16 @@ class MyMotionState : public btMotionState
 			auto bc = e->getBodyComponent();
 			if(!bc)
 				return;
+			auto cc = e->getCollisionComponent();
+			if(!cc)
+				return;
 			btQuaternion rot = worldTrans.getRotation();
 			vec3f r;
 			btMatrix3x3(rot).getEulerZYX(r.Z, r.Y, r.X);
 			bc->setRotation(r*180/M_PI);
 			
 			btVector3 pos = worldTrans.getOrigin();
-			bc->setPosition(vec3f(pos.x(), pos.y(), pos.z()));
+			bc->setPosition(vec3f(pos.x(), pos.y(), pos.z()) + cc->getPosOffset());
 		}
 };
 
@@ -145,7 +148,7 @@ Physics::Physics(World& world, scene::ISceneManager* smgr): _world{world}
 	btRigidBody* terrB = new btRigidBody(terrCI);
 	_physicsWorld->addRigidBody(terrB);
 	terrB->setUserIndex(0);
-	terrB->setAnisotropicFriction(btVector3(1,.2,1));
+	//terrB->setAnisotropicFriction(btVector3(1,0.4,1));
 }
 
 vec3f Physics::getObjVelocity(u32 ID)
@@ -164,7 +167,8 @@ void Physics::update(float timeDelta)
 {
 	_physicsWorld->stepSimulation(timeDelta, 10);
 	bodyDoStrafe(timeDelta);
-	_physicsWorld->debugDrawWorld();
+	//_physicsWorld->debugDrawWorld();
+	/*
 	auto t = getCollisionObjectByID(0);
 	auto tr = t->getWorldTransform();
 	auto o = tr.getOrigin();
@@ -172,6 +176,7 @@ void Physics::update(float timeDelta)
 	btMatrix3x3(tr.getRotation()).getEulerZYX(r.X, r.Y, r.Z);
 	std::cout << "pos: " << o.getX() << " " << o.getY() << " " << o.getZ() << endl;
 	std::cout << "rot: " << r << endl;
+	*/
 }
 
 void Physics::bodyDoStrafe(float timeDelta)
@@ -205,11 +210,11 @@ void Physics::bodyDoStrafe(float timeDelta)
 		*/
 		float& t = _objData[e.getID()].walkTimer;
 		
-		if(t > 0.4)
+		//if(t > 0.35)
 		{
-			t = 0;
-			float mass2 = 10000;
-			float fMul = 14000;
+			//t = 0;
+			//float fMul = 18000;
+			float fMul = 1300;
 			{
 				vec2f strDir = bc->getStrafeDir();
 				vec3f rot = bc->getRotation();
@@ -227,14 +232,20 @@ void Physics::bodyDoStrafe(float timeDelta)
 				//pSphereShape->calculateLocalInertia(mass2, fallInertia);
 				if(dir.getLength() != 0)// && s42onGr)
 				{
-					b->setFriction(0.9);
+					if(getObjVelocity(e.getID()).getLength() < 2)
+					{
+						cout << "climbing a hill\n";
+						fMul *= 4;
+					}
+					b->setFriction(3.0);
 					//b->setMassProps(mass, fallInertia);
 					//b->applyCentralForce(btVector3(dir.X, dir.Y+0.1, dir.Z)*fMul);
-					b->applyCentralForce(btVector3(dir.X, 0.16, dir.Z)*fMul);
+					b->applyCentralForce(btVector3(dir.X, 0.22, dir.Z)*fMul*abs(cos(2*M_PI*(1/0.5)*t)));
+					b->setDamping(0.46, 0);
 				}
 				else
 				{
-					t = 99999;
+					t = 0;
 					b->setFriction(4);
 					//b->setMassProps(mass2, fallInertia);
 				}
