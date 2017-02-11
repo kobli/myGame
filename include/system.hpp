@@ -27,12 +27,16 @@ class Physics: public System
 		World& _world;
 		unique_ptr<btDiscreteDynamicsWorld> _physicsWorld;
 		struct ObjData {
-			float walkTimer;
+			float walkTimer = 0;
+			bool onGround = false;
 		};
 		std::map<u32, ObjData> _objData;
+		float _tAcc;
+		bool _updating;
 
 		btCollisionObject* getCollisionObjectByID(int entityID);
 		void bodyDoStrafe(float timeDelta);
+		void callCollisionCBs();
 };
 
 class ViewSystem: public System

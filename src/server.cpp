@@ -107,7 +107,7 @@ void Updater::onObservableUpdate(EntityEvent& m)
 	// do not send position and rotation updates
 	if(m._componentModifiedType == ComponentType::Body && m._componentModified && !m._destroyed
 			&& static_cast<BodyComponent*>(m._componentModified)->posOrRotChanged())
-		return;
+		;//return;
 	//TODO send destroy updates
 	sf::Packet p;
 	p << PacketType::WorldUpdate << m;
@@ -182,7 +182,7 @@ void ServerApplication::run()
 		WizardComponent::update(timeDelta);
 
 
-		sf::sleep(sf::milliseconds(40));
+		sf::sleep(sf::milliseconds(100));
 		_irrDevice->getVideoDriver()->endScene();
 	}
 }
@@ -210,7 +210,7 @@ void ServerApplication::onClientConnect(std::unique_ptr<sf::TcpSocket>&& sock)
 	cout << "Client connected from " << sock->getRemoteAddress() << endl;
 	//TODO flip following lines!!
 	_sessions.emplace_back(std::move(sock));
-	auto& e = _gameWorld.createCharacter(vec3f(0,100,0));
+	auto& e = _gameWorld.createCharacter(vec3f(0,50,0));
 	_sessions.back().setControlledCharacter(&e);
 	_gameWorld.sendAddMsg(_updater); // TODO send updates only to newly connected client
 }

@@ -39,7 +39,7 @@ class WorldEntity;
 class WorldMap
 {
 	public:
-		WorldMap(unsigned patchSize, scene::ISceneManager* scene);
+		WorldMap(float patchSize, scene::ISceneManager* scene);
 		float* getHeightMap();
 		unsigned getVertexCount();
 		float getPatchSize();
@@ -71,19 +71,19 @@ class WorldEntityComponent: public Observable<EntityEvent>, public Serializable
 class BodyComponent: public WorldEntityComponent
 {
 	public:
-		BodyComponent(WorldEntity& parent, vec3f position = vec3f(0), vec3f rotation = vec3f(0,0,0), vec3f velocity = vec3f(0));
+		BodyComponent(WorldEntity& parent, vec3f position = vec3f(0), quaternion rotation = quaternion(0,0,0,0), vec3f velocity = vec3f(0));
 		vec3f getPosition() const;
-		vec3f getRotation() const;
+		quaternion getRotation() const;
 		vec3f getVelocity() const;
-		i32 getRotDir() const;
+		i8 getRotDir() const;
 		void setPosition(vec3f);
-		void setRotation(vec3f);
+		void setRotation(quaternion);
 		void setVelocity(vec3f);
 		void setStrafeDir(vec2f strafeDir);
-		void setRotDir(i32 rotDir);
+		void setRotDir(i8 rotDir);
 		void update(float timeDelta);
 		bool posOrRotChanged();
-		vec3f getTotalVelocity() const;
+		//vec3f getTotalVelocity() const;
 		vec2f getStrafeDir() const;
 		float getStrafeSpeed() const;
 		virtual void serDes(SerDesBase& s);
@@ -99,13 +99,13 @@ class BodyComponent: public WorldEntityComponent
 
 	private:
 		vec3f _position;
-		vec3f _rotation; // degrees
+		quaternion _rotation; // radians
 		vec3f _velocity; // speed and direction at which object is moving
 		// strafe velocity is relative to rotation and will be added to normal velocity
 		// (unless the entity has a collision component and the entity is falling)
 		vec2f _strafeDir; 
 		float _strafeSpeed;
-		i32 _rotDir; // around Y axis: left = -1, stop = 0, right = 1
+		i8 _rotDir; // around Y axis: left = -1, stop = 0, right = 1
 		bool _posRotChanged; // is set during notifyObservers call when the call is caused by change of position or rotation
 };
 

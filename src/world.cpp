@@ -9,7 +9,7 @@ EntityEvent::EntityEvent(u32 entityID, ComponentType componentModifiedType
 
 ////////////////////////////////////////////////////////////
 
-WorldMap::WorldMap(unsigned patchSize, scene::ISceneManager* scene): _patchSize{patchSize}, _scene{scene}, _heightScale{0.05}
+WorldMap::WorldMap(float patchSize, scene::ISceneManager* scene): _patchSize{patchSize}, _scene{scene}, _heightScale{0.05}
 {
 	scene::ITerrainSceneNode* terrain = _scene->addTerrainSceneNode(
 		"./media/terrain-heightmap.bmp",
@@ -177,7 +177,7 @@ shared_ptr<WizardComponent> WorldEntity::getWizardComponent()
 
 ////////////////////////////////////////////////////////////
 
-BodyComponent::BodyComponent(WorldEntity& parent, vec3f position, vec3f rotation, vec3f velocity)
+BodyComponent::BodyComponent(WorldEntity& parent, vec3f position, quaternion rotation, vec3f velocity)
 	: WorldEntityComponent{parent, ComponentType::Body}, _position{position}, _rotation{rotation}, _velocity{velocity}
 	, _strafeDir{vec2f(0,0)}, _strafeSpeed{120}, _rotDir{0}, _posRotChanged{false}
 {}
@@ -203,7 +203,7 @@ vec3f BodyComponent::getPosition() const
 	return _position;
 }
 
-vec3f BodyComponent::getRotation() const
+quaternion BodyComponent::getRotation() const
 {
 	return _rotation;
 }
@@ -213,7 +213,7 @@ vec3f BodyComponent::getVelocity() const
 	return _velocity;
 }
 
-i32 BodyComponent::getRotDir() const
+i8 BodyComponent::getRotDir() const
 {
 	return _rotDir;
 }
@@ -228,7 +228,7 @@ void BodyComponent::setPosition(vec3f p)
 	_posRotChanged = false;
 }
 
-void BodyComponent::setRotation(vec3f r)
+void BodyComponent::setRotation(quaternion r)
 {
 	if(_rotation == r)
 		return;
@@ -254,7 +254,7 @@ void BodyComponent::setStrafeDir(vec2f strafeDir)
 	notifyObservers();
 }
 
-void BodyComponent::setRotDir(i32 rotDir)
+void BodyComponent::setRotDir(i8 rotDir)
 {
 	if(_rotDir == rotDir)
 		return;
@@ -267,6 +267,7 @@ bool BodyComponent::posOrRotChanged()
 	return _posRotChanged;
 }
 
+/*
 vec3f BodyComponent::getTotalVelocity() const
 {
 	vec3f vel = _velocity;
@@ -282,6 +283,7 @@ vec3f BodyComponent::getTotalVelocity() const
 	}
 	return vel;
 }
+*/
 
 vec2f BodyComponent::getStrafeDir() const
 {
@@ -630,12 +632,11 @@ WorldEntity& World::createCharacter(vec3f position)
 {
 	WorldEntity& e = createEntity();
 	e.setBodyComponent(make_shared<BodyComponent>(e, position));
-	//scene::IAnimatedMeshSceneNode* sceneNode = _smgr->addAnimatedMeshSceneNode(_smgr->getMesh("./media/ninja.b3d"));
-	//e.setGraphicsComponent(make_shared<GraphicsComponent>(e, sceneNode, vec3f(0), vec3f(0,90,0), vec3f(17), true));
+	/*
+	e.setGraphicsComponent(make_shared<SphereGraphicsComponent>(e, 1));
+	e.setCollisionComponent(make_shared<CollisionComponent>(e, 1, 0));
+	*/
 	e.setGraphicsComponent(make_shared<MeshGraphicsComponent>(e, "ninja.b3d", true, vec3f(0), vec3f(0,90,0), vec3f(0.2)));
-	//e.setGraphicsComponent(make_shared<SphereGraphicsComponent>(e, 1));
-	//vec3f colliderSize = sceneNode->getTransformedBoundingBox().MaxEdge - sceneNode->getTransformedBoundingBox().MinEdge;
-	//colliderSize /= 2;
 	e.setCollisionComponent(make_shared<CollisionComponent>(e, 0.4, 1, vec3f(0, -0.9, 0)));
 	e.setInputComponent(make_shared<InputComponent>(e));
 	e.setWizardComponent(make_shared<WizardComponent>(e));

@@ -46,7 +46,7 @@ void Animator::onObservableUpdate(EntityEvent& m)
 	// play idle anim
 	int firstFrame = 190;
 	int lastFrame = 290;
-	float animSpeed = 7;
+	float animSpeed = 5;
 	float speed = _velGetter(m._entityID).getLength();
 	{
 		if(b->getStrafeDir().X == 1) {

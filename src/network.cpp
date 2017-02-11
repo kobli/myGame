@@ -1,5 +1,14 @@
 #include <network.hpp>
 
+sf::Packet& operator <<(sf::Packet& packet, const quaternion& q)
+{
+	return packet << q.X << q.Y << q.Z << q.W;
+}
+sf::Packet& operator >>(sf::Packet& packet, quaternion& q)
+{
+	return packet >> q.X >> q.Y >> q.Z >> q.W;
+}
+
 sf::Packet& operator <<(sf::Packet& packet, const ComponentType& m) {
   return packet << static_cast<u8>(m);
 }

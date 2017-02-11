@@ -61,8 +61,8 @@ class MyMotionState : public btMotionState
 			auto bc = e->getBodyComponent();
 			if(!bc)
 				return;
-			auto p = bc->getPosition();
-			worldTrans.setOrigin(btVector3(p.X, p.Y, p.Z));
+			worldTrans.setOrigin(V3f2btV3f(bc->getPosition()));
+			//worldTrans.setRotation(Q2btQ(bc->getRotation()));
 		}
 
 		virtual void setWorldTransform(const btTransform& worldTrans)
@@ -76,18 +76,20 @@ class MyMotionState : public btMotionState
 			auto cc = e->getCollisionComponent();
 			if(!cc)
 				return;
+			/*
 			btQuaternion rot = worldTrans.getRotation();
 			vec3f r;
 			btMatrix3x3(rot).getEulerZYX(r.Z, r.Y, r.X);
 			bc->setRotation(r*180/M_PI);
-			
-			btVector3 pos = worldTrans.getOrigin();
-			bc->setPosition(vec3f(pos.x(), pos.y(), pos.z()) + cc->getPosOffset());
+			*/
+			bc->setRotation(btQ2Q(worldTrans.getRotation()));
+			//cout << "ROT: " << btQ2Q(worldTrans.getRotation()) << endl;
+			bc->setPosition(btV3f2V3f(worldTrans.getOrigin()) + cc->getPosOffset());
 		}
 };
 
 
-Physics::Physics(World& world, scene::ISceneManager* smgr): _world{world}
+Physics::Physics(World& world, scene::ISceneManager* smgr): _world{world}, _tAcc{0}, _updating{false}
 {
 	observe(_world);
 	//TODO cleanup
@@ -149,6 +151,7 @@ Physics::Physics(World& world, scene::ISceneManager* smgr): _world{world}
 	_physicsWorld->addRigidBody(terrB);
 	terrB->setUserIndex(0);
 	//terrB->setAnisotropicFriction(btVector3(1,0.4,1));
+	terrB->setFriction(1);
 }
 
 vec3f Physics::getObjVelocity(u32 ID)
@@ -165,18 +168,62 @@ vec3f Physics::getObjVelocity(u32 ID)
 
 void Physics::update(float timeDelta)
 {
-	_physicsWorld->stepSimulation(timeDelta, 10);
-	bodyDoStrafe(timeDelta);
-	//_physicsWorld->debugDrawWorld();
+	_updating = true;
+	auto unsetUpdating = std::unique_ptr<void, std::function<void(void*)>>(this, [this](void*) { _updating = false; });
+	//cout << "realTD: " << timeDelta << endl;
+	static unsigned fn = 0;
+	float dt = 0.01;
+	_tAcc += timeDelta;
+
 	/*
-	auto t = getCollisionObjectByID(0);
+	_physicsWorld->stepSimulation(timeDelta, 0.1/dt, dt);
+	bodyDoStrafe(timeDelta);
+	*/
+
+	/*
+	// horrible
+	dt = 0.04;
+	if(_tAcc < dt)
+		return;
+	timeDelta = _tAcc;
+	_tAcc = 0;
+	_physicsWorld->stepSimulation(timeDelta, 100);
+	bodyDoStrafe(timeDelta);
+	*/
+
+	/*
+	int steps = _tAcc/dt;
+	timeDelta = steps*dt;
+	_tAcc -= timeDelta;
+	_physicsWorld->stepSimulation(timeDelta, steps, dt);
+	bodyDoStrafe(timeDelta);
+	*/
+
+	timeDelta = 0;
+	while(_tAcc >= dt)
+	{
+		_physicsWorld->stepSimulation(dt, 1, dt);
+		bodyDoStrafe(dt);
+		timeDelta += dt;
+		_tAcc -= dt;
+		fn++;
+	}
+
+	callCollisionCBs();
+	//cout << "fn: " << fn << "\n\tTD: "  << timeDelta << endl;
+	//_physicsWorld->debugDrawWorld();
+	auto t = getCollisionObjectByID(1);
+	if(!t)
+		return;
 	auto tr = t->getWorldTransform();
 	auto o = tr.getOrigin();
 	vec3f r;
 	btMatrix3x3(tr.getRotation()).getEulerZYX(r.X, r.Y, r.Z);
-	std::cout << "pos: " << o.getX() << " " << o.getY() << " " << o.getZ() << endl;
-	std::cout << "rot: " << r << endl;
-	*/
+	//std::cout << "pos: " << o.getX() << " " << o.getY() << " " << o.getZ() << endl;
+	//std::cout << "rot: " << r << endl;
+	auto b = dynamic_cast<btRigidBody*>(t);
+	if(b)
+		;//cout << "ANGV: " << b->getAngularVelocity() << endl;
 }
 
 void Physics::bodyDoStrafe(float timeDelta)
@@ -213,45 +260,82 @@ void Physics::bodyDoStrafe(float timeDelta)
 		//if(t > 0.35)
 		{
 			//t = 0;
-			//float fMul = 18000;
-			float fMul = 1300;
+			//float fMul = 19000;
+			//float fMul = 13000;
+			//float fMul = 4000;
+			//float fMul = 1300;
+			//float fMul = 4300;
+			float fMul = 2000;
 			{
 				vec2f strDir = bc->getStrafeDir();
-				vec3f rot = bc->getRotation();
 				vec3f dir{strDir.X, 0, strDir.Y};
+				vec3f rot;
+				bc->getRotation().toEuler(rot);
+				rot *= 180/M_PI;
 				dir.rotateYZBy(-rot.X);
 				dir.rotateXZBy(-rot.Y);
 				dir.rotateXYBy(-rot.Z);
-				dir.normalize();
 				dir.Y = 0;
+				dir.normalize();
 
 				//if(receiver.IsKeyDown(irr::KEY_SPACE))
 					//dir.Y = 1;
 
 				//dynamicsWorld->removeRigidBody(b);
 				//pSphereShape->calculateLocalInertia(mass2, fallInertia);
-				if(dir.getLength() != 0)// && s42onGr)
+				if(dir.getLength() > 0.1 && _objData[e.getID()].onGround)
 				{
+					b->setDamping(0.46, 0);
+					/*
 					if(getObjVelocity(e.getID()).getLength() < 2)
 					{
 						cout << "climbing a hill\n";
 						fMul *= 4;
 					}
+					*/
 					b->setFriction(3.0);
 					//b->setMassProps(mass, fallInertia);
 					//b->applyCentralForce(btVector3(dir.X, dir.Y+0.1, dir.Z)*fMul);
-					b->applyCentralForce(btVector3(dir.X, 0.22, dir.Z)*fMul*abs(cos(2*M_PI*(1/0.5)*t)));
-					b->setDamping(0.46, 0);
+					b->applyCentralImpulse(btVector3(dir.X, 0.1, dir.Z)*fMul*timeDelta);//*abs(cos(2*M_PI*(1/0.5)*t)));
+					//b->applyCentralImpulse(btVector3(dir.X, 0.05, dir.Z)*fMul/*abs(cos(2*M_PI*(1/0.5)*t))*/); // !! working
+					//t = 0;
 				}
 				else
 				{
 					t = 0;
-					b->setFriction(4);
+					b->setFriction(10);
+					//if(getObjVelocity(e.getID()).getLength() < 0.1)
+						//b->setDamping(50, 0);
+					
 					//b->setMassProps(mass2, fallInertia);
 				}
 				//b->setLinearVelocity(b->getLinearVelocity() + btVector3(dir.X*MOVEMENT_SPEED, 0, dir.Z*MOVEMENT_SPEED));
 				//dynamicsWorld->addRigidBody(b);
 			}
+		}
+	}
+}
+
+void Physics::callCollisionCBs()
+{
+	for(auto& d : _objData)
+		d.second.onGround = false;
+	int numManifolds = _physicsWorld->getDispatcher()->getNumManifolds();
+	for (int i = 0; i < numManifolds; i++)
+	{
+		btPersistentManifold* contactManifold =  _physicsWorld->getDispatcher()->getManifoldByIndexInternal(i);
+		const btCollisionObject* obA = contactManifold->getBody0();
+		const btCollisionObject* obB = contactManifold->getBody1();
+
+		int numContacts = contactManifold->getNumContacts();
+		if(numContacts > 0)
+		{
+			// set onGround flags
+			int uid0 = min(obA->getUserIndex(), obB->getUserIndex());
+			int uid1 = max(obA->getUserIndex(), obB->getUserIndex());
+			if(uid0 == 0)
+				_objData[uid1].onGround = true;	
+			//std::cout << "collision of " << obA->getUserIndex() << " and " << obB->getUserIndex() << std::endl;
 		}
 	}
 }
@@ -303,11 +387,13 @@ void Physics::onObservableUpdate(EntityEvent& m)
 			}
 		case ComponentType::Body:
 			{
+				if(_updating)
+					return;
 				auto e = _world.getEntityByID(m._entityID);
 				if(!e)
 					break;
-				auto col = e->getCollisionComponent();
-				if(!col)
+				auto cc = e->getCollisionComponent();
+				if(!cc)
 					break;
 				btCollisionObject* o = getCollisionObjectByID(m._entityID);
 				if(!o)
@@ -320,7 +406,16 @@ void Physics::onObservableUpdate(EntityEvent& m)
 				//if(rigB) //TODO only for ghostObjects
 					//rigB->setLinearVelocity(btVector3(v.X, v.Y, v.Z));
 				float rotSpeed = 3;
+				//_physicsWorld->removeCollisionObject(rigB);
+				auto tr = btTransform(Q2btQ(b->getRotation()), V3f2btV3f(b->getPosition()-cc->getPosOffset()));
+				//rigB->proceedToTransform(tr);
+				//rigB->setInterpolationWorldTransform(tr);
+				rigB->setWorldTransform(tr);
+				//rigB->setCenterOfMassTransform(tr);
+				//rigB->setLinearVelocity(btVector3(0,0,0));
+				//rigB->clearForces();
 				rigB->setAngularVelocity(btVector3(0, b->getRotDir()*rotSpeed, 0));
+				//_physicsWorld->addCollisionObject(rigB);
 				rigB->activate(true);
 				break;
 			}
@@ -374,7 +469,9 @@ void ViewSystem::onObservableUpdate(EntityEvent& m)
 				if(!bc)
 					return;
 				sn->setPosition(bc->getPosition());
-				sn->setRotation(bc->getRotation());
+				vec3f r;
+				bc->getRotation().toEuler(r);
+				sn->setRotation(r*180/M_PI);
 				sn->updateAbsolutePosition();
 				sn->setName("body");
 				sn->setDebugDataVisible(scene::EDS_FULL);

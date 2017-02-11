@@ -46,6 +46,8 @@ sf::Packet& operator >>(sf::Packet& packet, vec3<T>& m) {
 }
 template sf::Packet& operator << <float>(sf::Packet& packet, const vec2f& m);
 template sf::Packet& operator >> <float>(sf::Packet& packet, vec2f& m);
+sf::Packet& operator <<(sf::Packet& packet, const quaternion& q);
+sf::Packet& operator >>(sf::Packet& packet, quaternion& q);
 
 sf::Packet& operator <<(sf::Packet& packet, const PacketType& m);
 sf::Packet& operator >>(sf::Packet& packet, PacketType& m);
