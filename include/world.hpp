@@ -16,7 +16,6 @@ enum ComponentType: u8
 	GraphicsSphere,
 	GraphicsMesh,
 	Collision,
-	Input,
 	Wizard,
 };
 
@@ -202,21 +201,6 @@ class CollisionComponent: public WorldEntityComponent
 
 ////////////////////////////////////////////////////////////
 
-class InputComponent: public WorldEntityComponent
-{
-	public:
-		InputComponent(WorldEntity& parent);
-		void handleCommand(Command& c);
-		virtual void serDes(SerDesBase& s);
-		template <typename T>
-			void doSerDes(T&)
-			{
-			}
-
-};
-
-////////////////////////////////////////////////////////////
-
 class WizardComponent: public WorldEntityComponent
 {
 	public:
@@ -234,6 +218,7 @@ class WizardComponent: public WorldEntityComponent
 	private:
 		static std::shared_ptr<lua_State> _luaState;
 		u32 launchSpell(float radius, float speed);
+		void collisionCallback(u32 objID, u32 otherObjID);
 };
 
 ////////////////////////////////////////////////////////////
@@ -243,13 +228,10 @@ class WorldEntity: public Observabler<EntityEvent>
 	public:
 		WorldEntity(World& w, u32 ID);
 		u32 getID();
-		bool isEmpty(); // true when entity does not contain any components
 		shared_ptr<BodyComponent> setBodyComponent(shared_ptr<BodyComponent> bc);
 		shared_ptr<BodyComponent> getBodyComponent();
 		shared_ptr<GraphicsComponent> setGraphicsComponent(shared_ptr<GraphicsComponent> gc);
 		shared_ptr<GraphicsComponent> getGraphicsComponent();
-		shared_ptr<InputComponent> setInputComponent(shared_ptr<InputComponent> ic);
-		shared_ptr<InputComponent> getInputComponent();
 		shared_ptr<CollisionComponent> setCollisionComponent(shared_ptr<CollisionComponent> cc);
 		shared_ptr<CollisionComponent> getCollisionComponent();
 		shared_ptr<WizardComponent> setWizardComponent(shared_ptr<WizardComponent> cc);
@@ -261,7 +243,6 @@ class WorldEntity: public Observabler<EntityEvent>
 		const u32 _ID;
 		shared_ptr<BodyComponent> _body;
 		shared_ptr<GraphicsComponent> _graphics;
-		shared_ptr<InputComponent> _input;
 		shared_ptr<CollisionComponent> _collision;
 		shared_ptr<WizardComponent> _wizard;
 };

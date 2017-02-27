@@ -88,8 +88,13 @@ class MyMotionState : public btMotionState
 		}
 };
 
+System::System(World& world): _world{world}
+{
+}
 
-Physics::Physics(World& world, scene::ISceneManager* smgr): _world{world}, _tAcc{0}, _updating{false}
+////////////////////////////////////////////////////////////
+
+Physics::Physics(World& world, scene::ISceneManager* smgr): System{world}, _tAcc{0}, _updating{false}
 {
 	observe(_world);
 	//TODO cleanup
@@ -150,8 +155,8 @@ Physics::Physics(World& world, scene::ISceneManager* smgr): _world{world}, _tAcc
 	btRigidBody* terrB = new btRigidBody(terrCI);
 	_physicsWorld->addRigidBody(terrB);
 	terrB->setUserIndex(0);
-	//terrB->setAnisotropicFriction(btVector3(1,0.4,1));
-	terrB->setFriction(1);
+	terrB->setAnisotropicFriction(btVector3(0.8,0.3,0.8));
+	//terrB->setFriction(1);
 }
 
 vec3f Physics::getObjVelocity(u32 ID)
@@ -265,7 +270,7 @@ void Physics::bodyDoStrafe(float timeDelta)
 			//float fMul = 4000;
 			//float fMul = 1300;
 			//float fMul = 4300;
-			float fMul = 2000;
+			float fMul = 1100;
 			{
 				vec2f strDir = bc->getStrafeDir();
 				vec3f dir{strDir.X, 0, strDir.Y};
@@ -286,17 +291,15 @@ void Physics::bodyDoStrafe(float timeDelta)
 				if(dir.getLength() > 0.1 && _objData[e.getID()].onGround)
 				{
 					b->setDamping(0.46, 0);
-					/*
 					if(getObjVelocity(e.getID()).getLength() < 2)
 					{
 						cout << "climbing a hill\n";
-						fMul *= 4;
+						fMul *= 1.5;
 					}
-					*/
 					b->setFriction(3.0);
 					//b->setMassProps(mass, fallInertia);
 					//b->applyCentralForce(btVector3(dir.X, dir.Y+0.1, dir.Z)*fMul);
-					b->applyCentralImpulse(btVector3(dir.X, 0.1, dir.Z)*fMul*timeDelta);//*abs(cos(2*M_PI*(1/0.5)*t)));
+					b->applyCentralImpulse(btVector3(dir.X, 0.2, dir.Z)*fMul*timeDelta);//*abs(cos(2*M_PI*(1/0.5)*t)));
 					//b->applyCentralImpulse(btVector3(dir.X, 0.05, dir.Z)*fMul/*abs(cos(2*M_PI*(1/0.5)*t))*/); // !! working
 					//t = 0;
 				}
@@ -331,11 +334,12 @@ void Physics::callCollisionCBs()
 		if(numContacts > 0)
 		{
 			// set onGround flags
-			int uid0 = min(obA->getUserIndex(), obB->getUserIndex());
-			int uid1 = max(obA->getUserIndex(), obB->getUserIndex());
-			if(uid0 == 0)
-				_objData[uid1].onGround = true;	
-			//std::cout << "collision of " << obA->getUserIndex() << " and " << obB->getUserIndex() << std::endl;
+			int obj0ID = min(obA->getUserIndex(), obB->getUserIndex());
+			int obj1ID = max(obA->getUserIndex(), obB->getUserIndex());
+			if(obj0ID == 0)
+				_objData[obj1ID].onGround = true;	
+			for(auto& colCB : _collCallbacks)
+				colCB(obj0ID, obj1ID);
 		}
 	}
 }
@@ -437,10 +441,23 @@ btCollisionObject* Physics::getCollisionObjectByID(int entityID)
 	}
 	return nullptr;
 }
+
+void Physics::registerCollisionCallback(std::function<void(u32, u32)> callback)
+{
+	_collCallbacks.push_back(callback);
+	_collCallbacks.push_back([callback](u32 first, u32 second) {
+				callback(second, first);
+			});
+}
+
+void Physics::registerPairCollisionCallback(std::function<void(u32, u32)> callback)
+{
+	_collCallbacks.push_back(callback);
+}
 		
 ////////////////////////////////////////////////////////////
 
-ViewSystem::ViewSystem(irr::scene::ISceneManager* smgr, World& world): _smgr{smgr}, _world{world}
+ViewSystem::ViewSystem(irr::scene::ISceneManager* smgr, World& world): System{world}, _smgr{smgr}
 {
 	observe(_world);
 }
@@ -461,20 +478,12 @@ void ViewSystem::onObservableUpdate(EntityEvent& m)
 					return;
 				}
 				if(!sn)
+				{
 					sn = _smgr->addEmptySceneNode(nullptr, m._entityID);
-				auto e = _world.getEntityByID(m._entityID);
-				if(!e)
-					return;
-				auto bc = e->getBodyComponent();
-				if(!bc)
-					return;
-				sn->setPosition(bc->getPosition());
-				vec3f r;
-				bc->getRotation().toEuler(r);
-				sn->setRotation(r*180/M_PI);
-				sn->updateAbsolutePosition();
-				sn->setName("body");
-				sn->setDebugDataVisible(scene::EDS_FULL);
+					sn->setName("body");
+					sn->setDebugDataVisible(scene::EDS_FULL);
+				}
+				_transformedEntities.push_back(m._entityID);
 				break;
 			}
 		case ComponentType::GraphicsSphere:
@@ -525,7 +534,6 @@ void ViewSystem::onObservableUpdate(EntityEvent& m)
 						sn = _smgr->addAnimatedMeshSceneNode(_smgr->getMesh(("./media/" + sgc->getFileName()).c_str()), bsn, -1, gc->getPosOffset(), gc->getRotOffset(), gc->getScale());
 					else
 						sn = _smgr->addMeshSceneNode(_smgr->getMesh(("./media/" + sgc->getFileName()).c_str()), bsn, -1, gc->getPosOffset(), gc->getRotOffset(), gc->getScale());
-					//sn = _smgr->addSphereSceneNode(1, 64, bsn, -1, gc->getPosOffset());
 				}
 				sn->setMaterialFlag(video::EMF_LIGHTING, false);
 				sn->setName("graphics");
@@ -539,3 +547,95 @@ void ViewSystem::onObservableUpdate(EntityEvent& m)
 
 void ViewSystem::onObservableRemove(EntityEvent&)
 {}
+
+void ViewSystem::update(float timeDelta)
+{
+	updateTransforms(timeDelta);
+}
+
+void ViewSystem::updateTransforms(float timeDelta)
+{
+	for(auto it = _transformedEntities.begin(); it != _transformedEntities.end(); it++) {
+		auto eID = *it;
+		WorldEntity* e;
+		BodyComponent* bc;
+		scene::ISceneNode* sn;
+		if((e = _world.getEntityByID(eID)) && (bc = e->getBodyComponent().get()) && (sn = _smgr->getSceneNodeFromId(eID)))
+		{
+			vec3f r;
+			bc->getRotation().toEuler(r);
+			sn->setRotation(r*180/M_PI);
+
+			vec3f oldPos = sn->getPosition();
+			vec3f newPos = bc->getPosition();
+			vec3f resPos;
+			vec3f d = newPos - oldPos;
+			float snapThreshold = 1;
+			float interpolSpeed = d.getLength()/5;
+			if(d.getLength() > snapThreshold)
+				resPos = newPos;
+			else if(d.getLength() < interpolSpeed*timeDelta)
+				resPos = oldPos;
+			else
+				resPos = oldPos + d.normalize()*interpolSpeed*timeDelta;
+			//resPos = newPos; //TODO remove
+			sn->setPosition(resPos);
+			sn->updateAbsolutePosition();
+			if(resPos != newPos)
+				continue;
+		}
+		it = _transformedEntities.erase(it);
+	}
+}
+
+////////////////////////////////////////////////////////////
+
+InputSystem::InputSystem(World& world): System{world}
+{
+}
+
+void InputSystem::handleCommand(Command& c, u32 controlledObjID)
+{
+	switch(c._type)
+	{
+		case Command::Type::STRAFE_DIR_SET:
+			{
+				auto bc = getBodyComponent(controlledObjID);
+				if(bc)
+					bc->setStrafeDir(c._vec2f);
+				break;
+			}
+		case Command::Type::ROT_DIR_SET:
+			{
+				auto bc = getBodyComponent(controlledObjID);
+				if(bc)
+					bc->setRotDir(c._i32);
+				break;
+			}
+		case Command::Type::STR:
+			{
+				if(c._str.find("spell_") == 0)
+				{
+					/* TODO cast spell
+					auto w = _parent.getWizardComponent();
+					if(w)
+						w->cast(c._str);
+						*/
+				}
+				break;
+			}
+		default:
+			cerr << "unknown command type to handle\n";
+	}
+}
+
+BodyComponent* InputSystem::getBodyComponent(u32 objID)
+{
+	auto e = _world.getEntityByID(objID);
+	if(e)
+	{
+		auto bc = e->getBodyComponent().get();
+		return bc;
+	}
+	return nullptr;
+}

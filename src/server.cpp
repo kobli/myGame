@@ -3,8 +3,8 @@
 #include <cassert>
 #include <serdes.hpp>
 
-Session::Session(unique_ptr<sf::TcpSocket>&& socket, WorldEntity* controlledCharacter)
-	: _socket{std::move(socket)}, _controlledCharacter{controlledCharacter}, _closed{false}
+Session::Session(unique_ptr<sf::TcpSocket>&& socket, u32 controlledObjID, CommandHandler h)
+	: _socket{std::move(socket)}, _commandHandler{h}, _closed{false}, _controlledObjID{controlledObjID}
 {}
 
 sf::TcpSocket& Session::getSocket()
@@ -12,14 +12,14 @@ sf::TcpSocket& Session::getSocket()
 	return *_socket;
 }
 
-WorldEntity* Session::getControlledCharacter()
+void Session::setCommandHandler(CommandHandler h)
 {
-	return _controlledCharacter;
+	_commandHandler = h;
 }
 
-void Session::setControlledCharacter(WorldEntity* character)
+u32 Session::getControlledObjID()
 {
-	_controlledCharacter = character;
+	return _controlledObjID;
 }
 
 bool Session::receive()
@@ -77,8 +77,7 @@ void Session::handlePacket(sf::Packet& p)
 			Command c;
 			p >> c;
 			cout << "command type: " << unsigned(c._type) << endl;
-			if(_controlledCharacter && _controlledCharacter->getInputComponent())
-				_controlledCharacter->getInputComponent()->handleCommand(c);
+			_commandHandler(c, _controlledObjID);
 			break;
 		}
 		default:
@@ -128,7 +127,8 @@ void Updater::onObservableRemove(EntityEvent&)
 
 ServerApplication::ServerApplication(IrrlichtDevice* irrDev)
 	: _irrDevice{irrDev}, _map{70, irrDev->getSceneManager()->createNewSceneManager()}, _gameWorld{_map}
-	, _physics{_gameWorld}, _updater(std::bind(&ServerApplication::send, ref(*this), placeholders::_1, placeholders::_2))
+	, _physics{_gameWorld}, _input{_gameWorld},
+	_updater(std::bind(&ServerApplication::send, ref(*this), placeholders::_1, placeholders::_2))
 {
 	_listener.setBlocking(false);
 	_updater.observe(_gameWorld);
@@ -182,7 +182,7 @@ void ServerApplication::run()
 		WizardComponent::update(timeDelta);
 
 
-		sf::sleep(sf::milliseconds(100));
+		sf::sleep(sf::milliseconds(50));
 		_irrDevice->getVideoDriver()->endScene();
 	}
 }
@@ -201,7 +201,7 @@ void ServerApplication::acceptClient()
 void ServerApplication::send(sf::Packet& p, Updater::ClientFilterPredicate fp)
 {
 	for(auto& s : _sessions)
-		if(fp(s.getControlledCharacter()))
+		if(fp(_gameWorld.getEntityByID(s.getControlledObjID())))
 			s.send(p);
 }
 
@@ -209,16 +209,18 @@ void ServerApplication::onClientConnect(std::unique_ptr<sf::TcpSocket>&& sock)
 {
 	cout << "Client connected from " << sock->getRemoteAddress() << endl;
 	//TODO flip following lines!!
-	_sessions.emplace_back(std::move(sock));
 	auto& e = _gameWorld.createCharacter(vec3f(0,50,0));
-	_sessions.back().setControlledCharacter(&e);
+	_sessions.emplace_back(std::move(sock), e.getID());
+	_sessions.back().setCommandHandler([this](Command& c, u32 objID){
+			_input.handleCommand(c, objID);
+			});
 	_gameWorld.sendAddMsg(_updater); // TODO send updates only to newly connected client
 }
 
 void ServerApplication::onClientDisconnect(Session& s)
 {
 	cout << "Client disconnected: " << s.getSocket().getRemoteAddress() << endl;
-	auto* cc = s.getControlledCharacter();
+	auto* cc = _gameWorld.getEntityByID(s.getControlledObjID());
 	auto it = _sessions.begin();
 	while(&*it != &s && it != _sessions.end())
 		it++;

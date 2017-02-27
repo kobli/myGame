@@ -6,7 +6,6 @@ class GraphicsComponent;
 class SphereGraphicsComponent;
 class MeshGraphicsComponent;
 class CollisionComponent;
-class InputComponent;
 
 class SerDesBase
 {
@@ -17,7 +16,6 @@ class SerDesBase
 		virtual void serDes(SphereGraphicsComponent&) = 0;
 		virtual void serDes(MeshGraphicsComponent&) = 0;
 		virtual void serDes(CollisionComponent&) = 0;
-		virtual void serDes(InputComponent&) = 0;
 };
 
 class Serializable

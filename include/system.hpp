@@ -10,7 +10,13 @@
 class System: public Observer<EntityEvent>
 {
 	public:
+		System(World& world);
 		inline virtual void update(float /*timeDelta*/) {}
+		inline virtual void onObservableAdd(EntityEvent&) {}
+		inline virtual void onObservableUpdate(EntityEvent&) {}
+		inline virtual void onObservableRemove(EntityEvent&) {}
+	protected:
+		World& _world;
 };
 
 class Physics: public System
@@ -22,15 +28,17 @@ class Physics: public System
 		virtual void onObservableAdd(EntityEvent& m);
 		virtual void onObservableUpdate(EntityEvent& m);
 		virtual void onObservableRemove(EntityEvent& m);
+		void registerCollisionCallback(std::function<void(u32, u32)> callback);
+		void registerPairCollisionCallback(std::function<void(u32, u32)> callback);
 
 	private:
-		World& _world;
 		unique_ptr<btDiscreteDynamicsWorld> _physicsWorld;
 		struct ObjData {
 			float walkTimer = 0;
 			bool onGround = false;
 		};
 		std::map<u32, ObjData> _objData;
+		std::vector<std::function<void(u32, u32)>> _collCallbacks;
 		float _tAcc;
 		bool _updating;
 
@@ -46,11 +54,23 @@ class ViewSystem: public System
 		virtual void onObservableAdd(EntityEvent& m);
 		virtual void onObservableUpdate(EntityEvent& m);
 		virtual void onObservableRemove(EntityEvent& m);
+		virtual void update(float timeDelta);
 
 	private:
 		irr::scene::ISceneManager* _smgr;
-		World& _world;
+		std::list<u32> _transformedEntities;
 		//irr::scene::IMetaTriangleSelector* _worldTS;
+		
+		void updateTransforms(float timeDelta);
+};
 
+class InputSystem: public System
+{
+	public:
+		InputSystem(World& world);
+		void handleCommand(Command& c, u32 controlledObjID);
+
+	private:
+		BodyComponent* getBodyComponent(u32 objID);
 };
 #endif /* SYSTEM_HPP_17_01_29_09_08_12 */

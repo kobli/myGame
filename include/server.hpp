@@ -12,19 +12,21 @@
 class Session
 {
 	public:
-		Session(unique_ptr<sf::TcpSocket>&& socket, WorldEntity* controlledCharacter = nullptr);
+		using CommandHandler = std::function<void(Command& c, u32 charID)>;
+		Session(unique_ptr<sf::TcpSocket>&& socket, u32 controlledObjID, CommandHandler commandHandler = [](Command&, u32){});
 		sf::TcpSocket& getSocket();
-		WorldEntity* getControlledCharacter();
-		void setControlledCharacter(WorldEntity* character);
+		void setCommandHandler(CommandHandler h);
+		u32 getControlledObjID();
 		bool receive();
 		void send(sf::Packet& p);
 		bool isClosed();
 
 	private:
 		unique_ptr<sf::TcpSocket> _socket;
-		WorldEntity* _controlledCharacter;
+		CommandHandler _commandHandler;
 		void handlePacket(sf::Packet& p);
 		bool _closed;
+		u32 _controlledObjID;
 };
 
 ////////////////////////////////////////////////////////////
@@ -71,6 +73,7 @@ class ServerApplication
 		WorldMap _map;
 		World _gameWorld;
 		Physics _physics;
+		InputSystem _input;
 		Updater _updater;
 };
 

@@ -19,7 +19,7 @@ Config.Body.invocT = 2		-- invocation time [seconds]
 Config.Body.maxC = 50			-- maximum # of bodies 
 -- TODO values
 Config.Body.maxSpeed = 50			-- maximum traveling speed of the body [?]
-Config.Body.maxRadius = 200			-- maximum radius of the body sphere [?]
+Config.Body.maxRadius = 2			-- maximum radius of the body sphere [?]
 
 --Stats = {}
 

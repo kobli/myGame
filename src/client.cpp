@@ -127,9 +127,9 @@ void ClientApplication::run()
 		//TODO fix frameLen spike after win inactivity (mind the physics)
 		if(true)//if(_device->isWindowActive())
 		{
-			driver->beginScene(true, true, 0 );
+			driver->beginScene();
 			f32 ar = (float)driver->getScreenSize().Width/(float)driver->getScreenSize().Height;
-			if(ar && _camera)
+			if(ar != _camera->getAspectRatio() && _camera)
 				_camera->setAspectRatio(ar);
 			float timeDelta = c.restart().asSeconds();
 
@@ -138,6 +138,8 @@ void ClientApplication::run()
 				
 			if(_physics)
 				_physics->update(timeDelta);
+			if(_vs)
+				_vs->update(timeDelta);
 
 
 			_device->getSceneManager()->drawAll();
@@ -300,11 +302,6 @@ void ClientApplication::handleEntityEvent(EntityEvent& e)
 			e._componentModified = entity->getCollisionComponent().get();
 			if(!e._componentModified)
 				e._componentModified = entity->setCollisionComponent(make_shared<CollisionComponent>(*entity)).get();
-			break;
-		case ComponentType::Input: // TODO connect inputCompopnent with controller for client side prediction
-			e._componentModified = entity->getInputComponent().get();
-			if(!e._componentModified)
-				e._componentModified = entity->setInputComponent(make_shared<InputComponent>(*entity)).get();
 			break;
 		case ComponentType::Body:
 			e._componentModified = entity->getBodyComponent().get();

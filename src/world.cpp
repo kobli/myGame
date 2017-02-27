@@ -104,11 +104,6 @@ u32 WorldEntity::getID()
 	return _ID;
 }
 
-bool WorldEntity::isEmpty()
-{
-	return !(_body || _collision || _graphics || _input);
-}
-
 shared_ptr<BodyComponent> WorldEntity::setBodyComponent(shared_ptr<BodyComponent> bc)
 {
 	_body.swap(bc);
@@ -133,19 +128,6 @@ shared_ptr<GraphicsComponent> WorldEntity::setGraphicsComponent(shared_ptr<Graph
 shared_ptr<GraphicsComponent> WorldEntity::getGraphicsComponent()
 {
 	return _graphics;
-}
-
-shared_ptr<InputComponent> WorldEntity::setInputComponent(shared_ptr<InputComponent> ic)
-{
-	_input.swap(ic);
-	if(_input)
-		observe(*_input);
-	return _input;
-}
-
-shared_ptr<InputComponent> WorldEntity::getInputComponent()
-{
-	return _input;
 }
 
 shared_ptr<CollisionComponent> WorldEntity::setCollisionComponent(shared_ptr<CollisionComponent> cc)
@@ -442,49 +424,6 @@ void CollisionComponent::serDes(SerDesBase& s)
 
 ////////////////////////////////////////////////////////////
 
-InputComponent::InputComponent(WorldEntity& parent): WorldEntityComponent(parent, ComponentType::Input)
-{}
-
-void InputComponent::handleCommand(Command& c)
-{
-	switch(c._type)
-	{
-		case Command::Type::STRAFE_DIR_SET:
-			{
-				auto b = _parent.getBodyComponent();
-				if(b)
-					b->setStrafeDir(c._vec2f);
-				break;
-			}
-		case Command::Type::ROT_DIR_SET:
-			{
-				auto b = _parent.getBodyComponent();
-				if(b)
-					b->setRotDir(c._i32);
-				break;
-			}
-		case Command::Type::STR:
-			{
-				if(c._str.find("spell_") == 0)
-				{
-					auto w = _parent.getWizardComponent();
-					if(w)
-						w->cast(c._str);
-				}
-				break;
-			}
-		default:
-			cerr << "unknown command type to handle\n";
-	}
-}
-
-void InputComponent::serDes(SerDesBase& s)
-{
-	s.serDes(*this);
-}
-
-////////////////////////////////////////////////////////////
-
 std::shared_ptr<lua_State> WizardComponent::_luaState(nullptr);
 WizardComponent::WizardComponent(WorldEntity& parent): WorldEntityComponent(parent, ComponentType::Wizard)
 {
@@ -589,7 +528,7 @@ u32 WizardComponent::launchSpell(float radius, float speed)
 		return 0; //TODO fail in a better way
 
 	WorldEntity& e = _parent._world.createEntity();
-	vec3f pos = myBody->getPosition() + vec3f(0,70,0);
+	vec3f pos = myBody->getPosition() + vec3f(0,1,0);
 	e.setBodyComponent(make_shared<BodyComponent>(e, pos)); // parentEntity, TODO position, rotation, velocity
 
 	// TODO e.setCollisionComponent():
@@ -598,6 +537,11 @@ u32 WizardComponent::launchSpell(float radius, float speed)
 	e.setGraphicsComponent(gc);
 
 	return e.getID();
+}
+
+void WizardComponent::collisionCallback(u32 objID, u32 otherObjID)
+{
+	cout << "WIZ COMP: collision of " << objID << " and " << otherObjID << endl;
 }
 
 ////////////////////////////////////////////////////////////
@@ -638,7 +582,6 @@ WorldEntity& World::createCharacter(vec3f position)
 	*/
 	e.setGraphicsComponent(make_shared<MeshGraphicsComponent>(e, "ninja.b3d", true, vec3f(0), vec3f(0,90,0), vec3f(0.2)));
 	e.setCollisionComponent(make_shared<CollisionComponent>(e, 0.4, 1, vec3f(0, -0.9, 0)));
-	e.setInputComponent(make_shared<InputComponent>(e));
 	e.setWizardComponent(make_shared<WizardComponent>(e));
 	return e;
 }
