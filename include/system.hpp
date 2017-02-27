@@ -64,13 +64,36 @@ class ViewSystem: public System
 		void updateTransforms(float timeDelta);
 };
 
+class SpellSystem: public System
+{
+	public:
+		SpellSystem(World& world);
+		~SpellSystem();
+		virtual void update(float timeDelta);
+		virtual void onObservableUpdate(EntityEvent& m);
+		void reload();
+		void addWizard(u32 ID);
+		void removeWizard(u32 ID);
+		void cast(std::string& incantation, u32 authorID);
+		void collisionCallback(u32 objID, u32 otherObjID);
+
+	private:
+		lua_State* _luaState;
+
+		void init();
+		void deinit();
+		u32 launchSpell(float radius, float speed, u32 wizard);
+};
+
 class InputSystem: public System
 {
 	public:
-		InputSystem(World& world);
+		InputSystem(World& world, SpellSystem& spells);
 		void handleCommand(Command& c, u32 controlledObjID);
 
 	private:
 		BodyComponent* getBodyComponent(u32 objID);
+		SpellSystem& _spells;
 };
+
 #endif /* SYSTEM_HPP_17_01_29_09_08_12 */

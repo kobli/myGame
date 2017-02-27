@@ -217,7 +217,7 @@ end
 
 function handleIncantation(wizID, inc)
 	if WIZARDS[wizID] == nil then
-		dout("handleIncantation: wizard ID"..wizID.." does not exist")
+		dout("handleIncantation: wizard ID "..wizID.." does not exist")
 	else
 		WIZARDS[wizID]:handleIncantation(inc)
 	end

@@ -127,11 +127,12 @@ void Updater::onObservableRemove(EntityEvent&)
 
 ServerApplication::ServerApplication(IrrlichtDevice* irrDev)
 	: _irrDevice{irrDev}, _map{70, irrDev->getSceneManager()->createNewSceneManager()}, _gameWorld{_map}
-	, _physics{_gameWorld}, _input{_gameWorld},
+	, _physics{_gameWorld}, _spells{_gameWorld}, _input{_gameWorld, _spells},
 	_updater(std::bind(&ServerApplication::send, ref(*this), placeholders::_1, placeholders::_2))
 {
 	_listener.setBlocking(false);
 	_updater.observe(_gameWorld);
+	_spells.observe(_gameWorld);
 }
 
 bool ServerApplication::listen(short port)
@@ -163,6 +164,7 @@ void ServerApplication::run()
 		//_gameWorld.update(1./driver->getFPS());
 		float timeDelta = c.restart().asSeconds();
 		_physics.update(timeDelta);
+		_spells.update(timeDelta);
 		/*
 		for(WorldEntity& e : _gameWorld.getEntities())
 		{
@@ -179,7 +181,6 @@ void ServerApplication::run()
 			}
 		}
 		*/
-		WizardComponent::update(timeDelta);
 
 
 		sf::sleep(sf::milliseconds(50));
@@ -208,7 +209,6 @@ void ServerApplication::send(sf::Packet& p, Updater::ClientFilterPredicate fp)
 void ServerApplication::onClientConnect(std::unique_ptr<sf::TcpSocket>&& sock)
 {
 	cout << "Client connected from " << sock->getRemoteAddress() << endl;
-	//TODO flip following lines!!
 	auto& e = _gameWorld.createCharacter(vec3f(0,50,0));
 	_sessions.emplace_back(std::move(sock), e.getID());
 	_sessions.back().setCommandHandler([this](Command& c, u32 objID){

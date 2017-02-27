@@ -590,7 +590,164 @@ void ViewSystem::updateTransforms(float timeDelta)
 
 ////////////////////////////////////////////////////////////
 
-InputSystem::InputSystem(World& world): System{world}
+SpellSystem::SpellSystem(World& world): System{world}, _luaState{nullptr}
+{
+	init();
+}
+
+SpellSystem::~SpellSystem()
+{
+	deinit();
+}
+
+void SpellSystem::update(float timeDelta)
+{
+	if(_luaState != nullptr)
+	{
+		lua_getglobal(_luaState, "update");
+		lua_pushnumber(_luaState, timeDelta);
+		if(lua_pcall(_luaState, 1, 0, 0) != 0)
+		{
+			cerr << "something went wrong with spell update: " << lua_tostring(_luaState, -1) << endl;
+			lua_pop(_luaState, 1);
+		}
+	}
+}
+
+void SpellSystem::onObservableUpdate(EntityEvent& m)
+{
+	if(m._componentModifiedType == ComponentType::Wizard)
+	{
+		if(m._created)
+		{
+			reload(); // TODO just for testing - every time a player connects reload 
+			addWizard(m._entityID);
+		}
+		else if(m._destroyed)
+			removeWizard(m._entityID);
+	}
+}
+
+void SpellSystem::reload()
+{
+	deinit();
+	init();
+}
+
+void SpellSystem::addWizard(u32 ID)
+{
+	if(_luaState != nullptr)
+	{
+		lua_getglobal(_luaState, "addWizard");
+		lua_pushinteger(_luaState, ID);
+		if(lua_pcall(_luaState, 1, 0, 0) != 0)
+		{
+			cerr << "something went wrong with addWizard: " << lua_tostring(_luaState, -1) << endl;
+			lua_pop(_luaState, 1);
+		}
+	}
+}
+
+void SpellSystem::removeWizard(u32 ID)
+{
+	if(_luaState != nullptr)
+	{
+		lua_getglobal(_luaState, "removeWizard");
+		lua_pushinteger(_luaState, ID);
+		if(lua_pcall(_luaState, 1, 0, 0) != 0)
+		{
+			cerr << "something went wrong with removeWizard: " << lua_tostring(_luaState, -1) << endl;
+			lua_pop(_luaState, 1);
+		}
+	}
+}
+
+void SpellSystem::cast(std::string& incantation, u32 authorID)
+{
+	lua_getglobal(_luaState, "handleIncantation");
+	lua_pushinteger(_luaState, authorID);
+	lua_pushstring(_luaState, incantation.c_str());
+	if(lua_pcall(_luaState, 2, 0, 0) != 0)
+	{
+		cerr << "something went wrong with handleIncantation: " << lua_tostring(_luaState, -1) << endl;
+		lua_pop(_luaState, 1);
+	}
+}
+
+void SpellSystem::collisionCallback(u32 objID, u32 otherObjID)
+{
+	cout << "WIZ COMP: collision of " << objID << " and " << otherObjID << endl;
+}
+
+void SpellSystem::init()
+{
+	_luaState = luaL_newstate();
+	luaL_openlibs(_luaState);
+	luaL_dofile(_luaState, "lua/spellSystem.lua");
+
+	auto callLaunchSpell = [](lua_State* s)->int {
+		int argc = lua_gettop(s);
+		if(argc != 3)
+		{
+			std::cerr << "callLaunchSpell: wrong number of arguments\n";
+			return 0;		
+		}
+		u32 wizard = lua_tointeger(s, 1);
+		float sRadius = lua_tonumber(s, 2);
+		float sSpeed = lua_tonumber(s, 3);
+		SpellSystem* ss = (SpellSystem*)lua_touserdata(s, lua_upvalueindex(1));
+		/*
+		WorldEntity* e = _world->getEntityByID(wizard);
+		if(e == nullptr)
+		{
+			std::cerr << "callLaunchSpell: invalid entity ID\n";
+			return 0;		
+		}
+		auto wc = e->getWizardComponent();
+		if(!wc)
+		{
+			std::cerr << "callLaunchSpell: wizard component missing\n";
+			return 0;		
+		}
+		*/
+		u32 spell = ss->launchSpell(sRadius, sSpeed, wizard);
+		lua_pushinteger(s, spell);
+		return 1;
+	};
+	lua_pushlightuserdata(_luaState, this);
+	lua_pushcclosure(_luaState, callLaunchSpell, 1);
+	lua_setglobal(_luaState, "wizardLaunchSpell");
+}
+
+void SpellSystem::deinit()
+{
+	lua_close(_luaState);
+}
+
+u32 SpellSystem::launchSpell(float radius, float speed, u32 wizard)
+{
+	auto e = _world.getEntityByID(wizard);
+	if(!e)
+		return 0; //TODO fail in a better way
+	auto wBody = e->getBodyComponent();
+	if(!wBody)
+		return 0; //TODO fail in a better way
+
+	WorldEntity& spellE = _world.createEntity();
+	vec3f pos = wBody->getPosition() + vec3f(0,1,0);
+	spellE.setBodyComponent(make_shared<BodyComponent>(spellE, pos)); // parentEntity, TODO position, rotation, velocity
+
+	// TODO e.setCollisionComponent():
+	
+	auto gc = make_shared<SphereGraphicsComponent>(spellE, radius);
+	spellE.setGraphicsComponent(gc);
+
+	return spellE.getID();
+}
+
+////////////////////////////////////////////////////////////
+
+InputSystem::InputSystem(World& world, SpellSystem& spells): System{world}, _spells{spells}
 {
 }
 
@@ -616,11 +773,7 @@ void InputSystem::handleCommand(Command& c, u32 controlledObjID)
 			{
 				if(c._str.find("spell_") == 0)
 				{
-					/* TODO cast spell
-					auto w = _parent.getWizardComponent();
-					if(w)
-						w->cast(c._str);
-						*/
+					_spells.cast(c._str, controlledObjID);
 				}
 				break;
 			}

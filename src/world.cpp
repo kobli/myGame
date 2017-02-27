@@ -424,124 +424,13 @@ void CollisionComponent::serDes(SerDesBase& s)
 
 ////////////////////////////////////////////////////////////
 
-std::shared_ptr<lua_State> WizardComponent::_luaState(nullptr);
 WizardComponent::WizardComponent(WorldEntity& parent): WorldEntityComponent(parent, ComponentType::Wizard)
 {
-	if(true)//TODO _luaState == nullptr)
-	{
-		_luaState.reset(luaL_newstate(), [](lua_State* luaState){ lua_close(luaState); });
-		luaL_openlibs(_luaState.get());
-		luaL_dofile(_luaState.get(), "lua/spellSystem.lua");
-
-		auto callLaunchSpell = [](lua_State* s)->int {
-			int argc = lua_gettop(s);
-			if(argc != 3)
-			{
-				std::cerr << "callLaunchSpell: wrong number of arguments\n";
-				return 0;		
-			}
-			u32 ID = lua_tointeger(s, 1);
-			float sRadius = lua_tonumber(s, 2);
-			float sSpeed = lua_tonumber(s, 3);
-			World* w = (World*)lua_touserdata(s, lua_upvalueindex(1));
-			WorldEntity* e = w->getEntityByID(ID);
-			if(e == nullptr)
-			{
-				std::cerr << "callLaunchSpell: invalid entity ID\n";
-				return 0;		
-			}
-			auto wc = e->getWizardComponent();
-			if(!wc)
-			{
-				std::cerr << "callLaunchSpell: wizard component missing\n";
-				return 0;		
-			}
-			u32 sID = wc->launchSpell(sRadius, sSpeed);
-			lua_pushinteger(s, sID);
-			return 1;
-		};
-		lua_pushlightuserdata(_luaState.get(), &_parent._world);
-		lua_pushcclosure(_luaState.get(), callLaunchSpell, 1);
-		lua_setglobal(_luaState.get(), "wizardLaunchSpell");
-	}
-	if(_luaState != nullptr)
-	{
-		lua_getglobal(_luaState.get(), "addWizard");
-		lua_pushinteger(_luaState.get(), _parent.getID());
-		if(lua_pcall(_luaState.get(), 1, 0, 0) != 0)
-		{
-			cerr << "something went wrong with addWizard: " << lua_tostring(_luaState.get(), -1) << endl;
-			lua_pop(_luaState.get(), 1);
-		}
-	}
 }
 
-WizardComponent::~WizardComponent()
-{
-	if(_luaState != nullptr)
-	{
-		lua_getglobal(_luaState.get(), "removeWizard");
-		lua_pushinteger(_luaState.get(), _parent.getID());
-		if(lua_pcall(_luaState.get(), 1, 0, 0) != 0)
-		{
-			cerr << "something went wrong with removeWizard: " << lua_tostring(_luaState.get(), -1) << endl;
-			lua_pop(_luaState.get(), 1);
-		}
-	}
-}
-
-void WizardComponent::update(float timeDelta)
-{
-	if(_luaState != nullptr)
-	{
-		lua_getglobal(_luaState.get(), "update");
-		lua_pushnumber(_luaState.get(), timeDelta);
-		if(lua_pcall(_luaState.get(), 1, 0, 0) != 0)
-		{
-			cerr << "something went wrong with spell update: " << lua_tostring(_luaState.get(), -1) << endl;
-			lua_pop(_luaState.get(), 1);
-		}
-	}
-}
-
-void WizardComponent::cast(std::string& incantation)
-{
-	lua_getglobal(_luaState.get(), "handleIncantation");
-	lua_pushinteger(_luaState.get(), _parent.getID());
-	lua_pushstring(_luaState.get(), incantation.c_str());
-	if(lua_pcall(_luaState.get(), 2, 0, 0) != 0)
-	{
-		cerr << "something went wrong with handleIncantation: " << lua_tostring(_luaState.get(), -1) << endl;
-		lua_pop(_luaState.get(), 1);
-	}
-}
-	
-void WizardComponent::serDes(SerDesBase& s)
+void WizardComponent::serDes(SerDesBase&)
 {
 	//s.serDes(*this);
-}
-
-u32 WizardComponent::launchSpell(float radius, float speed)
-{
-	auto myBody = _parent.getBodyComponent();
-	if(myBody == nullptr)
-		return 0; //TODO fail in a better way
-
-	WorldEntity& e = _parent._world.createEntity();
-	vec3f pos = myBody->getPosition() + vec3f(0,1,0);
-	e.setBodyComponent(make_shared<BodyComponent>(e, pos)); // parentEntity, TODO position, rotation, velocity
-
-	// TODO e.setCollisionComponent():
-	
-	auto gc = make_shared<SphereGraphicsComponent>(e, radius);
-	e.setGraphicsComponent(gc);
-
-	return e.getID();
-}
-
-void WizardComponent::collisionCallback(u32 objID, u32 otherObjID)
-{
-	cout << "WIZ COMP: collision of " << objID << " and " << otherObjID << endl;
 }
 
 ////////////////////////////////////////////////////////////

@@ -205,20 +205,11 @@ class WizardComponent: public WorldEntityComponent
 {
 	public:
 		WizardComponent(WorldEntity& parent);
-		~WizardComponent();
-		void cast(std::string& incantation);
-		static void update(float timeDelta);
 		virtual void serDes(SerDesBase& s);
 		template <typename T>
 			void doSerDes(T&)
 			{
 			}
-
-
-	private:
-		static std::shared_ptr<lua_State> _luaState;
-		u32 launchSpell(float radius, float speed);
-		void collisionCallback(u32 objID, u32 otherObjID);
 };
 
 ////////////////////////////////////////////////////////////

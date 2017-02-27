@@ -73,6 +73,7 @@ class ServerApplication
 		WorldMap _map;
 		World _gameWorld;
 		Physics _physics;
+		SpellSystem _spells;
 		InputSystem _input;
 		Updater _updater;
 };
