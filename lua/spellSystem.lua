@@ -1,11 +1,8 @@
 -- TODO
--- eng: spell creation
--- scr: spell collision callbacks; params: entityID, collWith_(terrain/spell/player), ..?
--- 	- onCollision with ... do:
--- 		- terrain	- die (+dying effect)																																							- in script
--- 		- spell		- die (+dying effect) / nothing / ..?																															- in script
--- 		- player	- die (+dying effect) / nothing / temporarily alter players stats / alter players amount of HP		- script, altering stats and HP in eng
--- eng: spell deletion
+-- body creation arguments - parse, validate, process, use
+-- spell/body - die on collision with terrain / spell / player / timer / whatever is first
+-- scr+eng: spell deletion
+-- apply effect on body death
 -- when a spell hits a player and has no effect -> append its bodies to his spell
 -- InvocationQ limit
 require("lua/list")
@@ -177,6 +174,7 @@ end
 
 function Spell:appendBody(body)
 	table.insert(self.bodies, body)
+	dout("spell now contains "..#self.bodies.." bodies")
 end
 
 -------------------- globals --------------------
