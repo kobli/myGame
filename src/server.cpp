@@ -133,6 +133,7 @@ ServerApplication::ServerApplication(IrrlichtDevice* irrDev)
 	_listener.setBlocking(false);
 	_updater.observe(_gameWorld);
 	_spells.observe(_gameWorld);
+	_physics.registerCollisionCallback(std::bind(&SpellSystem::collisionCallback, std::ref(_spells), placeholders::_1, placeholders::_2));
 }
 
 bool ServerApplication::listen(short port)

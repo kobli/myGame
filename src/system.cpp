@@ -381,9 +381,11 @@ void Physics::onObservableUpdate(EntityEvent& m)
 				body->setUserIndex(eID);
 				//body->setCcdMotionThreshold(1e-7);
 				//body->setCcdSweptSphereRadius(0.2);
-				// TODO
-				// mark the sphere as kinematic (so bullet loads its updated position before each simulation step)
-				//fallRigidBody->setCollisionFlags(fallRigidBody->getCollisionFlags() |	btCollisionObject::CF_KINEMATIC_OBJECT);
+				if(!col->contactResponseEnabled())
+				{
+					body->setCollisionFlags(body->getCollisionFlags() |	btCollisionObject::CF_NO_CONTACT_RESPONSE);
+					body->setGravity(btVector3(0,0,0));
+				}
 				//body->setActivationState(DISABLE_DEACTIVATION);
 				body->setAngularFactor(btVector3(0,0,0));
 				//body->setRollingFriction(0);
@@ -676,7 +678,15 @@ void SpellSystem::cast(std::string& incantation, u32 authorID)
 
 void SpellSystem::collisionCallback(u32 objID, u32 otherObjID)
 {
-	cout << "WIZ COMP: collision of " << objID << " and " << otherObjID << endl;
+	//cout << "WIZ COMP: collision of " << objID << " and " << otherObjID << endl;
+	lua_getglobal(_luaState, "handleCollision");
+	lua_pushinteger(_luaState, objID);
+	lua_pushinteger(_luaState, otherObjID);
+	if(lua_pcall(_luaState, 2, 0, 0) != 0)
+	{
+		cerr << "something went wrong with handleCollision: " << lua_tostring(_luaState, -1) << endl;
+		lua_pop(_luaState, 1);
+	}
 }
 
 void SpellSystem::init()
@@ -696,20 +706,6 @@ void SpellSystem::init()
 		float sRadius = lua_tonumber(s, 2);
 		float sSpeed = lua_tonumber(s, 3);
 		SpellSystem* ss = (SpellSystem*)lua_touserdata(s, lua_upvalueindex(1));
-		/*
-		WorldEntity* e = _world->getEntityByID(wizard);
-		if(e == nullptr)
-		{
-			std::cerr << "callLaunchSpell: invalid entity ID\n";
-			return 0;		
-		}
-		auto wc = e->getWizardComponent();
-		if(!wc)
-		{
-			std::cerr << "callLaunchSpell: wizard component missing\n";
-			return 0;		
-		}
-		*/
 		u32 spell = ss->launchSpell(sRadius, sSpeed, wizard);
 		lua_pushinteger(s, spell);
 		return 1;
@@ -736,9 +732,7 @@ u32 SpellSystem::launchSpell(float radius, float speed, u32 wizard)
 	WorldEntity& spellE = _world.createEntity();
 	vec3f pos = wBody->getPosition() + vec3f(0,1,0);
 	spellE.setBodyComponent(make_shared<BodyComponent>(spellE, pos)); // parentEntity, TODO position, rotation, velocity
-
-	// TODO e.setCollisionComponent():
-	
+	spellE.setCollisionComponent(make_shared<CollisionComponent>(spellE, radius, 0, vec3f(0), true));
 	auto gc = make_shared<SphereGraphicsComponent>(spellE, radius);
 	spellE.setGraphicsComponent(gc);
 

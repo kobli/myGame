@@ -176,13 +176,14 @@ class MeshGraphicsComponent: public GraphicsComponent
 class CollisionComponent: public WorldEntityComponent
 {
 	public:
-		CollisionComponent(WorldEntity& parent, float radius = 1, float height = 0, vec3f posOffset = vec3f(0,0,0));
+		CollisionComponent(WorldEntity& parent, float radius = 1, float height = 0, vec3f posOffset = vec3f(0,0,0), bool noContactResponse = false);
 		float getRadius() const;
 		void setRadius(float);
 		float getHeight() const;
 		void setHeight(float);
 		vec3f getPosOffset() const;
 		void setPosOffset(vec3f);
+		bool contactResponseEnabled();
 
 		virtual void serDes(SerDesBase& s);
 		template <typename T>
@@ -191,12 +192,14 @@ class CollisionComponent: public WorldEntityComponent
 				t & _radius;
 				t & _height;
 				t & _posOff;
+				t & _noContactResponse;
 			}
 
 	private:
 		float _radius;
 		float _height;
 		vec3f _posOff;
+		bool _noContactResponse;
 };
 
 ////////////////////////////////////////////////////////////

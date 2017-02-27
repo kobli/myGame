@@ -187,6 +187,7 @@ SPELLS = {}
 
 LF = "\n"
 function dout(...)
+	io.write("SS: ")
 	for i = 1, select("#",...) do
 		io.write(tostring(select(i,...))..LF)
 	end
@@ -227,6 +228,22 @@ end
 function update(delta)
 	for k,v in pairs(WIZARDS) do
 		v:update(delta)
+	end
+end
+
+function handleCollision(obj1ID, obj2ID)
+	if SPELLS[obj1ID] ~= nil then
+		what = ""
+		if obj2ID == 0 then
+			what = "terrain"
+		elseif obj2ID == obj1ID then
+			what = "same spell .. WTF?"
+		elseif SPELLS[obj2ID] ~= nil then
+			what = "other spell"
+		else
+			what = "probably player"
+		end
+		dout("spell "..obj1ID.." hit "..what)
 	end
 end
 
@@ -276,9 +293,9 @@ function Wizard.Command:spell_launch()
 	local sRadius = self.spellInHands.baseBody:getRadius()
 	local sSpeed = self.spellInHands.baseBody:getSpeed()
 	local sID = wizardLaunchSpell(self.ID, sRadius, sSpeed)
-	if sID ~= nil then
+	if sID ~= 0 then
 		dout("probably launched")
-		-- TODO assign resulting ID to the SPELL and add it to the SPELLS table
+		SPELLS[sID] = self.spellInHands
 	else
 		dout("launching the spell failed in the engine")
 	end

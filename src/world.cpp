@@ -383,8 +383,8 @@ bool MeshGraphicsComponent::isAnimated()
 
 ////////////////////////////////////////////////////////////
 
-CollisionComponent::CollisionComponent(WorldEntity& parent, float radius, float height, vec3f posOffset)
-	: WorldEntityComponent(parent, ComponentType::Collision), _radius{radius}, _height{height}, _posOff{posOffset}
+CollisionComponent::CollisionComponent(WorldEntity& parent, float radius, float height, vec3f posOffset, bool noContactResponse)
+	: WorldEntityComponent(parent, ComponentType::Collision), _radius{radius}, _height{height}, _posOff{posOffset}, _noContactResponse{noContactResponse}
 {}
 
 float CollisionComponent::getRadius() const
@@ -420,6 +420,11 @@ void CollisionComponent::setPosOffset(vec3f pO)
 void CollisionComponent::serDes(SerDesBase& s)
 {
 	s.serDes(*this);
+}
+
+bool CollisionComponent::contactResponseEnabled()
+{
+	return !_noContactResponse;
 }
 
 ////////////////////////////////////////////////////////////
