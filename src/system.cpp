@@ -175,7 +175,6 @@ void Physics::update(float timeDelta)
 {
 	_updating = true;
 	auto unsetUpdating = std::unique_ptr<void, std::function<void(void*)>>(this, [this](void*) { _updating = false; });
-	//cout << "realTD: " << timeDelta << endl;
 	static unsigned fn = 0;
 	float dt = 0.01;
 	_tAcc += timeDelta;
@@ -209,26 +208,13 @@ void Physics::update(float timeDelta)
 	{
 		_physicsWorld->stepSimulation(dt, 1, dt);
 		bodyDoStrafe(dt);
+		moveKinematics(dt);
 		timeDelta += dt;
 		_tAcc -= dt;
 		fn++;
 	}
-
 	callCollisionCBs();
-	//cout << "fn: " << fn << "\n\tTD: "  << timeDelta << endl;
 	//_physicsWorld->debugDrawWorld();
-	auto t = getCollisionObjectByID(1);
-	if(!t)
-		return;
-	auto tr = t->getWorldTransform();
-	auto o = tr.getOrigin();
-	vec3f r;
-	btMatrix3x3(tr.getRotation()).getEulerZYX(r.X, r.Y, r.Z);
-	//std::cout << "pos: " << o.getX() << " " << o.getY() << " " << o.getZ() << endl;
-	//std::cout << "rot: " << r << endl;
-	auto b = dynamic_cast<btRigidBody*>(t);
-	if(b)
-		;//cout << "ANGV: " << b->getAngularVelocity() << endl;
 }
 
 void Physics::bodyDoStrafe(float timeDelta)
@@ -319,6 +305,23 @@ void Physics::bodyDoStrafe(float timeDelta)
 	}
 }
 
+void Physics::moveKinematics(float timeDelta)
+{
+	for(auto& e: _world.getEntities())
+	{
+		auto cc = e.getCollisionComponent();
+		auto bc = e.getBodyComponent();
+		if(bc && cc)
+			if(cc->isKinematic())
+			{
+				vec3f p = bc->getPosition();
+				p += bc->getVelocity()*timeDelta;
+				bc->setPosition(p);
+			}
+	}
+
+}
+
 void Physics::callCollisionCBs()
 {
 	for(auto& d : _objData)
@@ -381,9 +384,9 @@ void Physics::onObservableUpdate(EntityEvent& m)
 				body->setUserIndex(eID);
 				//body->setCcdMotionThreshold(1e-7);
 				//body->setCcdSweptSphereRadius(0.2);
-				if(!col->contactResponseEnabled())
+				if(col->isKinematic())
 				{
-					body->setCollisionFlags(body->getCollisionFlags() |	btCollisionObject::CF_NO_CONTACT_RESPONSE);
+					body->setCollisionFlags(body->getCollisionFlags() |	btCollisionObject::CF_NO_CONTACT_RESPONSE | btCollisionObject::CF_KINEMATIC_OBJECT);
 					body->setGravity(btVector3(0,0,0));
 				}
 				//body->setActivationState(DISABLE_DEACTIVATION);
@@ -713,6 +716,22 @@ void SpellSystem::init()
 	lua_pushlightuserdata(_luaState, this);
 	lua_pushcclosure(_luaState, callLaunchSpell, 1);
 	lua_setglobal(_luaState, "wizardLaunchSpell");
+
+	auto callRemoveSpell = [](lua_State* s)->int {
+		int argc = lua_gettop(s);
+		if(argc != 1)
+		{
+			std::cerr << "callRemoveSpell: wrong number of arguments\n";
+			return 0;		
+		}
+		u32 spell = lua_tointeger(s, 1);
+		SpellSystem* ss = (SpellSystem*)lua_touserdata(s, lua_upvalueindex(1));
+		ss->removeSpell(spell);
+		return 1;
+	};
+	lua_pushlightuserdata(_luaState, this);
+	lua_pushcclosure(_luaState, callRemoveSpell, 1);
+	lua_setglobal(_luaState, "removeSpell");
 }
 
 void SpellSystem::deinit()
@@ -730,13 +749,27 @@ u32 SpellSystem::launchSpell(float radius, float speed, u32 wizard)
 		return 0; //TODO fail in a better way
 
 	WorldEntity& spellE = _world.createEntity();
-	vec3f pos = wBody->getPosition() + vec3f(0,1,0);
-	spellE.setBodyComponent(make_shared<BodyComponent>(spellE, pos)); // parentEntity, TODO position, rotation, velocity
+	vec3f dir{1,0,0};
+	vec3f rot;
+	wBody->getRotation().toEuler(rot);
+	rot *= 180/M_PI;
+	dir.rotateYZBy(-rot.X);
+	dir.rotateXZBy(-rot.Y);
+	dir.rotateXYBy(-rot.Z);
+	dir.normalize();
+	vec3f pos = wBody->getPosition() + vec3f(0,1,0) + dir*(radius + 1);
+	std::cout << "spell vel: " << dir*speed << endl;
+	spellE.setBodyComponent(make_shared<BodyComponent>(spellE, pos, quaternion(), dir*speed));
 	spellE.setCollisionComponent(make_shared<CollisionComponent>(spellE, radius, 0, vec3f(0), true));
 	auto gc = make_shared<SphereGraphicsComponent>(spellE, radius);
 	spellE.setGraphicsComponent(gc);
 
 	return spellE.getID();
+}
+
+void SpellSystem::removeSpell(u32 spell)
+{
+	_world.removeEntity(spell);
 }
 
 ////////////////////////////////////////////////////////////

@@ -44,6 +44,7 @@ class Physics: public System
 
 		btCollisionObject* getCollisionObjectByID(int entityID);
 		void bodyDoStrafe(float timeDelta);
+		void moveKinematics(float timeDelta);
 		void callCollisionCBs();
 };
 
@@ -83,6 +84,7 @@ class SpellSystem: public System
 		void init();
 		void deinit();
 		u32 launchSpell(float radius, float speed, u32 wizard);
+		void removeSpell(u32 spell);
 };
 
 class InputSystem: public System

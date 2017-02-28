@@ -274,10 +274,13 @@ void ClientApplication::handlePacket(sf::Packet& p)
 					p >> Deserializer<sf::Packet>(*e._componentModified);
 					e._componentModified->notifyObservers();
 					cout << "updated component: " << Serializer<ostream>(*e._componentModified) << endl;
-					if(e._created)
-						cout << "CREATED!\n";
-					if(e._destroyed)
-						cout << "DESTROYED!\n";
+				}
+				if(e._created)
+					cout << "CREATED!\n";
+				if(e._destroyed && e._componentModifiedType == ComponentType::None) // TODO respond to component deletes
+				{
+					cout << "SHOULD DELETE ENTITY\n";
+					_gameWorld->removeEntity(e._entityID);
 				}
 				break;
 			}

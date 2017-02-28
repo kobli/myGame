@@ -42,10 +42,10 @@ bool Controller::OnEvent(const SEvent& event)
 			switch (event.KeyInput.Key)
 			{
 				case KEY_F1:
-					spell_c = "spell_body_create 1 2 3 hello";
+					spell_c = "spell_body_create 1";
 					break;
 				case KEY_F2:
-					spell_c = "spell_body_create_now 1 2 3 hello";
+					spell_c = "spell_body_create_now 0.5 die{player,terrain}";
 					break;
 				case KEY_F3:
 					spell_c = "spell_launch hello";

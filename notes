@@ -25,7 +25,6 @@ TODO
 	x terrain
 	x water surface
 =========>
-- body velocity, radius
 - multiplying effect with stacking bodies
 - merging bodies from someone else
 - see spellSystem.lua

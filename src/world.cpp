@@ -383,8 +383,8 @@ bool MeshGraphicsComponent::isAnimated()
 
 ////////////////////////////////////////////////////////////
 
-CollisionComponent::CollisionComponent(WorldEntity& parent, float radius, float height, vec3f posOffset, bool noContactResponse)
-	: WorldEntityComponent(parent, ComponentType::Collision), _radius{radius}, _height{height}, _posOff{posOffset}, _noContactResponse{noContactResponse}
+CollisionComponent::CollisionComponent(WorldEntity& parent, float radius, float height, vec3f posOffset, bool kinematic)
+	: WorldEntityComponent(parent, ComponentType::Collision), _radius{radius}, _height{height}, _posOff{posOffset}, _kinematic{kinematic}
 {}
 
 float CollisionComponent::getRadius() const
@@ -422,9 +422,9 @@ void CollisionComponent::serDes(SerDesBase& s)
 	s.serDes(*this);
 }
 
-bool CollisionComponent::contactResponseEnabled()
+bool CollisionComponent::isKinematic()
 {
-	return !_noContactResponse;
+	return _kinematic;
 }
 
 ////////////////////////////////////////////////////////////
@@ -460,10 +460,16 @@ WorldEntity& World::createEntity(u32 ID)
 
 void World::removeEntity(WorldEntity& e)
 {
+	cout << "REMOVING ENTITY WITH ID " << e.getID() << endl;
 	auto it = _entities.begin();
 	while(&*it != &e && it != _entities.end())
 		it++;
 	_entities.erase(it);
+}
+
+void World::removeEntity(u32 ID)
+{
+	removeEntity(*getEntityByID(ID));
 }
 
 WorldEntity& World::createCharacter(vec3f position)

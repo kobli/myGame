@@ -1,7 +1,4 @@
 -- TODO
--- body creation arguments - parse, validate, process, use
--- spell/body - die on collision with terrain / spell / player / timer / whatever is first
--- scr+eng: spell deletion
 -- apply effect on body death
 -- when a spell hits a player and has no effect -> append its bodies to his spell
 -- InvocationQ limit
@@ -14,7 +11,6 @@ Config.Body = {}
 
 Config.Body.invocT = 2		-- invocation time [seconds]
 Config.Body.maxC = 50			-- maximum # of bodies 
--- TODO values
 Config.Body.maxSpeed = 50			-- maximum traveling speed of the body [?]
 Config.Body.maxRadius = 2			-- maximum radius of the body sphere [?]
 
@@ -125,12 +121,13 @@ end
 
 Body = {}
 
-function Body:new(author, radSpeedRatio)
+function Body:new(author, radSpeedRatio, dieOn)
 	dout("body created")
 	local meta = {__index = Body}
 	local value = {
 		author = author,
 		radSpeedRatio = radSpeedRatio,
+		dieOn = dieOn,
 	}
 	return setmetatable(value, meta)
 end
@@ -149,14 +146,19 @@ function Body:getSpeed()
 	return (1-self.radSpeedRatio)*Config.Body.maxSpeed
 end
 
+function Body:dieOnCollisionWith(str)
+	return self.dieOn ~= nil and self.dieOn[str] ~= nil
+end
+
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
 Spell = {}
 
-function Spell:new(baseBody)
+function Spell:new(ID, baseBody)
 	dout("spell created")
 	local meta = {__index = Spell}
 	local value = {
+		ID = ID,
 		baseBody = baseBody,
 		bodies = {baseBody}
 	}
@@ -177,6 +179,31 @@ function Spell:appendBody(body)
 	dout("spell now contains "..#self.bodies.." bodies")
 end
 
+function Spell:handleCollision(otherID)
+	what = ""
+	if otherID == 0 then
+		what = "terrain"
+	elseif otherID == self.ID then
+		dout("spell hit itself - WTF?")
+	elseif SPELLS[otherID] ~= nil then
+		what = "spell"
+	else
+		what = "player"
+	end
+	dout("spell "..self.ID.." hit "..what)
+	if self.baseBody:dieOnCollisionWith(what) then
+		self:die()
+	end
+end
+
+function Spell:die()
+	--TODO if applyEffectOnDeath ... 
+	removeSpell(self.ID)
+	SPELLS[self.ID] = nil
+	self.ID = nil
+	self:destroy()
+end
+
 -------------------- globals --------------------
 WIZARDS = {}
 SPELLS = {}
@@ -189,6 +216,27 @@ function dout(...)
 	for i = 1, select("#",...) do
 		io.write(tostring(select(i,...))..LF)
 	end
+end
+
+-- example input: " 0.5 die{sfd,bla} 23"
+-- in the result single values can be accessed under indexes (from 1) (in the example 1=0.5, 2=23)
+-- sets can be accessed by their name, here die
+-- if the set does not have a name, it behaves like single value
+function parseBodyArgStr(argStr)
+	r = {}
+	for i in string.gmatch(argStr,"%S+") do
+		key, valStr = string.match(i,"(.*)%{(.*)%}")
+		if key ~= nil and key ~= "" then
+			values = {}
+			for i in string.gmatch(valStr, "[^,]+") do
+				values[i] = true
+			end
+			r[key] = values
+		else
+			table.insert(r, i)
+		end
+	end
+	return r
 end
 
 -------------------- Cpp interface --------------------
@@ -231,17 +279,7 @@ end
 
 function handleCollision(obj1ID, obj2ID)
 	if SPELLS[obj1ID] ~= nil then
-		what = ""
-		if obj2ID == 0 then
-			what = "terrain"
-		elseif obj2ID == obj1ID then
-			what = "same spell .. WTF?"
-		elseif SPELLS[obj2ID] ~= nil then
-			what = "other spell"
-		else
-			what = "probably player"
-		end
-		dout("spell "..obj1ID.." hit "..what)
+		SPELLS[obj1ID]:handleCollision(obj2ID)
 	end
 end
 
@@ -250,6 +288,20 @@ end
 -- TODO argStr: <radius/speed ratio [0.-1.]> <die [<player> <terrain>]>
 function Wizard.Command:spell_body_create(argStr)
 	dout("create body: "..argStr)
+	-- validate and parse arg str
+	local args = parseBodyArgStr(argStr)
+	local radSpeedRatio = tonumber(args[1])
+	dout(radSpeedRatio)
+	if radSpeedRatio ~= nil then
+		if radSpeedRatio >= 0.1 and radSpeedRatio <= 1 then 
+			dout("OK")
+		else
+			dout("wrong radSpeedRatio")
+		end
+	else
+		dout("invalid argument string")
+		return
+	end
 	-- check body limit
 	if self.bodiesInUse >= Config.Body.maxC then 
 		dout("not enough free bodies")
@@ -257,13 +309,13 @@ function Wizard.Command:spell_body_create(argStr)
 	end
 	-- invocation delay
 	self:doInvocation(Config.Body.invocT)
-	local body = Body:new(self, 1)
+	local body = Body:new(self, radSpeedRatio, args["die"])
 	if body == nil then
 		return
 	end
 	self.bodiesInUse = self.bodiesInUse + 1	
 	if self.spellInHands == nil then
-		self.spellInHands = Spell:new(body)
+		self.spellInHands = Spell:new(nil, body)
 	else
 		self.spellInHands:appendBody(body)
 	end
@@ -293,6 +345,7 @@ function Wizard.Command:spell_launch()
 	local sID = wizardLaunchSpell(self.ID, sRadius, sSpeed)
 	if sID ~= 0 then
 		dout("probably launched")
+		self.spellInHands.ID = sID
 		SPELLS[sID] = self.spellInHands
 	else
 		dout("launching the spell failed in the engine")

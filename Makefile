@@ -8,16 +8,21 @@ INCLUDES = -Iinclude -I../../irrlicht-1.8.3/include -I/usr/X11R6/include -I/usr/
 SRCS = $(shell cd $(SRCDIR)>/dev/null && ls *.cpp && cd - >/dev/null)
 OBJS = $(subst .cpp,.o,$(SRCS))
 
-run: $(TARGET)
-#./$(TARGET)
+build: $(TARGET)
+
+quicktest: FORCE
+	lua5.3 ./lua/sandbox.lua
+
+FORCE:
+
 
 test: tests
 	./test
 
-
-
 tests: testsrc/*
 	g++ $(CPPFLAGS) $(INCLUDES) -o test testsrc/* -lpthread -lgtest -lgtest_main
+
+
 
 $(TARGET): $(SRCS:%.cpp=$(BUILDDIR)/%.depend) $(SRCS:%.cpp=$(BUILDDIR)/%.o) 
 	g++ $(CPPFLAGS) $(OBJS:%=$(BUILDDIR)/%) -o $@ $(LIBS)

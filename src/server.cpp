@@ -113,10 +113,12 @@ void Updater::onObservableUpdate(EntityEvent& m)
 	if(m._componentModified && !m._destroyed)
 		p << Serializer<sf::Packet>(*m._componentModified);
 	_send(p, [](WorldEntity*){ return true; });
+	/*
 	cout << "sent an update:\n\tentityID: " << m._entityID 
 		<< "\n\tcomponent modified type: " << m._componentModifiedType << endl;
 	if(m._componentModified != nullptr && !m._destroyed)
 		cout << "\tcomponent: " << Serializer<ostream>(*m._componentModified) << endl;
+		*/
 }
 
 void Updater::onObservableRemove(EntityEvent&)

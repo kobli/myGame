@@ -176,14 +176,14 @@ class MeshGraphicsComponent: public GraphicsComponent
 class CollisionComponent: public WorldEntityComponent
 {
 	public:
-		CollisionComponent(WorldEntity& parent, float radius = 1, float height = 0, vec3f posOffset = vec3f(0,0,0), bool noContactResponse = false);
+		CollisionComponent(WorldEntity& parent, float radius = 1, float height = 0, vec3f posOffset = vec3f(0,0,0), bool kinematic = false);
 		float getRadius() const;
 		void setRadius(float);
 		float getHeight() const;
 		void setHeight(float);
 		vec3f getPosOffset() const;
 		void setPosOffset(vec3f);
-		bool contactResponseEnabled();
+		bool isKinematic();
 
 		virtual void serDes(SerDesBase& s);
 		template <typename T>
@@ -192,14 +192,14 @@ class CollisionComponent: public WorldEntityComponent
 				t & _radius;
 				t & _height;
 				t & _posOff;
-				t & _noContactResponse;
+				t & _kinematic;
 			}
 
 	private:
 		float _radius;
 		float _height;
 		vec3f _posOff;
-		bool _noContactResponse;
+		bool _kinematic;
 };
 
 ////////////////////////////////////////////////////////////
@@ -249,6 +249,7 @@ class World: public Observabler<EntityEvent>
 		World(WorldMap& wm);
 		WorldEntity& createEntity(u32 ID = 0);
 		void removeEntity(WorldEntity& e);
+		void removeEntity(u32 ID);
 		WorldEntity& createCharacter(vec3f position);
 		WorldMap& getMap();
 		std::list<WorldEntity>& getEntities();
