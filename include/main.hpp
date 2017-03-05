@@ -10,6 +10,9 @@
 using namespace std;
 using namespace irr;
 
+constexpr float PI = 3.1415926535;
+constexpr float PI_2 = PI/2;
+
 template <typename T>
 using vec2 = core::vector2d<T>;
 template <typename T>

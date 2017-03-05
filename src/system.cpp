@@ -1,4 +1,5 @@
 #include <system.hpp>
+#define _USE_MATH_DEFINES
 class DebugDrawer: public btIDebugDraw
 {
 	public:
@@ -262,7 +263,7 @@ void Physics::bodyDoStrafe(float timeDelta)
 				vec3f dir{strDir.X, 0, strDir.Y};
 				vec3f rot;
 				bc->getRotation().toEuler(rot);
-				rot *= 180/M_PI;
+				rot *= 180/PI;
 				dir.rotateYZBy(-rot.X);
 				dir.rotateXZBy(-rot.Y);
 				dir.rotateXYBy(-rot.Z);
@@ -569,7 +570,7 @@ void ViewSystem::updateTransforms(float timeDelta)
 		{
 			vec3f r;
 			bc->getRotation().toEuler(r);
-			sn->setRotation(r*180/M_PI);
+			sn->setRotation(r*180/PI);
 
 			vec3f oldPos = sn->getPosition();
 			vec3f newPos = bc->getPosition();
@@ -752,7 +753,7 @@ u32 SpellSystem::launchSpell(float radius, float speed, u32 wizard)
 	vec3f dir{1,0,0};
 	vec3f rot;
 	wBody->getRotation().toEuler(rot);
-	rot *= 180/M_PI;
+	rot *= 180/PI;
 	dir.rotateYZBy(-rot.X);
 	dir.rotateXZBy(-rot.Y);
 	dir.rotateXYBy(-rot.Z);
