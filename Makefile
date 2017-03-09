@@ -1,63 +1,73 @@
+.SUFFIXES:
+
+PROJECT = myGame
+# ! the builddir is deleted on clean
 BUILDDIR = build
 SRCDIR = src
 CPPFLAGS = -std=c++11 #-g -w #-Wall -Wextra -pedantic
-INCLUDES = -Iinclude -I../../irrlicht-1.8.4/include -I/usr/X11R6/include -I../../SFML-2.3.2/include -I../../SFML-2.3.2/bin/include -I../../bullet3-2.83.7/src -I../../bullet3-2.83.7 -I../../lua-5.3.4
+INCLUDES = -Iinclude -I/usr/X11R6/include -Iextlibs/irrlicht-1.8.4/include -Iextlibs/SFML-2.3.2/include -Iextlibs/bullet3-2.83.7/include -Iextlibs/bullet3-2.83.7/include/bullet -Iextlibs/lua-5.3.4/include
 
-TARGET = myGame
-CXX = g++
-LIBS = -L/usr/X11R6/lib64 -L../../SFML-2.3.2/lib -L../../irrlicht-1.8.4/lib/Linux -L../../lua-5.3.4/lib-lin -L../../bullet3-2.83.7/lib-lin -lIrrlicht -lGL -lXxf86vm -lXext -lX11 -lXcursor -lsfml-system -lsfml-network -llua -lBulletDynamics -lBulletCollision -lLinearMath -ldl
+ifeq ($(MAKECMDGOALS), lin64)
+	TARGET = $(PROJECT)
+	CXX = g++
+	LIBS = \
+				 -L/usr/X11R6/lib64 \
+				 -Lextlibs/SFML-2.3.2/lib/lin_64 \
+				 -Lextlibs/irrlicht-1.8.4/lib/lin_64 \
+				 -Lextlibs/lua-5.3.4/lib/lin_64 \
+				 -Lextlibs/bullet3-2.83.7/lib/lin_64 \
+				 -lIrrlicht -lGL -lXxf86vm -lXext -lX11 -lXcursor -lsfml-system -lsfml-network -llua -lBulletDynamics -lBulletCollision -lLinearMath -ldl
+	else
 
-#TARGET = myGame.exe
-#CXX = i686-w64-mingw32-g++
-#LIBS = \
-			 -L../../irrlicht-1.8.4/lib/Win32-gcc -lIrrlicht \
-			 -l:../../SFML-2.3.2/extlibs/libs-mingw/x64/libjpeg.a \
-			 -L../../SFML-2.3.2/lib-win -L../../SFML-2.3.2/extlibs/libs-mingw/x64 -lsfml-network-s -lsfml-system-s \
-			 -L/usr/i686-w64-mingw32/lib -lws2_32 -static -static-libgcc -static-libstdc++ -lwinmm -lgdi32 \
-			 -lopengl32 -lwinmm -lgdi32 -lws2_32 \
-			 -L../../bullet3-2.83.7/lib-win -lBulletDynamics -lBulletCollision -lLinearMath \
-			 -L../../lua-5.3.4/lib-win -llua
-#CPPFLAGS += -D_IRR_STATIC_LIB_  -DSFML_STATIC
+	ifeq ($(MAKECMDGOALS), win32-static)
+	TARGET = $(PROJECT).exe
+	CPPFLAGS += -D_IRR_STATIC_LIB_  -DSFML_STATIC
+	CXX = i686-w64-mingw32-g++
+	LIBS = \
+				 -L/usr/i686-w64-mingw32/lib \
+				 -Lextlibs/irrlicht-1.8.4/lib/win_gcc_32 \
+				 -Lextlibs/SFML-2.3.2/lib/win_gcc_32 \
+				 -Lextlibs/lua-5.3.4/lib/win_gcc_32 \
+				 -Lextlibs/bullet3-2.83.7/lib/win_gcc_32 \
+				 -lIrrlicht \
+				 -lsfml-network-s -lsfml-system-s \
+				 -lws2_32 -static -static-libgcc -static-libstdc++ -lwinmm -lgdi32 \
+				 -lopengl32 -lwinmm -lgdi32 -lws2_32 \
+				 -lBulletDynamics -lBulletCollision -lLinearMath \
+				 -llua
+	endif
+endif
+
+########## end of user settings #########
+
+
+win32-static lin64: build
+
+
+test: build-test
+	./test
+
+build-test: testsrc/*
+	$(CXX) $(CPPFLAGS) $(INCLUDES) -o test testsrc/* -lpthread -lgtest -lgtest_main
 
 
 
 SRCS = $(shell cd $(SRCDIR)>/dev/null && ls *.cpp && cd - >/dev/null)
 OBJS = $(subst .cpp,.o,$(SRCS))
 
-build: $(TARGET)
-
-quicktest: FORCE
-	lua5.3 ./lua/sandbox.lua
-
-FORCE:
-
-
-test: tests
-	./test
-
-tests: testsrc/*
-	$(CXX) $(CPPFLAGS) $(INCLUDES) -o test testsrc/* -lpthread -lgtest -lgtest_main
-
-
-
-$(TARGET): $(SRCS:%.cpp=$(BUILDDIR)/%.depend) $(SRCS:%.cpp=$(BUILDDIR)/%.o) 
-	$(CXX) $(CPPFLAGS) $(OBJS:%=$(BUILDDIR)/%) -o $@ $(LIBS)
-
-
-$(BUILDDIR)/%.o: $(SRCDIR)/%.cpp $(BUILDDIR)/%.depend
-	$(CXX) $(CPPFLAGS) $(INCLUDES) $^ -c -o $@
-
-%.depend: $(BUILDDIR)/%.depend 
+build: $(SRCS:%.cpp=$(BUILDDIR)/%.depend) $(SRCS:%.cpp=$(BUILDDIR)/%.o)
+	$(CXX) $(CPPFLAGS) $(OBJS:%=$(BUILDDIR)/%) -o $(TARGET) $(LIBS)
 
 $(BUILDDIR)/%.depend: $(SRCDIR)/%.cpp
+	@mkdir -p $(BUILDDIR)
 	rm -f $@
 	printf '$(BUILDDIR)/' >> $@
 	$(CXX) $(CPPFLAGS) $(INCLUDES) -MM $^>>$@;
 	printf '\t$(CXX) $(CPPFLAGS) $(INCLUDES) -c $< -o $(subst .depend,.o,$@)' >> $@
 
 clean:
-	rm $(BUILDDIR)/* $(TARGET)
+	rm -r $(BUILDDIR)
 
 ifneq ($(MAKECMDGOALS),clean)
-include $(SRCS:%.cpp=$(BUILDDIR)/%.depend)
+-include $(SRCS:%.cpp=$(BUILDDIR)/%.depend)
 endif

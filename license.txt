@@ -1,0 +1,23 @@
+// TODO add project license
+OpenAL soft used by SFML cannot be linked statically!
+(but it's used only by libsfml-audio which we do not use)
+
+
+This project uses following libraries:
+- SFML (zlib/png license)
+- Irrlicht (zlib license)
+- Bullet (zlib license)
+- Lua (MIT license)
+
+libraries used by SFML:
+- freetype is distributed under the FTL license or the GPL license
+- libjpeg is in the public domain
+- stb_image is in the public domain
+- OpenAL Soft is distributed under the LGPL license
+- libogg is distributed under the BSD 3 license
+- libvorbis is distributed under the BSD 3 license
+- libflac is distributed under the BSD 3 license
+
+libraries used by Irrlicht:
+- zlib
+- libjpeg
