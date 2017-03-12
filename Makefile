@@ -40,8 +40,10 @@ endif
 
 ########## end of user settings #########
 
+build-default:
+	@$(MAKE) lin64
 
-win32-static lin64: build
+win32-static lin64: $(TARGET)
 
 
 test: build-test
@@ -55,7 +57,7 @@ build-test: testsrc/*
 SRCS = $(shell cd $(SRCDIR)>/dev/null && ls *.cpp && cd - >/dev/null)
 OBJS = $(subst .cpp,.o,$(SRCS))
 
-build: $(SRCS:%.cpp=$(BUILDDIR)/%.depend) $(SRCS:%.cpp=$(BUILDDIR)/%.o)
+$(TARGET): $(SRCS:%.cpp=$(BUILDDIR)/%.depend) $(SRCS:%.cpp=$(BUILDDIR)/%.o)
 	$(CXX) $(CPPFLAGS) $(OBJS:%=$(BUILDDIR)/%) -o $(TARGET) $(LIBS)
 
 $(BUILDDIR)/%.depend: $(SRCDIR)/%.cpp
