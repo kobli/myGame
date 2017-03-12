@@ -10,16 +10,6 @@ notes
 	- add virtual overloads in serdes.hpp and serializable.hpp
 	- add case to the receive switch that creates the component if it does not exist
 	- add field, getter and setter in the EntityComponent
-
-
-TODO
-===============================
-- fix player colliders not disappearing after disconnect
-- better hill climbing detection? so player cannot push other players around ... especially lower/no angular friction
-- remove useless printouts
-- character sometimes falls through the ground
-- character is not a wizard
-- get rid of componentPtr in entityEvent
 - graphics component subtypes:
 	* mesh (/ animated)
 	* sphere
@@ -31,27 +21,42 @@ TODO
 	x skybox/dome
 	x terrain
 	x water surface
-=========>
+
+
+TODO (also see spellSystem.lua)
+===============================
+- fix player colliders not disappearing after disconnect
+	- destroy events are not being sent, because we would be trying to serialize an object which is not fully constructed / is almost deleted
+		-> do not send destr. events for components, just for whole entity... and recreate them on the client
+			- what if later we want to destroy only a component? probably will be needed for magic
+	- get rid of componentPtr in entityEvent
+		- create componentFactory
+		- group components inside entity into list? why / (why not)?
+		- DO NOT send create events without data - the objects would be created with funny parameters
+
+- clean the code, remove useless printouts, refactor
+- better hill climbing detection? so player cannot push other players around ... especially lower/no angular friction
+- character sometimes falls through the ground
+- character is not a wizard
+
 - implement attack spells
 	-	area affectors with time period, that can deal damage and alter other player stats
+		- player stats, HP
+		- types of affectors
+			- repetitive = give player a de/buff
+			- apply_once = (only for damage?)
+			- or only one type (apply_once) that either adds a buff or alters HP or .. 
 	- graphic effects (particle systems, opaque glowing spheres, ..) with dynamic color and scale
-- player stats, HP
-- buffs - list of Buff objects, each buff can affect several abilities (so such buffs can be removed easily) (multiplicative or additive), reuse timers, expiration timers
-	- how does buff die? timer expired, canceled (character died / spell), the affector died, ..?
-- area affectors
-	- repetitive = buffs
-	- apply_once = (only for damage?)
-	- or one kind (apply_once) that either adds a buff or alters HP or .. 
+	? buffs
+		- list of Buff objects, each buff can affect several abilities (so such buffs can be removed easily) (multiplicative or additive), effect repeat timers, expiration timers
+		- how does buff die? timer expired, canceled (character died / spell), the affector died, ..?
 - multiplying effect with stacking bodies
 - merging bodies from someone else
-- see spellSystem.lua
 ? interrupt casting when: character dies / takes dmg / moves (/ is teleported) / ...
 	=> can these events be detected?
 x on client binding controls to an entity (= client side prediction for movement) - YAGNI
 - binding clients camera to an entity
-- deleting entities
 - different modes for launching spell: from hands in look_at direction, at target location, ..?
-- try to crosscompile for Windows
 
 
 spell system
