@@ -1,0 +1,249 @@
+This file contains general information about the project.
+For TODOs and programming related info see notes.
+
+? = needs more thought on if and how it should be implemented
+* = done
+- = TODO / in progress
+x = canceled
+! = important
+
+
+Brief description
+=====================
+This should be a multiplayer online first person 3D game focused on PVP using magic and spells. It's focus will be on cooperation between players, tactics and building custom spells.
+
+
+Game mechanics
+=====================
+TODO
+- visualize the battle for each class .. isnt it too boring? just attack, attack, attack, ...
+- revise the roles
+
+Key aspects (by priority)
+-------------------
+- fun to play - idependent on experience
+- effectivness does not depend on time spent in game
+- effectivness slightly depends on understanding the game
+- cooperation for higher effectivness
+- usage of environment for higher effectivness
+
+What the game should have / be
+----------------------
+- no progress that would prevent you from playing with less / more experienced players
+	- some people want to play more often than others
+- no grind - should not force players to spend lot of time in game (at least not too much) (like L2 - you can not do almost anything on lower levels)
+- should allow some kind of player improvement (but not through items and levels)
+	- like in WoT
+		- understanding the game mechanics - should be helpful but unnecessary (how spotting works, armor and penetration, ...)
+			-> sidescraping, shooting from 15 meters behind a bush, ...
+		- tricks like driving against slope to compensate for low gun depression / elevation
+		- memorizing parameters of character skills (dmg, reuse, ..) (LoL) / tank armor, speed, guns (dmg, reload, penetration), view range, ... (WoT) 
+			- this gives advantage to players who spend more time in game - should be avoided (or the game should be fun without knowing them - like WoT)
+	- rating system (used by matchmaking)
+	- bad players in team should not affect the game negatively for others
+		- feeding / AFK in LoL
+		- AFK / team damage / (no help) in WoT
+	! achievment guide (achievments as hints what to try / learn next) (what spell combinations)
+- pace - somewhere between WoT and LoL
+	- some roles could require lower pace than others - so we can target more potential players
+? cooperate with other teammates - either like WoT (cover, spotting, ..) or LoL (timing of spells)
+	- different players have different roles (attack, defense, heal, scout, builder) and they have to cooperate
+	- players can empower each others spells
+	- strategy (like in WoT) (probably not in random battles)
+? usage of terrain / environment would be nice (trees / forests, stones, cliffs?, rivers?, weather)
+	-	steep hill = fortification
+	- river = fortification, ?fast transport
+	-	tree = shield 
+	- large rock = shield
+? swamp = cage (teleport enemy into swamp)
+? maps? what should they contain? what should they look like? 
+- each player picks one class before the game starts - each class has different effects available (and possible different number of bodies)
+
+Battles
+---------------
+? number of players in battle
+	- probably varying
+	- more than 20 players on each side:
+		-> larger maps
+		-> faster transport around the map
+		-> location independant objective or map shrinking
+? number of teams in battle
+	- probably varying
+-	rounds like in WoT - with more players they would probably have to be longer
+	- is there a reason to make rounds?
+? modes - standard, assault/defense (castle siege?), domination
+?	worlds and continuous battles (respawn time, players can join and quit during the game)
+	! longer battles: ex. 0.5 - 2 hours
+	+ players can join and leave any time
+	+ inactive players can be kicked
+	+ large teams (and maps) possible
+		- amount of players on a map stays the same (players do not die permanently) - no map shrinking necessary
+		- no "waiting for enough players"
+	- balancing skill and roles?
+		- skill - sum of ratings in each team should be equal, autoassign and ingame queue per team
+		-	roles - after choosing the team - quotas?
+	? revealing teams secrets when switching teams
+		- will there be any secrets? what team secrets will each player know?
+	? how about larger groups of players wanting to play together? how do they join a game?
+		- they should be able to start a new game
+		- or join one after one (always waiting for someone else to balance)
+	? changing roles during battle? should be OK
+
+
+magic effects by role (=class)
+-----------------
+? cancel spell (for enemy structure destruction and, my own permanent spells, single use spell block (shield))
+? buff cancel
+? cloud / fog / smoke
+	- DD (elemental?)
+		- attack (fire ball / sphere (area))
+	- defender
+		- magic shield (all effects of each spell that flies through are multiplied by shields power)
+		- stun
+	- healer
+		- heal
+	? scout
+		- no need for a dedicated role
+		- just running about a map ... would be replaced by a minimap 
+	o summoner / builder
+		- teleporter
+		- camera (palantir)
+		- baricade
+		- mobile base that serves as a spawn point and can be relocated and captured(?) by the enemy -- (structure -> only builder can manipulate those?)
+		-? trigger
+		- reporter? when something triggers the trigger, report ... (maybe show something on a map? or send msg to owner)
+		? bridge (no gravity field)
+	*o buffer
+	*o debuffer
+		- root, silence
+		* join
+		- buff and debuff effects can be given to areas, not players (like in L2)
+
+stats
+-------------------
+! can be visualized by colors - for use in magic visual effects
+- max health
+- health regen
+- attack
+- defense
+-	speed
+- casting speed
+
+Monetization
+-------------------
+- no pay to win
+- no free to play up to ..., then pay to play (like LoTRO)
+? probably donations, possibly some skins - nothing that affects the gameplay
+
+
+spell system
+======================
+- possibility to create macros (= custom spells)? there could (!should) be predefined ones for beginners)
+	- macros can contain other macros
+- spell consists of a body (stackable for higher effect) and possibly several effects
+- player can alter spell properties on the run by issuing different sets of commands (see below)
+- commands are added into queue and executed on FIFO basis
+- casting (and spell) interruptions
+	- movement
+		- reset progress in current spell component
+		- continue processing the queue when the character has stopped
+	- damage taken
+		- reset progress in current spell component
+		- cancel spell
+	- death
+		- abort and cancel everything
+		x revoke all counted bodies and effects?
+			- difficult, many details
+-	player can move while holding a spell
+- each part of the spell has casting time, but the actual time of casting depends also on the players casting speed
+- merging / appending should take no time
+? mana? maybe later - if battles are too aggresive
+? area damage spells
+	- how do they get to the enemy?
+		? cast in place .. up to n meters away
+	- when do they die?
+		- just so they do not block my body
+	- casting lots of them should not pay off too much
+	- when would they pay off? why make them?
+
+Magic body
+-----------------
+- grab_from_ground lock
+- grab_from_hands lock
+0) parameters
+	- velocity (direction*speed)
+	- size (radius)
+	- die
+		- on timer
+		? never (on cancel spell)
+		- collision with player
+		- collision with terrain
+		+ combinations (whatever comes first)
+	- apply effect when ...
+		- dying
+		? collision with player (reuse delay / recharge)
+		? every timer (or distance_traveled)
+		? charge and burst 
+	- apply collision to body
+	- apply gravity to body
+	? follow a player
+0.1) constraints
+	- size and speed are inversly proportionate
+	- each class has a limit of alive bodies per player
+1) creation
+	- body casting time is constant (but affected by casting speed)
+	- during this phase the body cannot be grabbed
+	x player can not cast a body if he is already holding one
+2) lifetime
+	- check for collision with players and ...
+	- check for collision with map and ...
+2.1) appending an effect
+	- only to a curently held body
+	- the appending takes no time
+2.2) grabbing
+	- only if grabbing is not locked
+	- body cannot be grabbed when someone is casting an effect on it
+	- release (in holders direction)
+	- player can not grab a body if he is already holding one
+2.3) merging (= appending body)
+	- the parameters of the body that is being appended have no effect
+	? increased body size with each appended body (multiply the base size)
+	- increased effect power with each appended body
+		(which will increase casting time - so variable casting time and effect power for effects is not needed)
+	- simply cast an empty body - it will be merged to the first player (which is holding a body) it collides with
+x 2.3.1) merging bodies with effects on them - probably wont be possible
+	- effects are also appended
+3) death
+
+Magic effect
+-----------------
+? apply to: allies / enemies / both
+0) parameters
+	- type
+	- base power
+0.1) constraints
+	- this class can cast the efect
+	- limit the number of bodies with this effect per player
+	- currently holding a body
+1) creation
+	- casting time varies by effect type
+	- appended to curently held body
+2) lifetime
+	- effect is applied depending on the body	
+4) death
+	- with the body
+
+Spell commands
+-----------------
+* spell_body_create(body params)
+	* if holding a body, the new body will be appended
+* spell_launch - launches the spell 
+* spell_launch_now - resets casting and launches the spell
+* spell_abort_now - aborts casting and empties the entire queue
+* spell_cancel_now - cancels the currently held spell and resets casting (so that check for appending effect on no body can be done at dequeue) (or only when its an effect?)
+- spell_effect_create(effect params)
+- spell_grab
+- spell_grab_lock
+- spell_grab_unlock
+- spell_grab_hand_lock
+- spell_grab_hand_unlock
