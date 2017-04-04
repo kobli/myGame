@@ -4,6 +4,8 @@ TODO (also see spellSystem.lua)
 	- destroy events are not being sent, because we would be trying to serialize an object which is not fully constructed / is almost deleted
 		-> do not send destr. events for components, just for whole entity... and recreate them on the client
 			- what if later we want to destroy only a component? probably will be needed for magic
+			- the problem is that we are trying to serialize incomplete objects
+				=> remove componentPtr from entityEvent
 	- get rid of componentPtr in entityEvent
 		- create componentFactory
 		- group components inside entity into list? why / (why not)?
