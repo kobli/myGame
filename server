@@ -1,7 +1,3 @@
 #!/bin/sh
 export LD_LIBRARY_PATH=./extlibs/SFML-2.3.2/lib/lin_64:$LD_LIBRARY_PATH
-xterm -e "./myGame -s" &
-TASK_PID=$!
-sleep 0.1s
-./myGame -c
-kill $TASK_PID
+./myGame -s
