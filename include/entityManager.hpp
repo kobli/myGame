@@ -7,20 +7,6 @@
 #include <map>
 #include <typeindex>
 #include <typeinfo>
-//TODO do not return raw pointers - they will be invalidated with next object added
-//			return something like iterator instead .. what about its type?
-//			template for base and deriveds
-//TODO probably no need to return ID, if we have "iterators"
-// no dereference operator, only access via ->
-//
-// TODO how about iterating over components?
-// 		access only from EM
-// 		!! do not allow to add/remove components - only modify the components
-//
-// TODO what about removing entities during iteration?
-// TODO what about removing components during iteration?
-// 	- I think we don't want that - if I remove the component, I need to know the implementation - which component is the next one then? ... not true ... possible to make the iterator valid after erase
-// 		- but the problem is that entities hold references to components so we must remove component through the parent entity
 
 class ComponentContainerBase {
 	public:
@@ -33,8 +19,17 @@ class ComponentContainerBase {
 template <typename T>
 class ComponentContainer : public ComponentContainerBase {
 	friend EntityManager;
+
 	public:
-	//TODO begin and end iterator
+		typedef typename SolidVector<T>::iterator iterator;
+
+		iterator begin() {
+			return _vec.begin();
+		}
+
+		iterator end() {
+			return _vec.end();
+		}
 
 	protected:
 		Component::ID emplace() {
@@ -56,16 +51,11 @@ class ComponentContainer : public ComponentContainerBase {
 		SolidVector<T> _vec;
 };
 
-/*
- * The ECS pattern could be used multiple times in a program (with different comp. types)
- * We want to be able to create multiple instances of EM of single type.
- * 
- */
+
 class EntityManager {
 	friend Entity;
 
 	public:
-		
 		Entity::ID createEntity() {
 			return _entities.insert(Entity(*this));
 		}
@@ -90,6 +80,15 @@ class EntityManager {
 			}
 			else
 				throw std::invalid_argument("Component class " + std::string(typeid(ComponentClass).name()) + " is already registered.");
+		}
+
+		template <typename ComponentClass>
+		ComponentContainer<ComponentClass>& getComponentBucket() {
+			ComponentType t = componentClassToType<ComponentClass>();
+			if(existsBucketFor(t))
+				return _componentBuckets[t];
+			else
+				throw std::invalid_argument("Component type " + std::to_string(t) + " not registred.");
 		}
 
 		

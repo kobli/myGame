@@ -64,7 +64,73 @@ class SolidVector {
 		}
 
 		typedef typename std::vector<T>::iterator iterator;
+		/*
+		class iterator {// : public std::forward_iterator_tag { // TODO is the inheritance necessary?
+			public:
 
+				typedef T                          value_type;
+				typedef size_t										 difference_type;
+				typedef std::forward_iterator_tag iterator_category; //TODO change to random_access
+				typedef T*                         pointer;
+				typedef T&                         reference;
+
+				iterator(): _v{nullptr} {
+				}
+				
+				//TODO make this private
+				iterator(SolidVector<T>& v, size_t elemI): _i{elemI}, _v{&v} {
+				}
+
+				iterator(const iterator& it) : _i{it._i}, _v{it._v} {
+				}
+
+				iterator& operator=(iterator& it) {
+					_i = it._i;
+					_v = it._v;
+				}
+				 
+				iterator& operator++() { // ++it
+					_i++;
+				 	return *this;
+				}
+					        
+				iterator operator++(int) { // it++
+					iterator tmp(*this);
+				 	++(*this);
+				 	return tmp;
+				}
+				
+				bool operator==(iterator& it) {
+					return _i == it._i && _v == it._v;
+				}
+
+				bool operator!=(iterator& it) {
+					return !(*this == it);
+				}
+
+				T& operator*() {
+					return (*_v)[_i];
+				}
+
+				T* operator->() {
+					return &(*_v)[_i];
+				}
+
+
+			private:
+
+				size_t _i;
+				SolidVector<T>* _v;
+		};
+
+		iterator begin() {
+			return iterator{*this, 0};
+		}
+
+		iterator end() {
+			return iterator{*this, size()};
+		}
+		*/
 		iterator begin() {
 			return _v.begin();
 		}
