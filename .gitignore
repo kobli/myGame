@@ -1,3 +1,7 @@
 build/
+tags
 myGame*
-session.vim
+test
+*.vim
+*.swp
+*.swo
