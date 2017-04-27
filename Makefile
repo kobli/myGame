@@ -4,7 +4,7 @@ PROJECT = myGame
 # ! the builddir is deleted on clean
 BUILDDIR = build
 SRCDIR = src
-CPPFLAGS = -std=c++11 #-g -w #-Wall -Wextra -pedantic
+CPPFLAGS = -std=c++14 -g -w #-Wall -Wextra -pedantic
 INCLUDES = -Iinclude -I/usr/X11R6/include -Iextlibs/irrlicht-1.8.4/include -Iextlibs/SFML-2.3.2/include -Iextlibs/bullet3-2.83.7/include -Iextlibs/bullet3-2.83.7/include/bullet -Iextlibs/lua-5.3.4/include
 
 ifeq ($(MAKECMDGOALS), lin64)
@@ -49,8 +49,8 @@ win32-static lin64: $(TARGET)
 test: build-test
 	./test
 
-build-test: testsrc/*
-	$(CXX) $(CPPFLAGS) $(INCLUDES) -o test testsrc/* -lpthread -lgtest -lgtest_main
+build-test: testsrc/* src/entity.cpp
+	$(CXX) $(CPPFLAGS) $(INCLUDES) -o test $^ -lpthread -lgtest -lgtest_main
 
 
 

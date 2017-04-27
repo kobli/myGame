@@ -78,6 +78,7 @@ unsigned WorldMap::getVertexCount()
 ////////////////////////////////////////////////////////////
 
 WorldEntityComponent::WorldEntityComponent(WorldEntity& parent, ComponentType compType)
+	//TODO /this/ should not be passed, because the object is invalid both during construction and destruction
 	: Observable(EntityEvent(parent.getID(), compType, this,  true)
 			, EntityEvent(parent.getID(), compType, this, false, true))
 		, _parent{parent}, _compType{compType}

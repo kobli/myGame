@@ -1,5 +1,56 @@
 TODO (also see spellSystem.lua)
 ===============================
+- change interface of the worldEntity and test it ..... or create EC system template and unittest it ... probably better
+	- create templated entityComponent /manager/ EntityManager?
+		- something that creates and stores one type of object (based on template arg) and returns its ID which can be later used to access it
+			? getter returns what type?
+			- common base with virtual methods
+			- template params: derived type, base type
+		- something to delegate get/create/destroy/.. to the correct object based on int/enum
+	- then create a concrete manager which can be observed and forwards events
+
+use cases:
+	- system reads / writes into single component type
+		-> direct access to iterable container of single type components
+	- system reads / writes into components of more than one type
+		-> iterate all entities (and check, if each of them has all required components, then get components)
+		-> have entities sorted into buckets by components they consist of
+			-> access components from entity - probably by entity ID
+			-> entities in buckets and components should probably be sorted
+				- unless cache cannot handle forward skips in vector
+	- component changed - send entityEvent - serialize the component and send it over network
+		-> access component by component type and ID
+	- add entity
+	- remove entity
+	- add component of a type (var) to entity
+	- remove component of a type (var) to entity
+	- create events (probably dummy functions in base, override in derived):
+		- entity/component created/destroyed
+? adding component types to ECS?
+	- compile time - enum with LAST item - special_vector<Component> components times compType::LAST-1
+		- not possible - vector of component_type must use the derived type
+	- one vector of each type - thats a problem
+		- method template with static special_vector of componentType
+	-> manually register special_vectors for each component type in ECS
+		- registerComponentType<compType>(ComponentType::type)
+			- add special_vector<compType> into map with key=enumValue
+? componentModified event - do not create the events in components
+	- create/delete event can be created by EntityManager
+		? is it necessary? which constructor / destr. is called during vector realloc?
+	? update event ... created by systems
+		- systems can create update event once - after they have finished updating the component
+		x or update events could be created after each "writing" system iteration
+			- not good for network - update only components which have really been modified
+? component type - enum
+? component factory
+	- not possible - would have to use new
+
+EntityManager
+- IDpool - use lowest free ID
+- map of component types to component containers
+
+
+
 - fix player colliders not disappearing after disconnect
 	- destroy events are not being sent, because we would be trying to serialize an object which is not fully constructed / is almost deleted
 		-> do not send destr. events for components, just for whole entity... and recreate them on the client
@@ -8,12 +59,39 @@ TODO (also see spellSystem.lua)
 				=> remove componentPtr from entityEvent
 	- get rid of componentPtr in entityEvent
 		- create componentFactory
-		- group components inside entity into list? why / (why not)?
-			- how does a user pick the right component?
+		- group components of same type inside entity into list? why / (why not)?
+			- how does a user pick the right component? - difficult usage
 				-> only one component of each type per object
-					- what about graphics components? character casting a spell, and his name above him?
-					- multiple graphics components, with string and numeric user ID (an ID provided by the user)
-		- DO NOT send create events without data - the objects would be created with funny parameters
+					- what about graphics components? character casting a spell? (probably necessary only for effects)
+ 					- how about name (and class) above player? probably a separate component (not billboard but label - name from game, not from engine)
+						=> only one comp. of each type
+							- division into components should be game oriented - not engine oriented
+							- rename graphicsComponent to appearance / mesh (sphereMesh, animatedMesh, textMesh)
+								- should players name be a textMeshComponent (= part of the game world)? or should it be handled somewhere else by the GUI?
+									-> by the GUI, because we may need to also add a sprite and we should already be able to collect all the data from the model
+							- rename bodyComponent to Transform?
+				- getComponent
+					- each component type must have an ID - string or enum
+		 				- what ID? enum? int? string?
+							- ID is unreadable, string is too much data for networking
+							- there is almost no overhead for enum compared to str - just create a new value in enum
+							- binding to Lua is probably easier with string - but now probably unnecessary
+						- it must be automatically de/serializable based on the ID
+				- addComponent
+					- pool / factory_with_ownership - what to call it?
+					- vector of components - how to avoid unused components being synced to all clients?
+						- currently the components are synced ... ? on create and on update
+>>==========^
+							- sync only on update (relevant clients) and on destroy (all clients)
+								- create would be difficult because of relevancy change
+								- destroy - not when destructor is called (it will probably be called during realloc too) but when component is released
+					- on client how to find corresponding component when handling an update? probably through entity
+						-> use the vector only for iterating components, not direct access / lookup
+							- but the lookup has to be possible so we can recreate the reference in entity after vec realloc
+>>============^
+							- we can use the index - get index after first insert - it will stay the same after realloc
+							- remember which elements are free
+		- DO NOT send create events without data - the objects would be created (and exist for a moment - until an update comes ... maybe its sent right afer the 'create' event) with funny parameters 
 
 - clean the code, remove useless printouts, refactor
 - better hill climbing detection? so player cannot push other players around ... especially lower/no angular friction
@@ -45,6 +123,7 @@ x on client binding controls to an entity (= client side prediction for movement
 	- changing spells, some kind of spellbook
 	- interface for creating spells
 	? testing spells
+- it might be possible to simplify serialization of components using CRTP
 
 
 notes
