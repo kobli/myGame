@@ -8,9 +8,6 @@
 #include <typeindex>
 #include <typeinfo>
 
-typedef uint16_t ID;
-const ID NULLID = ID{}-1;
-
 template <typename ComponentBase>
 class ComponentContainerBase {
 	public:

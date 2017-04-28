@@ -5,6 +5,10 @@
 #include <vector>
 #include <map>
 
+typedef uint16_t ID;
+const ID NULLID = ID{}-1;
+
+
 template <typename ComponentBase, typename ComponentType>
 class EntityManager;
 
@@ -14,7 +18,6 @@ class Entity {
 	friend EntityManager<ComponentBase, ComponentType>;
 
 	public:
-		typedef unsigned ID;
 
 		Entity(Entity&& other) noexcept : _manager{other._manager} {
 			swap(other);
