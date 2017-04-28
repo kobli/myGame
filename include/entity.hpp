@@ -1,19 +1,20 @@
 #ifndef ENTITY_HPP_17_04_20_11_22_33
 #define ENTITY_HPP_17_04_20_11_22_33 
 
-#include "component.hpp"
 #include <array>
 #include <vector>
 #include <map>
 
+template <typename ComponentBase, typename ComponentType>
 class EntityManager;
 
+
+template <typename ComponentBase, typename ComponentType>
 class Entity {
-	friend EntityManager;
+	friend EntityManager<ComponentBase, ComponentType>;
 
 	public:
 		typedef unsigned ID;
-		static const ID NULLID;
 
 		Entity(Entity&& other) noexcept : _manager{other._manager} {
 			swap(other);
@@ -46,12 +47,15 @@ class Entity {
 		bool hasComponent();
 
 	private:
-		EntityManager* _manager;
+		EntityManager<ComponentBase, ComponentType>* _manager;
 		std::map<ComponentType,ID> _componentID;
 
-		Entity(EntityManager& manager);
+		Entity(EntityManager<ComponentBase, ComponentType>& manager);
 };
 
-void swap(Entity& lhs, Entity& rhs);
+template <typename T, typename TT>
+void swap(Entity<T, TT>& lhs, Entity<T, TT>& rhs) {
+	lhs.swap(rhs);
+}
 
 #endif /* ENTITY_HPP_17_04_20_11_22_33 */

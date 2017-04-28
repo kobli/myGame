@@ -8,17 +8,20 @@
 #include <typeindex>
 #include <typeinfo>
 
+typedef size_t ID;
+
+template <typename ComponentBase>
 class ComponentContainerBase {
 	public:
-		virtual Component::ID emplace() = 0;
-		virtual ComponentBase* get(Component::ID id) = 0;
-		virtual void remove(Component::ID id) = 0;
+		virtual ID emplace() = 0;
+		virtual ComponentBase* get(ID cid) = 0;
+		virtual void remove(ID cid) = 0;
 };
 
 
-template <typename T>
-class ComponentContainer : public ComponentContainerBase {
-	friend EntityManager;
+template <typename T, typename ComponentBase, typename ComponentType>
+class ComponentContainer : public ComponentContainerBase<ComponentBase> {
+	friend EntityManager<ComponentBase, ComponentType>;
 
 	public:
 		typedef typename SolidVector<T>::iterator iterator;
@@ -32,19 +35,19 @@ class ComponentContainer : public ComponentContainerBase {
 		}
 
 	protected:
-		Component::ID emplace() {
+		ID emplace() {
 			return _vec.emplace();
 		}
 
-		ComponentBase* get(Component::ID id) {
-			if(_vec.indexValid(id))
-				return &_vec[id];
+		ComponentBase* get(ID cid) {
+			if(_vec.indexValid(cid))
+				return &_vec[cid];
 			else
 				return nullptr;
 		}
 
-		void remove(Component::ID id) {
-			_vec.remove(id);
+		void remove(ID cid) {
+			_vec.remove(cid);
 		}
 
 	private:
@@ -52,30 +55,31 @@ class ComponentContainer : public ComponentContainerBase {
 };
 
 
+template <typename ComponentBase, typename ComponentType>
 class EntityManager {
-	friend Entity;
+	friend Entity<ComponentBase, ComponentType>;
 
 	public:
-		Entity::ID createEntity() {
-			return _entities.insert(Entity(*this));
+		ID createEntity() {
+			return _entities.insert(Entity<ComponentBase, ComponentType>(*this));
 		}
 
-		Entity* getEntity(Entity::ID id) {
-			if(_entities.indexValid(id))
-				return &_entities[id];
+		Entity<ComponentBase, ComponentType>* getEntity(ID eid) {
+			if(_entities.indexValid(eid))
+				return &_entities[eid];
 			else
 				return nullptr;
 		}
 
-		void removeEntity(Entity::ID id) {
-			if(_entities.indexValid(id))
-				_entities.remove(id);
+		void removeEntity(ID eid) {
+			if(_entities.indexValid(eid))
+				_entities.remove(eid);
 		}
 
 		template <typename ComponentClass>
 		void registerComponentType(ComponentType t) {
 			if(!existsBucketFor(t)) {
-				_componentBuckets[t] = std::make_unique<ComponentContainer<ComponentClass>>();
+				_componentBuckets[t] = std::make_unique<ComponentContainer<ComponentClass, ComponentBase, ComponentType>>();
 				_componentClassToType[typeid(ComponentClass)] = t;
 			}
 			else
@@ -83,7 +87,7 @@ class EntityManager {
 		}
 
 		template <typename ComponentClass>
-		ComponentContainer<ComponentClass>& getComponentBucket() {
+		ComponentContainer<ComponentClass, ComponentBase, ComponentType>& getComponentBucket() {
 			ComponentType t = componentClassToType<ComponentClass>();
 			if(existsBucketFor(t))
 				return _componentBuckets[t];
@@ -93,26 +97,26 @@ class EntityManager {
 
 		
 	private:
-		SolidVector<Entity> _entities;
-		std::map<ComponentType, std::unique_ptr<ComponentContainerBase>> _componentBuckets;
+		SolidVector<Entity<ComponentBase, ComponentType>> _entities;
+		std::map<ComponentType, std::unique_ptr<ComponentContainerBase<ComponentBase>>> _componentBuckets;
 		std::map<std::type_index, ComponentType> _componentClassToType;
 
 
-		Component::ID addComponent(ComponentType t) {
+		ID addComponent(ComponentType t) {
 			if(existsBucketFor(t))
 				return _componentBuckets[t]->emplace();
 			else
 				throw std::invalid_argument("Component type " + std::to_string(t) + " not registred.");
 		}
 
-		ComponentBase* getComponent(ComponentType t, Component::ID id) {
+		ComponentBase* getComponent(ComponentType t, ID id) {
 			if(existsBucketFor(t))
 				return _componentBuckets[t]->get(id);
 			else
 				throw std::invalid_argument("Component type " + std::to_string(t) + " not registred.");
 		}
 
-		void removeComponent(ComponentType t, Component::ID id) {
+		void removeComponent(ComponentType t, ID id) {
 			if(existsBucketFor(t))
 				_componentBuckets[t]->remove(id);
 		}
