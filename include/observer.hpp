@@ -2,7 +2,6 @@
 #include <list>
 #include <memory>
 #include <algorithm>
-#include <iostream>
 
 #ifndef OBSERVER_HPP_16_11_12_10_26_41
 #define OBSERVER_HPP_16_11_12_10_26_41 
@@ -92,7 +91,6 @@ class Observable {
 
 		virtual ~Observable()
 		{
-			std::cout << "dest observable\n";
 			for(auto& o : _observers)
 			{
 				if(auto spt = o.lock())
@@ -114,7 +112,6 @@ class Observabler: public Observable<messageT>, protected Observer<messageT> {
 		{}
 		virtual ~Observabler()
 		{
-			std::cout << "dest observabler\n";
 		}
 		virtual void observe(Observable<messageT>& o) {
 			Observer<messageT>::observe(o);
