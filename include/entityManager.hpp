@@ -55,14 +55,15 @@ class ComponentContainer : public ComponentContainerBase<ComponentBase> {
 
 template <typename ComponentBase, typename ComponentType>
 class EntityManager {
-	friend Entity<ComponentBase, ComponentType>;
+	typedef Entity<ComponentBase, ComponentType> EntityT;
+	friend EntityT;
 
 	public:
 		ID createEntity() {
-			return _entities.insert(Entity<ComponentBase, ComponentType>(*this));
+			return _entities.insert(EntityT(*this));
 		}
 
-		Entity<ComponentBase, ComponentType>* getEntity(ID eid) {
+		EntityT* getEntity(ID eid) {
 			if(_entities.indexValid(eid))
 				return &_entities[eid];
 			else
@@ -95,7 +96,7 @@ class EntityManager {
 
 		
 	private:
-		SolidVector<Entity<ComponentBase, ComponentType>> _entities;
+		SolidVector<EntityT> _entities;
 		std::map<ComponentType, std::unique_ptr<ComponentContainerBase<ComponentBase>>> _componentBuckets;
 		std::map<std::type_index, ComponentType> _componentClassToType;
 
