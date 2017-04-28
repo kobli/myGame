@@ -49,7 +49,7 @@ win32-static lin64: $(TARGET)
 test: build-test
 	./test
 
-build-test: testsrc/* src/entity.cpp
+build-test: testsrc/*
 	$(CXX) $(CPPFLAGS) $(INCLUDES) -o test $^ -lpthread -lgtest -lgtest_main
 
 
