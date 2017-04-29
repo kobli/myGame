@@ -7,56 +7,56 @@
 #include <map>
 #include <typeindex>
 #include <typeinfo>
-
-template <typename ComponentBase>
-class ComponentContainerBase {
-	public:
-		virtual ID emplace() = 0;
-		virtual ComponentBase* get(ID cid) = 0;
-		virtual void remove(ID cid) = 0;
-};
+#include <iostream>
 
 
-template <typename T, typename ComponentBase, typename ComponentType>
-class ComponentContainer : public ComponentContainerBase<ComponentBase> {
-	friend EntityManager<ComponentBase, ComponentType>;
-
-	public:
-		typedef typename SolidVector<T>::iterator iterator;
-
-		iterator begin() {
-			return _vec.begin();
-		}
-
-		iterator end() {
-			return _vec.end();
-		}
+template <typename ComponentBase, typename ComponentType, typename EntityT>
+class EntityManager : public EntityManagerBase<ComponentBase,ComponentType> {
+	//typedef Entity<ComponentBase, ComponentType> EntityT;
+	friend EntityT;
 
 	protected:
-		ID emplace() {
-			return _vec.emplace();
-		}
+	class ComponentContainerBase {
+		public:
+			virtual ID emplace() = 0;
+			virtual ComponentBase* get(ID cid) = 0;
+			virtual void remove(ID cid) = 0;
+	};
+	public:
+	template <typename T>
+		class ComponentContainer : public ComponentContainerBase {
 
-		ComponentBase* get(ID cid) {
-			if(_vec.indexValid(cid))
-				return &_vec[cid];
-			else
-				return nullptr;
-		}
+			public:
+			typedef typename SolidVector<T>::iterator iterator;
 
-		void remove(ID cid) {
-			_vec.remove(cid);
-		}
+			iterator begin() {
+				return _vec.begin();
+			}
 
-	private:
-		SolidVector<T> _vec;
-};
+			iterator end() {
+				return _vec.end();
+			}
 
+			private:
+			virtual ID emplace() {
+				return _vec.emplace();
+			}
 
-template <typename ComponentBase, typename ComponentType>
-class EntityManager {
-	typedef Entity<ComponentBase, ComponentType> EntityT;
-	friend EntityT;
+			virtual ComponentBase* get(ID cid) {
+				if(_vec.indexValid(cid))
+					return &_vec[cid];
+				else
+					return nullptr;
+			}
+
+			virtual void remove(ID cid) {
+				_vec.remove(cid);
+			}
+
+			private:
+			SolidVector<T> _vec;
+		};
+
 
 	public:
 		ID createEntity() {
@@ -78,7 +78,7 @@ class EntityManager {
 		template <typename ComponentClass>
 		void registerComponentType(ComponentType t) {
 			if(!existsBucketFor(t)) {
-				_componentBuckets[t] = std::make_unique<ComponentContainer<ComponentClass, ComponentBase, ComponentType>>();
+				_componentBuckets[t] = std::make_unique<ComponentContainer<ComponentClass>>();
 				_componentClassToType[typeid(ComponentClass)] = t;
 			}
 			else
@@ -86,7 +86,7 @@ class EntityManager {
 		}
 
 		template <typename ComponentClass>
-		ComponentContainer<ComponentClass, ComponentBase, ComponentType>& getComponentBucket() {
+		ComponentContainer<ComponentClass>& getComponentBucket() {
 			ComponentType t = componentClassToType<ComponentClass>();
 			if(existsBucketFor(t))
 				return _componentBuckets[t];
@@ -97,27 +97,28 @@ class EntityManager {
 		
 	private:
 		SolidVector<EntityT> _entities;
-		std::map<ComponentType, std::unique_ptr<ComponentContainerBase<ComponentBase>>> _componentBuckets;
+		std::map<ComponentType, std::unique_ptr<ComponentContainerBase>> _componentBuckets;
 		std::map<std::type_index, ComponentType> _componentClassToType;
 
 
-		ID addComponent(ComponentType t) {
+		virtual ID addComponent(ComponentType t) {
 			if(existsBucketFor(t))
 				return _componentBuckets[t]->emplace();
 			else
 				throw std::invalid_argument("Component type " + std::to_string(t) + " not registred.");
 		}
 
-		ComponentBase* getComponent(ComponentType t, ID id) {
+		virtual ComponentBase* getComponent(ComponentType t, ID id) {
 			if(existsBucketFor(t))
 				return _componentBuckets[t]->get(id);
 			else
 				throw std::invalid_argument("Component type " + std::to_string(t) + " not registred.");
 		}
 
-		void removeComponent(ComponentType t, ID id) {
-			if(existsBucketFor(t))
-				_componentBuckets[t]->remove(id);
+		virtual void removeComponent(ComponentType t, ID cid) {
+			std::cout << "EM::removeComponent\n";
+			if(existsBucketFor(t) && _componentBuckets[t].get())
+				_componentBuckets[t]->remove(cid);
 		}
 
 		bool existsBucketFor(ComponentType t) {

@@ -6,6 +6,10 @@ enum ComponentType {
 };
 
 class ComponentBase : public Observable<EntityEvent<ComponentType>> {
+	typedef EntityEvent<ComponentType> EventT;
+	public:
+	ComponentBase() : Observable<EventT>{EventT{}, EventT{}} {
+	}
 };
 
 class Component1 : public ComponentBase {
@@ -21,19 +25,22 @@ template <typename T>
 void ignoreUnused(T&) {
 }
 
+typedef ObservableEntity<ComponentBase,ComponentType> EntityT;
+typedef ObservableEntityManager<ComponentBase,ComponentType,EntityT> EntityManagerT;
+
 
 TEST(ObservableEntityManager, getNonExistingEntity) {
-	ObservableEntityManager<ComponentBase,ComponentType> em;
+	EntityManagerT em;
 	ASSERT_EQ(em.getEntity(0), nullptr);
 }
 
 TEST(ObservableEntityManager, createEntity) {
-	ObservableEntityManager<ComponentBase,ComponentType> em;
+	EntityManagerT em;
 	em.createEntity();
 }
 
 TEST(ObservableEntityManager, getEntity) {
-	ObservableEntityManager<ComponentBase,ComponentType> em;
+	EntityManagerT em;
 	ID eID = em.createEntity();
 	ASSERT_EQ(eID, 0);
 	auto* e = em.getEntity(eID);
@@ -43,22 +50,29 @@ TEST(ObservableEntityManager, getEntity) {
 ///////////////////// component tests ///////////////////////
 
 TEST(ObservableEntityManager, registerComponentType) {
-	ObservableEntityManager<ComponentBase,ComponentType> em;
+	EntityManagerT em;
 	em.registerComponentType<Component1>(ComponentType::t1);
 }
 
 TEST(ObservableEntityManager, createComponent) {
-	ObservableEntityManager<ComponentBase,ComponentType> em;
+	EntityManagerT em;
 	em.registerComponentType<Component1>(ComponentType::t1);
 
 	ID eID = em.createEntity();
 	auto& e = *em.getEntity(eID); // should not return nullptr now
 
+	e.addComponent(ComponentType::t1);
+	ASSERT_EQ(e.hasComponent(ComponentType::t1), true);
+}
+
+TEST(ObservableEntityManager, removeComponent) {
+	EntityManagerT em;
+	em.registerComponentType<Component1>(ComponentType::t1);
+
+	ID eID = em.createEntity();
+	auto& e = *em.getEntity(eID); // should not return nullptr now
+
+	e.removeComponent(ComponentType::t1);
 	ASSERT_EQ(e.hasComponent(ComponentType::t1), false);
-	//e.addComponent(ComponentType::t1);
-	e.addComponent<Component1>();
-	//ASSERT_EQ(true, e.hasComponent(ComponentType::t1));
-	ASSERT_EQ(e.hasComponent<Component1>(), true);
-	Component1& c1 = *e.getComponent<Component1>(); // should not return nullptr now
-	ignoreUnused(c1);
+	ASSERT_EQ(e.getComponent(ComponentType::t1), nullptr);
 }

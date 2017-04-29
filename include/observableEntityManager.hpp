@@ -27,43 +27,52 @@ struct EntityEvent {
  * 	! it would be logical to be able to observe an entity to get changes in components
  */
 
+
 template <typename ComponentBase, typename ComponentType>
-class ObservableEntityManager : public EntityManager<ComponentBase,ComponentType>, public Observabler<EntityEvent<ComponentType>>{
-	//TODO on entityAdd/remove call observe(...)
-	
-	friend Entity<ComponentBase, ComponentType>;
-	typedef EntityManager<ComponentBase,ComponentType> BaseEM;
+class ObservableEntity : public Entity<ComponentBase,ComponentType>, public Observabler<EntityEvent<ComponentType>> {
+
+	typedef EntityManagerBase<ComponentBase,ComponentType> EntityManagerBaseT;
+	typedef Entity<ComponentBase,ComponentType> EntityBaseT;
 	typedef EntityEvent<ComponentType> EventT;
 
 	static_assert(std::is_base_of<Observable<EventT>, ComponentBase>::value, "ComponentBase must be Observable");
+
+	public:
+		ObservableEntity(EntityManagerBaseT& manager) : EntityBaseT{manager}, Observabler<EventT>(EventT(), EventT()) {
+		}
+
+		ObservableEntity(EntityBaseT&& other) noexcept : EntityBaseT{other} {
+		}
+
+		virtual void addComponent(ComponentType t) {
+			EntityBaseT::addComponent(t);
+			std::cout << "add component\n";
+			//TODO this->observe(*EntityBaseT::getComponent(t));
+		}
+
+};
+
+
+template <typename ComponentBase, typename ComponentType, typename EntityT>
+class ObservableEntityManager : public EntityManager<ComponentBase,ComponentType,EntityT>, public Observabler<EntityEvent<ComponentType>>{
+	
+	friend EntityT;
+	typedef EntityManager<ComponentBase,ComponentType,EntityT> BaseEM;
+	typedef EntityEvent<ComponentType> EventT;
+
+	static_assert(std::is_base_of<Observable<EventT>, EntityT>::value, "EntityT must be Observable");
 
 	public:
 		ObservableEntityManager(): Observabler<EventT>(EventT(), EventT()) {
 		}
 			
 		ID createEntity() {
-			return BaseEM::createEntity();
-		}
-
-		Entity<ComponentBase, ComponentType>* getEntity(ID eid) {
-			return BaseEM::getEntity(eid);
-		}
-
-		void removeEntity(ID eid) {
-			BaseEM::removeEntity(eid);
-		}
-
-		template <typename ComponentClass>
-		void registerComponentType(ComponentType t) {
-			BaseEM::template registerComponentType<ComponentClass>(t);
-		}
-
-		template <typename ComponentClass>
-		ComponentContainer<ComponentClass, ComponentBase, ComponentType>& getComponentBucket() {
-			return BaseEM::template getComponentBucket<ComponentClass>();
+			std::cout << "createEntity\n";
+			ID id = BaseEM::createEntity();
+			this->observe(*this->getEntity(id));
+			return id;
 		}
 };
-
 #endif /* OBSERVABLEENTITYMANAGER_HPP_17_04_28_11_28_05 */
 
 

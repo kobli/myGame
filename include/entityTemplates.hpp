@@ -10,12 +10,14 @@ void Entity<ComponentBase,ComponentType>::addComponent(ComponentType t) {
 
 template <typename ComponentBase, typename ComponentType>
 void Entity<ComponentBase,ComponentType>::removeComponent(ComponentType t) {
-	if(hasComponent(t))
+	if(hasComponent(t)) {
+		_manager->removeComponent(t, _componentID[t]);
 		_componentID.erase(t);
+		}
 }
 
 template <typename ComponentBase, typename ComponentType>
-Entity<ComponentBase,ComponentType>::Entity(EntityManager<ComponentBase,ComponentType>& manager) : _manager{&manager} {
+Entity<ComponentBase,ComponentType>::Entity(EntityManagerBaseT& manager) : _manager{&manager} {
 }
 
 template <typename ComponentBase, typename ComponentType>
@@ -31,6 +33,7 @@ bool Entity<ComponentBase,ComponentType>::hasComponent(ComponentType t) {
 	return _componentID.find(t) != _componentID.end();
 }
 
+/*
 template <typename ComponentBase, typename ComponentType>
 template<typename T>
 void Entity<ComponentBase,ComponentType>::addComponent() {
@@ -54,4 +57,5 @@ template<typename T>
 bool Entity<ComponentBase,ComponentType>::hasComponent() {
 	return hasComponent(_manager->template componentClassToType<T>());
 }
+*/
 #endif /* ENTITYTEMPLATES_HPP_17_04_26_12_30_15 */
