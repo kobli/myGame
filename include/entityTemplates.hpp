@@ -33,7 +33,6 @@ bool Entity<ComponentBase,ComponentType>::hasComponent(ComponentType t) {
 	return _componentID.find(t) != _componentID.end();
 }
 
-/*
 template <typename ComponentBase, typename ComponentType>
 template<typename T>
 void Entity<ComponentBase,ComponentType>::addComponent() {
@@ -57,5 +56,4 @@ template<typename T>
 bool Entity<ComponentBase,ComponentType>::hasComponent() {
 	return hasComponent(_manager->template componentClassToType<T>());
 }
-*/
 #endif /* ENTITYTEMPLATES_HPP_17_04_26_12_30_15 */

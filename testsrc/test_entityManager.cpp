@@ -69,7 +69,6 @@ TEST(EntityManager, createComponent) {
 	ASSERT_EQ(e.hasComponent(ComponentType::t1), true);
 }
 
-/*
 TEST(EntityManager, componentAccessTemplated) {
 	EntityManagerT em;
 	em.registerComponentType<Component1>(ComponentType::t1);
@@ -79,7 +78,6 @@ TEST(EntityManager, componentAccessTemplated) {
 	e.addComponent<Component1>();
 	ASSERT_EQ(e.hasComponent<Component1>(), true);
 }
-*/
 
 TEST(EntityManager, removeComponent) {
 	EntityManagerT em;

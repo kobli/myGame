@@ -47,7 +47,9 @@ class ObservableEntity : public Entity<ComponentBase,ComponentType>, public Obse
 		virtual void addComponent(ComponentType t) {
 			EntityBaseT::addComponent(t);
 			std::cout << "add component\n";
-			//TODO this->observe(*EntityBaseT::getComponent(t));
+			auto* c = EntityBaseT::getComponent(t);
+			assert(c != nullptr);
+			//TODO .. first fix the bug - try unit test lower level parts this->observe(*c);
 		}
 
 };
@@ -74,6 +76,3 @@ class ObservableEntityManager : public EntityManager<ComponentBase,ComponentType
 		}
 };
 #endif /* OBSERVABLEENTITYMANAGER_HPP_17_04_28_11_28_05 */
-
-
-
