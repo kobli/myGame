@@ -10,7 +10,7 @@ class SolidVector {
 	static const size_t NONE = 0-1;
 	public:
 		size_t emplace() {
-			//return insert(T{});
+			return insert(T{});
 		}
 
 		size_t insert(const T& elem) {
