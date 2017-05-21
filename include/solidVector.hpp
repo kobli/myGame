@@ -4,42 +4,73 @@
 #include "rental.hpp"
 #include <stdexcept>
 
+/** A vector-like container which retains indicies after insert/remove.
+ * Elements are stored in contignuous memmory.
+ */
 template<typename T>
 class SolidVector {
 	typedef std::size_t size_t;
 	static const size_t NONE = 0-1;
+
 	public:
+		/** Constructs an object in place from given arguments.
+		 * \return index of the constructed object
+		 */
+		//TODO
 		size_t emplace() {
 			return insert(T{});
 		}
 
+		/** Inserts a copy of the object into the container.
+		 * \return index of the inserted object
+		 */
 		size_t insert(const T& elem) {
 			size_t pi = insertPhysical(elem);
 			return insertLogical(pi);
 		}
 
+		/** Insert an object into the container.
+		 * \return index of the inserted object
+		 */
 		size_t insert(T&& elem) {
 			size_t pi = insertPhysical(std::move(elem));
 			return insertLogical(pi);
 		}
 
-		// throws when i out of range
+		/** Access specified element with validity check.
+		 * Throws std::out_of_range exception if index is not.
+		 * \return reference to the object at given index
+		 */
 		T& at(size_t i) {
 			return _v[physicalIndexChecked(i)];
 		}
 
+		/** Access specified element with validity check.
+		 * Throws std::out_of_range exception if index is not.
+		 * \return const reference to the object at given index
+		 */
 		const T& at(size_t i) const {
 			return _v[physicalIndexChecked(i)];
 		}
 
+		/** Access specified element.
+		 * \return reference to the object at given index
+		 */
 		T& operator[](size_t i) {
 			return _v[_map[i]];
 		}
 
+		/** Access specified element.
+		 * \return const reference to the object at given index
+		 */
 		const T& operator[](size_t i) const {
 			return _v[_map[i]];
 		}
 
+		/** Removes specified element.
+		 * Throws std::out_of_range exception if index is not valid.
+		 * Uses swap function.
+		 */
 		void remove(size_t i) {
 			// swap elements at pi and last
 			size_t pi = physicalIndexChecked(i);
@@ -59,6 +90,9 @@ class SolidVector {
 			_map[i] = NONE;
 		}
 
+		/**
+		 * \return number of elements in the container.
+		 */
 		size_t size() {
 			return _v.size();
 		}
@@ -131,14 +165,24 @@ class SolidVector {
 			return iterator{*this, size()};
 		}
 		*/
+
+		/**
+		 * \return an iterator to the beginning.
+		 */
 		iterator begin() {
 			return _v.begin();
 		}
 
+		/**
+		 * \return an iterator past the last element. (Same as begin when empty)
+		 */
 		iterator end() {
 			return _v.end();
 		}
 
+		/** Index validity check
+		 * \return true if index is valid, false otherwise.
+		 */
 		bool indexValid(size_t i) const {
 			if(i >= _map.size())
 				return false;
@@ -149,11 +193,14 @@ class SolidVector {
 		}
 
 	private:
+		// inserts the element and returns physical index
+		// (the physical index may change on remove)
 		size_t insertPhysical(T&& elem) {
 			_v.push_back(std::move(elem));
 			return _v.size()-1;
 		}
 
+		// creates a new element and returns its logical index
 		size_t insertLogical(size_t pi) {
 			size_t li = _mapSlot.borrow();
 			_map.resize(std::max(li+1, _map.size()));
@@ -161,6 +208,8 @@ class SolidVector {
 			return li;
 		}
 		
+		// returns physical index if the logical index is valid
+		// else throws std::out_of_range
 		size_t physicalIndexChecked(size_t logicalI) const {
 			if(!indexValid(logicalI))
 				throw std::out_of_range("Index out of range");
