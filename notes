@@ -79,7 +79,10 @@ use cases:
 - character is not a wizard
 
 - implement attack spells
-	-	area affectors with time period, that can deal damage and alter other player stats
+	- the body of the spell (entity) only gives effectApplier to a character
+	- body can die immediately (give effectAppliers once) or after some time (make sure everyone touching the body has effecApplier)
+	- eA can die after some time / when character leaves the spell body
+	x	area affectors with time period, that can deal damage and alter other player stats
 		- player stats, HP
 		- types of affectors
 			- repetitive = give player a de/buff
