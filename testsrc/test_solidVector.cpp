@@ -1,12 +1,6 @@
 #include <solidVector.hpp>
 #include "gtest/gtest.h"
 #include <functional>
-/*
-		- requirements
-			- no element shifting on remove
-			- other indicies stay valid
-			- reuse method to use any free index (will be used only on entity level, components will be accessed directly)
-*/
 
 using namespace std;
 
@@ -14,7 +8,7 @@ TEST(SolidVector, create) {
 	SolidVector<int> s;
 }
 
-TEST(SolidVector, singleInsert) {
+TEST(SolidVector, insertOne) {
 	SolidVector<int> s;
 	size_t i = s.insert(5);
 	ASSERT_EQ(i, 0);
