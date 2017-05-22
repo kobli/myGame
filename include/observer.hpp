@@ -4,11 +4,8 @@
 #include <list>
 #include <memory>
 #include <algorithm>
-#include <iostream>
 #include "reallocable.hpp"
 #include <exception>
-
-#include <typeinfo>
 
 
 template <typename messageT>
@@ -63,11 +60,11 @@ class Observable_ {
 		}
 
 		Observable_(Observable_&& other) noexcept {
-			swap(*this, other);
+			swap(other);
 		}
 
 		Observable_& operator=(Observable_ other) noexcept {
-			swap(*this, other);
+			swap(other);
 			return *this;
 		}
 
@@ -79,6 +76,7 @@ class Observable_ {
 			swap(_sendAddRemMsg, other._sendAddRemMsg);
 		}
 
+		//TODO rename to sendMsg ... or rename all to send..
 		void notifyObservers(const messageT& m) {
 			for(int i = 0; i < _observers.size(); i++) {
 				auto& observer = _observers[i];
@@ -91,8 +89,19 @@ class Observable_ {
 			}
 		}
 
+		virtual void broadcastRemMsg(const messageT& m) {
+			for(int i = 0; i < _observers.size(); i++) {
+				auto& observer = _observers[i];
+				if(auto ospt = observer.lock())
+					(*ospt)->onObservableRemove(*this, m);
+				else {
+					_observers.erase(_observers.begin()+i);
+					i--;
+				}
+			}
+		}
+
 		virtual ~Observable_() {
-			std::cout << "observable dtor\n";
 			for(auto& o : _observers) {
 				if(auto spt = o.lock())
 					sendRemMsg(**spt);
@@ -116,13 +125,16 @@ class Observable_ {
 			}
 		}
 
+		void removeAllObservers() {
+			_observers.clear();
+		}
+
 		virtual void sendAddMsg(Observer<messageT>& observer) {
 			if(_sendAddRemMsg)
 				observer.onObservableAdd(*this, _obsAddMsg);
 		}
 
 		virtual void sendRemMsg(Observer<messageT>& observer) {
-			std::cout << "observable sendRemMsg\n";
 			if(_sendAddRemMsg)
 				observer.onObservableRemove(*this, _obsRemMsg);
 		}
@@ -142,33 +154,53 @@ void swap(Observable_<messageT>& lhs, Observable_<messageT>& rhs) {
 
 // an observable observer
 // it creates no messages - only forwards whatever it receives up the tree
-//TODO revise: after calling observabler::addObserver the observer should receive addMsgs from all observed objs
+// after calling observabler::addObserver the observer should receive addMsgs from all observed objs
+// also when observabler dies, the observer should receive remMsg from objects observed by observabler
 template <typename messageT>
 class Observabler: public Observable<messageT>, public Observer<messageT> {
 	public:
+		Observabler() = default;
+
 		Observabler(messageT obsAddMsg, messageT obsRemMsg): Observable<messageT>(obsAddMsg, obsRemMsg) {
 		}
 
-		Observabler() {
+		Observabler(Observabler& other, bool dropObservers = true)
+			: Observable<messageT>(static_cast<Observable<messageT>&>(other))
+				, Observer<messageT>(static_cast<Observer<messageT>&>(other)) {
+			_observed = other._observed;
+			if(dropObservers)
+				this->removeAllObservers();
 		}
 
-		Observabler(Observabler&& other) {
-			swap(other);
+
+		Observabler& operator=(Observabler& other) = default;
+
+		Observabler(Observabler&& other) = default;
+
+		Observabler& operator=(Observabler&& other) {
+			Observable<messageT>::operator=(std::move(other));
+			Observer<messageT>::operator=(std::move(other));
+			swapSelf(other);
+			return *this;
 		}
 
 		void swap(Observabler& other) {
-			using std::swap;
-			swap(_observed, other._observed);
+			swapSelf();
 			Observable<messageT>::swap(other);
 			Observer<messageT>::swap(other);
 		}
 
-		// when observabler dies, send remMsgs ... but when it reallocates?
+		void swapSelf(Observabler& other) {
+			using std::swap;
+			swap(_observed, other._observed);
+		}
+
 		virtual ~Observabler() {
 			while(!_observed.empty()) {
 				auto& o = _observed.front();
 				if(auto spt = o.lock())
 					(*spt)->sendRemMsg(*this);
+				_observed.pop_front();
 			}
 		}
 
@@ -197,21 +229,14 @@ class Observabler: public Observable<messageT>, public Observer<messageT> {
 			this->notifyObservers(m);
 		}
 
-		//TODO when this is called from Observable_ dtor, the derived part does not exist
-		//anymore and the cast will fail ...
-		//how about if Realocable::self returned ptr to base type?
 		virtual void onObservableRemove(Observable_<messageT>& o, const messageT& m) {
 			// this method is called when the observabler stops observing an observable
-			std::cout << "observabler::onObservableRemove\n";
-			this->notifyObservers(m);
-			std::cout << typeid(o).name() << std::endl;
-			auto& ro = dynamic_cast<Observable<messageT>&>(o);
-			std::cout << "observabler::onObservableRemove casting passed\n";
-			_observed.remove_if([&ro](auto& v) -> bool {
+			this->broadcastRemMsg(m);
+			_observed.remove_if([](auto& v) -> bool {
 				if(v.expired())
 					return true;
-				auto vsp = v.lock();
-				return *vsp == &ro;
+				else
+				return false;
 			});
 		}
 

@@ -45,20 +45,20 @@ class ObserverMock: public Observer<Msg>
 		MessageSequence _s;
 	private:
 
-		virtual void onObservableAdd(Observable_<Msg>&, const Msg& m) {
-			onMsg(m);
+		virtual void onObservableAdd(Observable_<Msg>& caller, const Msg& m) {
+			onMsg(caller, m);
 		}
 
-		virtual void onObservableUpdate(Observable_<Msg>&, const Msg& m) {
-			onMsg(m);
+		virtual void onObservableUpdate(Observable_<Msg>& caller, const Msg& m) {
+			onMsg(caller, m);
 		}
 
-		virtual void onObservableRemove(Observable_<Msg>&, const Msg& m) {
-			onMsg(m);
+		virtual void onObservableRemove(Observable_<Msg>& caller, const Msg& m) {
+			onMsg(caller, m);
 		}
 
-		void onMsg(const Msg& m) {
-			cout << m;
+		void onMsg(Observable_<Msg>& caller, const Msg& m) {
+			//cout << m;// << " (caller: " << &caller << ")\n";
 			ASSERT_EQ(_s.empty(), false);
 			ASSERT_EQ(m, _s.front());
 			_s.pop();
@@ -147,12 +147,26 @@ TEST(Observabler, ObserverReceivesAddMsgsWhenObservablerAdded) {
 	Observable<Msg> observable1(Msg(1, true), Msg(1, false, true));
 	Observable<Msg> observable2(Msg(2, true), Msg(2, false, true));
 	Observabler<Msg> observabler(Msg(0, true), Msg(0, false, true));
+	// no remove messages because observer dies before observabler or observables
 	ObserverMock observer(MsgSeq{
 			Msg(1, true),
 			Msg(2, true),
 			});
 	observable1.addObserver(observabler);
 	observable2.addObserver(observabler);
+
+	observabler.addObserver(observer);
+}
+
+TEST(Observabler, DeadObservedIgnored) { // ignored ...  since we cannot test if the dead observer was removed
+	ObserverMock observer(MsgSeq{
+			});
+	Observabler<Msg> observabler;
+
+	{
+		Observable<Msg> observable(Msg(1, true), Msg(1, false, true));
+		observable.addObserver(observabler);
+	}
 
 	observabler.addObserver(observer);
 }
@@ -212,16 +226,78 @@ TEST(Observabler, MoveConstruction) {
 	}
 }
 
-TEST(Observabler, weirdBS) {
+TEST(Observabler, MoveAssignment) {
+	ObserverMock observer(MsgSeq{
+			Msg(1, true),
+			Msg(2, true),
+			Msg(1, false, true),
+			Msg(2, false, true),
+			});
 	Observabler<Msg> observabler1;
 	Observable<Msg> observable1(Msg(1, true), Msg(1, false, true));
 	Observable<Msg> observable2(Msg(2, true), Msg(2, false, true));
 	observable1.addObserver(observabler1);
 	observable2.addObserver(observabler1);
+	{
+		Observabler<Msg> observabler2 = std::move(observabler1);
+		observabler2.addObserver(observer);
+	}
 }
 
-/*TODO test observabler:
- * copy and move constructors / assignments
- * realloc
- * proper destruction - valgrind
- */
+TEST(Observabler, ObservableDeath) {
+	Observabler<Msg> observabler;
+	Observable<Msg> observable(Msg(1, true), Msg(1, false, true));
+	observable.addObserver(observabler);
+}
+
+TEST(Observabler, CopyConstruction) {
+	ObserverMock observer(MsgSeq{
+			Msg(1, true),
+			Msg(2, true),
+
+			Msg(1, true),
+			Msg(2, true),
+
+			Msg(1, false, true),
+			Msg(2, false, true),
+
+			Msg(1, false, true),
+			Msg(2, false, true),
+			});
+	Observable<Msg> observable1(Msg(1, true), Msg(1, false, true));
+	Observable<Msg> observable2(Msg(2, true), Msg(2, false, true));
+	Observabler<Msg> observabler1;
+	observable1.addObserver(observabler1);
+	observable2.addObserver(observabler1);
+	observabler1.addObserver(observer);
+	{
+		Observabler<Msg> observabler2(observabler1);
+		observabler2.addObserver(observer);
+	}
+}
+
+TEST(Observabler, CopyAssignment) {
+	ObserverMock observer(MsgSeq{
+			Msg(1, true),
+			Msg(2, true),
+
+			Msg(1, true),
+			Msg(2, true),
+
+			Msg(1, false, true),
+			Msg(2, false, true),
+
+			Msg(1, false, true),
+			Msg(2, false, true),
+			});
+	Observable<Msg> observable1(Msg(1, true), Msg(1, false, true));
+	Observable<Msg> observable2(Msg(2, true), Msg(2, false, true));
+	Observabler<Msg> observabler1;
+	observable1.addObserver(observabler1);
+	observable2.addObserver(observabler1);
+	observabler1.addObserver(observer);
+	{
+		Observabler<Msg> observabler2 = observabler1;
+		observabler2.addObserver(observer);
+	}
+}
