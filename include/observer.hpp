@@ -5,7 +5,6 @@
 #include <memory>
 #include <algorithm>
 #include "reallocable.hpp"
-#include <exception>
 
 
 template <typename messageT>
@@ -23,10 +22,8 @@ using Observable = Reallocable<Observable_<msgT>>;
 
 template <typename messageT>
 class Observer_ {
-	//TODO try to hide onObservable... methods .. in Observabler too
-	//friend Observable_;
-	//protected:
-	public:
+	friend Observable_<messageT>;
+	protected:
 		// called when the observer is starting to observe an object
 		virtual void onObservableAdd(Observable_<messageT>& o, const messageT& m) = 0;
 		// called when the observable is changed
@@ -35,7 +32,7 @@ class Observer_ {
 		// - either because the observable was destroyed or 
 		// because Observable::removeObserver was called
 		virtual void onObservableRemove(Observable_<messageT>& o, const messageT& m) = 0;
-		// i guess observable.remove(self) should not be called in dtor
+	public:
 		virtual ~Observer_()
 		{}
 
@@ -68,44 +65,19 @@ class Observable_ {
 			return *this;
 		}
 
+		virtual ~Observable_() {
+			for(auto& o : _observers) {
+				if(auto spt = o.lock())
+					sendRemMsg(**spt);
+			}
+		}
+
 		void swap(Observable_& other) noexcept { //TODO when is this really noexcept?
 			using std::swap;
 			swap(_observers, other._observers);
 			swap(_obsAddMsg, other._obsAddMsg);
 			swap(_obsRemMsg, other._obsRemMsg);
 			swap(_sendAddRemMsg, other._sendAddRemMsg);
-		}
-
-		//TODO rename to sendMsg ... or rename all to send..
-		void notifyObservers(const messageT& m) {
-			for(int i = 0; i < _observers.size(); i++) {
-				auto& observer = _observers[i];
-				if(auto ospt = observer.lock())
-					(*ospt)->onObservableUpdate(*this, m);
-				else {
-					_observers.erase(_observers.begin()+i);
-					i--;
-				}
-			}
-		}
-
-		virtual void broadcastRemMsg(const messageT& m) {
-			for(int i = 0; i < _observers.size(); i++) {
-				auto& observer = _observers[i];
-				if(auto ospt = observer.lock())
-					(*ospt)->onObservableRemove(*this, m);
-				else {
-					_observers.erase(_observers.begin()+i);
-					i--;
-				}
-			}
-		}
-
-		virtual ~Observable_() {
-			for(auto& o : _observers) {
-				if(auto spt = o.lock())
-					sendRemMsg(**spt);
-			}
 		}
 
 		virtual void addObserver(Observer<messageT>& obs) {
@@ -138,7 +110,30 @@ class Observable_ {
 			if(_sendAddRemMsg)
 				observer.onObservableRemove(*this, _obsRemMsg);
 		}
+		
+		void notifyObservers(const messageT& m) {
+			for(int i = 0; i < _observers.size(); i++) {
+				auto& observer = _observers[i];
+				if(auto ospt = observer.lock())
+					(*ospt)->onObservableUpdate(*this, m);
+				else {
+					_observers.erase(_observers.begin()+i);
+					i--;
+				}
+			}
+		}
 
+		virtual void broadcastRemMsg(const messageT& m) {
+			for(int i = 0; i < _observers.size(); i++) {
+				auto& observer = _observers[i];
+				if(auto ospt = observer.lock())
+					(*ospt)->onObservableRemove(*this, m);
+				else {
+					_observers.erase(_observers.begin()+i);
+					i--;
+				}
+			}
+		}
 
 	private:
 		std::vector<std::weak_ptr<Observer<messageT>*>> _observers;
@@ -161,7 +156,8 @@ class Observabler: public Observable<messageT>, public Observer<messageT> {
 	public:
 		Observabler() = default;
 
-		Observabler(messageT obsAddMsg, messageT obsRemMsg): Observable<messageT>(obsAddMsg, obsRemMsg) {
+		Observabler(messageT obsAddMsg, messageT obsRemMsg)
+			: Observable<messageT>(obsAddMsg, obsRemMsg) {
 		}
 
 		Observabler(Observabler& other, bool dropObservers = true)
@@ -171,7 +167,6 @@ class Observabler: public Observable<messageT>, public Observer<messageT> {
 			if(dropObservers)
 				this->removeAllObservers();
 		}
-
 
 		Observabler& operator=(Observabler& other) = default;
 
@@ -190,11 +185,6 @@ class Observabler: public Observable<messageT>, public Observer<messageT> {
 			Observer<messageT>::swap(other);
 		}
 
-		void swapSelf(Observabler& other) {
-			using std::swap;
-			swap(_observed, other._observed);
-		}
-
 		virtual ~Observabler() {
 			while(!_observed.empty()) {
 				auto& o = _observed.front();
@@ -202,6 +192,12 @@ class Observabler: public Observable<messageT>, public Observer<messageT> {
 					(*spt)->sendRemMsg(*this);
 				_observed.pop_front();
 			}
+		}
+
+	protected:
+		void swapSelf(Observabler& other) {
+			using std::swap;
+			swap(_observed, other._observed);
 		}
 
 		// when new observer starts observing, send him addMessages from all observed objects
@@ -217,7 +213,6 @@ class Observabler: public Observable<messageT>, public Observer<messageT> {
 					(*spt)->sendRemMsg(observer);
 		}
 
-	private:
 		virtual void onObservableAdd(Observable_<messageT>& o, const messageT& m) {
 			// this method is called when the observabler starts observing an observable
 			this->notifyObservers(m);
