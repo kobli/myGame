@@ -68,7 +68,7 @@ class Observable_ {
 		virtual ~Observable_() {
 			for(auto& o : _observers) {
 				if(auto spt = o.lock())
-					sendRemMsg(**spt);
+					sendRemMsgTo(**spt);
 			}
 		}
 
@@ -82,14 +82,14 @@ class Observable_ {
 
 		virtual void addObserver(Observer<messageT>& obs) {
 			_observers.push_back(obs.getSelf());
-			sendAddMsg(obs);
+			sendAddMsgTo(obs);
 		}
 
 		void removeObserver(Observer<messageT>& obs) {
 			for(auto it = _observers.begin(); it != _observers.end(); it++) {
 				if(auto spt = it->lock()) {
 					if(*spt.get() == &obs) {
-						sendRemMsg(**spt);
+						sendRemMsgTo(**spt);
 						_observers.erase(it);
 						break;
 					}
@@ -101,21 +101,34 @@ class Observable_ {
 			_observers.clear();
 		}
 
-		virtual void sendAddMsg(Observer<messageT>& observer) {
+		virtual void sendAddMsgTo(Observer<messageT>& observer) {
 			if(_sendAddRemMsg)
 				observer.onObservableAdd(*this, _obsAddMsg);
 		}
 
-		virtual void sendRemMsg(Observer<messageT>& observer) {
+		virtual void sendRemMsgTo(Observer<messageT>& observer) {
 			if(_sendAddRemMsg)
 				observer.onObservableRemove(*this, _obsRemMsg);
 		}
 		
-		void notifyObservers(const messageT& m) {
+		void broadcastUpdMsg(const messageT& m) {
 			for(int i = 0; i < _observers.size(); i++) {
 				auto& observer = _observers[i];
 				if(auto ospt = observer.lock())
 					(*ospt)->onObservableUpdate(*this, m);
+				else {
+					_observers.erase(_observers.begin()+i);
+					i--;
+				}
+			}
+		}
+
+	protected:
+		virtual void broadcastAddMsg(const messageT& m) {
+			for(int i = 0; i < _observers.size(); i++) {
+				auto& observer = _observers[i];
+				if(auto ospt = observer.lock())
+					(*ospt)->onObservableAdd(*this, m);
 				else {
 					_observers.erase(_observers.begin()+i);
 					i--;
@@ -189,7 +202,7 @@ class Observabler: public Observable<messageT>, public Observer<messageT> {
 			while(!_observed.empty()) {
 				auto& o = _observed.front();
 				if(auto spt = o.lock())
-					(*spt)->sendRemMsg(*this);
+					(*spt)->sendRemMsgTo(*this);
 				_observed.pop_front();
 			}
 		}
@@ -201,27 +214,27 @@ class Observabler: public Observable<messageT>, public Observer<messageT> {
 		}
 
 		// when new observer starts observing, send him addMessages from all observed objects
-		virtual void sendAddMsg(Observer<messageT>& observer) {
+		virtual void sendAddMsgTo(Observer<messageT>& observer) {
 			for(auto& o : _observed)
 				if(auto spt = o.lock())
-					(*spt)->sendAddMsg(observer);
+					(*spt)->sendAddMsgTo(observer);
 		}
 
-		virtual void sendRemMsg(Observer<messageT>& observer) {
+		virtual void sendRemMsgTo(Observer<messageT>& observer) {
 			for(auto& o : _observed)
 				if(auto spt = o.lock())
-					(*spt)->sendRemMsg(observer);
+					(*spt)->sendRemMsgTo(observer);
 		}
 
 		virtual void onObservableAdd(Observable_<messageT>& o, const messageT& m) {
 			// this method is called when the observabler starts observing an observable
-			this->notifyObservers(m);
+			this->broadcastAddMsg(m);
 			auto& ro = dynamic_cast<Observable<messageT>&>(o);
 			_observed.push_back(ro.getSelf());
 		}
 
 		virtual void onObservableUpdate(Observable_<messageT>&, const messageT& m) {
-			this->notifyObservers(m);
+			this->broadcastUpdMsg(m);
 		}
 
 		virtual void onObservableRemove(Observable_<messageT>& o, const messageT& m) {
