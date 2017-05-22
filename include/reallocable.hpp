@@ -4,27 +4,28 @@
 
 template <typename T>
 class Reallocable : public T {
+	using SelfPtrT = Reallocable<T>*;
 	public:
 		template <typename... Args>
 		Reallocable(Args... args): T{args...},
-			_self{new Reallocable*(this)} {
+			_self{new SelfPtrT(this)} {
 		}
 
 		Reallocable():
-			_self{new Reallocable*(this)} {
+			_self{new SelfPtrT(this)} {
 		}
 
 		Reallocable(Reallocable& other) noexcept: T{other},
-			_self{new Reallocable*(this)} {
+			_self{new SelfPtrT(this)} {
 		}
 
 		Reallocable& operator=(Reallocable& other) noexcept {
-			_self.reset(new Reallocable*(this));
+			_self.reset(new SelfPtrT(this));
 			T::operator=(other);
 		}
 
 		Reallocable(Reallocable&& other) noexcept: T{std::move(other)}, 
-			_self{new Reallocable*(this)} {
+			_self{new SelfPtrT(this)} {
 			swapSelf(other._self);
 		}
 		
@@ -34,7 +35,7 @@ class Reallocable : public T {
 			return *this;
 		}
 
-		std::weak_ptr<Reallocable<T>*> getSelf() {
+		std::weak_ptr<SelfPtrT> getSelf() {
 			return _self;
 		}
 
@@ -44,9 +45,9 @@ class Reallocable : public T {
 		}
 
 	protected:
-		std::shared_ptr<Reallocable<T>*> _self;
+		std::shared_ptr<SelfPtrT> _self;
 
-		void swapSelf(std::shared_ptr<Reallocable<T>*>& otherSelf) {
+		void swapSelf(std::shared_ptr<SelfPtrT>& otherSelf) {
 			using std::swap;
 			swap(_self, otherSelf);
 			swap(*_self, *otherSelf);
