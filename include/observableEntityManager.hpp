@@ -46,12 +46,15 @@ class ObservableEntity : public Entity<ComponentBase,ComponentType>, public Obse
 
 		virtual void addComponent(ComponentType t) {
 			EntityBaseT::addComponent(t);
-			std::cout << "add component\n";
-			auto* c = EntityBaseT::getComponent(t);
+			auto* c = static_cast<ComponentBase*>(EntityBaseT::getComponent(t));
 			assert(c != nullptr);
-			//TODO .. first fix the bug - try unit test lower level parts this->observe(*c);
+			c->addObserver(*this); 
 		}
 
+		using EntityBaseT::addComponent;
+		using EntityBaseT::removeComponent;
+		using EntityBaseT::getComponent;
+		using EntityBaseT::hasComponent;
 };
 
 
@@ -69,9 +72,8 @@ class ObservableEntityManager : public EntityManager<ComponentBase,ComponentType
 		}
 			
 		ID createEntity() {
-			std::cout << "createEntity\n";
 			ID id = BaseEM::createEntity();
-			this->observe(*this->getEntity(id));
+			this->getEntity(id)->addObserver(*this);
 			return id;
 		}
 };
