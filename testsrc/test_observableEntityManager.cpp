@@ -5,17 +5,17 @@ enum ComponentType {
 	t2,
 };
 
-class ComponentBase : public Observable<EntityEvent<ComponentType>> {
+class ObservableComponentBase : public Observable<EntityEvent<ComponentType>> {
 	typedef EntityEvent<ComponentType> EventT;
 	public:
-	ComponentBase() : Observable<EventT>{EventT{}, EventT{}} {
+	ObservableComponentBase() : Observable<EventT>{EventT{}, EventT{}} {
 	}
 };
 
-class Component1 : public ComponentBase {
+class ObservableComponent1 : public ObservableComponentBase {
 };
 
-class Component2 : public ComponentBase {
+class ObservableComponent2 : public ObservableComponentBase {
 };
 
 
@@ -25,8 +25,8 @@ template <typename T>
 void ignoreUnused(T&) {
 }
 
-typedef ObservableEntity<ComponentBase,ComponentType> EntityT;
-typedef ObservableEntityManager<ComponentBase,ComponentType,EntityT> EntityManagerT;
+typedef ObservableEntity<ObservableComponentBase,ComponentType> EntityT;
+typedef ObservableEntityManager<ObservableComponentBase,ComponentType,EntityT> EntityManagerT;
 
 
 TEST(ObservableEntityManager, getNonExistingEntity) {
@@ -51,23 +51,24 @@ TEST(ObservableEntityManager, getEntity) {
 
 TEST(ObservableEntityManager, registerComponentType) {
 	EntityManagerT em;
-	em.registerComponentType<Component1>(ComponentType::t1);
+	em.registerComponentType<ObservableComponent1>(ComponentType::t1);
 }
 
 TEST(ObservableEntityManager, createComponent) {
 	EntityManagerT em;
-	em.registerComponentType<Component1>(ComponentType::t1);
+	em.registerComponentType<ObservableComponent1>(ComponentType::t1);
 
 	ID eID = em.createEntity();
 	auto& e = *em.getEntity(eID); // should not return nullptr now
 
+	//e.addComponent<ObservableComponent1>();
 	e.addComponent(ComponentType::t1);
 	ASSERT_EQ(e.hasComponent(ComponentType::t1), true);
 }
 
 TEST(ObservableEntityManager, removeComponent) {
 	EntityManagerT em;
-	em.registerComponentType<Component1>(ComponentType::t1);
+	em.registerComponentType<ObservableComponent1>(ComponentType::t1);
 
 	ID eID = em.createEntity();
 	auto& e = *em.getEntity(eID); // should not return nullptr now
