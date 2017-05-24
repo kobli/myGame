@@ -46,21 +46,27 @@ class ObserverMock: public Observer<Msg>
 	private:
 
 		virtual void onObservableAdd(Observable_<Msg>& caller, const Msg& m) {
+			EXPECT_EQ(m._add, true);
+			EXPECT_NE(m._rem, true);
 			onMsg(caller, m);
 		}
 
 		virtual void onObservableUpdate(Observable_<Msg>& caller, const Msg& m) {
+			EXPECT_NE(m._add, true);
+			EXPECT_NE(m._rem, true);
 			onMsg(caller, m);
 		}
 
 		virtual void onObservableRemove(Observable_<Msg>& caller, const Msg& m) {
+			EXPECT_NE(m._add, true);
+			EXPECT_EQ(m._rem, true);
 			onMsg(caller, m);
 		}
 
 		void onMsg(Observable_<Msg>& caller, const Msg& m) {
 			//cout << m;// << " (caller: " << &caller << ")\n";
-			ASSERT_EQ(_s.empty(), false);
-			ASSERT_EQ(m, _s.front());
+			EXPECT_EQ(_s.empty(), false);
+			EXPECT_EQ(m, _s.front());
 			_s.pop();
 		}
 };
@@ -82,7 +88,7 @@ TEST(Observer, ObservableUpdated) {
 			});
 
 	observable.addObserver(observer);
-	observable.notifyObservers(Msg(5));
+	observable.broadcastUpdMsg(Msg(5));
 }
 
 TEST(Observer, ObservableDeath) {
@@ -104,9 +110,9 @@ TEST(Observer, ObservableRemove) {
 			});
 	Observable<Msg> observable(Msg(0, true), Msg(0, false, true));
 	observable.addObserver(observer);
-	observable.notifyObservers(Msg(0));
+	observable.broadcastUpdMsg(Msg(0));
 	observable.removeObserver(observer);
-	observable.notifyObservers(Msg(0));
+	observable.broadcastUpdMsg(Msg(0));
 }
 
 TEST(Observer, ObserverMove) {
@@ -123,7 +129,7 @@ TEST(Observer, ObserverMove) {
 		}
 		observer2._s.push(Msg(0));
 		observer2._s.push(Msg(0, false, true));
-		observable.notifyObservers(Msg(0));
+		observable.broadcastUpdMsg(Msg(0));
 	}
 }
 
@@ -136,7 +142,7 @@ TEST(Observer, ObservableUpdateAfterObserverDead) {
 		observable.addObserver(observer);
 	}
 	// this shouldn't crash the program
-	observable.notifyObservers(Msg(0)); 
+	observable.broadcastUpdMsg(Msg(0)); 
 }
 
 TEST(Observabler, create) {
