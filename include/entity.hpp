@@ -14,7 +14,11 @@ typedef uint16_t ID;
 const ID NULLID = ID{}-1;
 
 template <typename ComponentBase, typename ComponentType>
+class Entity;
+
+template <typename ComponentBase, typename ComponentType>
 class EntityManagerBase {
+	friend Entity<ComponentBase, ComponentType>;
 	protected:
 	class ComponentContainerBase {
 		public:
@@ -82,7 +86,6 @@ class EntityManagerBase {
 		std::map<std::type_index, ComponentType> _componentClassToType;
 
 
-	public:
 		virtual ID addComponent(ComponentType t) {
 			if(existsBucketFor(t))
 				return _componentBuckets[t]->emplace();
@@ -98,7 +101,6 @@ class EntityManagerBase {
 		}
 
 		virtual void removeComponent(ComponentType t, ID cid) {
-			std::cout << "EM::removeComponent\n";
 			if(existsBucketFor(t) && _componentBuckets[t].get())
 				_componentBuckets[t]->remove(cid);
 		}
