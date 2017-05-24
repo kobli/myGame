@@ -1,5 +1,5 @@
 #include "gtest/gtest.h"
-#include "entityTemplates.hpp"
+#include "entityComponent.hpp"
 enum ComponentType {
 	t1,
 	t2,

@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
-#include "observableEntityManager.hpp"
+#include "observableEntityComponent.hpp"
 enum ComponentType {
+	NONE,
 	t1,
 	t2,
 };
@@ -77,3 +78,8 @@ TEST(ObservableEntityManager, removeComponent) {
 	ASSERT_EQ(e.hasComponent(ComponentType::t1), false);
 	ASSERT_EQ(e.getComponent(ComponentType::t1), nullptr);
 }
+
+/*TODO
+ * make sure creating/removing entities and components emits events with all Event members set properly
+ *
+ */

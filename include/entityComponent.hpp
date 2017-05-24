@@ -8,10 +8,8 @@
 #include "solidVector.hpp"
 #include <typeindex>
 #include <typeinfo>
-#include <iostream>
 
 typedef uint16_t ID;
-const ID NULLID = ID{}-1;
 
 template <typename ComponentBase, typename ComponentType>
 class Entity;
@@ -127,7 +125,8 @@ class Entity {
 	typedef EntityManagerBase<ComponentBase,ComponentType> EntityManagerBaseT;
 
 	public:
-		Entity(EntityManagerBaseT& manager);
+		Entity(EntityManagerBaseT& manager) : _manager{&manager} {
+		}
 
 		Entity(Entity&& other) noexcept : _manager{other._manager} {
 			swap(other);
@@ -144,20 +143,48 @@ class Entity {
 			swap(_componentID, other._componentID);
 		}
 
+		void addComponent(ComponentType t) {
+			if(!hasComponent(t))
+				_componentID[t] = _manager->addComponent(t);
+		}
 
-		virtual void addComponent(ComponentType t);
-		void removeComponent(ComponentType t);
-		ComponentBase* getComponent(ComponentType t);
-		bool hasComponent(ComponentType t);
+		void removeComponent(ComponentType t) {
+			if(hasComponent(t)) {
+				_manager->removeComponent(t, _componentID[t]);
+				_componentID.erase(t);
+			}
+		}
+
+		ComponentBase* getComponent(ComponentType t) {
+			if(hasComponent(t))
+				return _manager->getComponent(t, _componentID[t]);
+			else
+				return nullptr;
+		}
+
+		bool hasComponent(ComponentType t) {
+			return _componentID.find(t) != _componentID.end();
+		}
 
 		template<typename T>
-		void addComponent();
+			void addComponent() {
+				addComponent(_manager->template componentClassToType<T>());
+			}
+
 		template<typename T>
-		void removeComponent();
+			void removeComponent() {
+				removeComponent(_manager->template componentClassToType<T>());
+			}
+
 		template<typename T>
-		T* getComponent();
+			T* getComponent() {
+				return static_cast<T*>(getComponent(_manager->template componentClassToType<T>()));
+			}
+
 		template<typename T>
-		bool hasComponent();
+			bool hasComponent() {
+				return hasComponent(_manager->template componentClassToType<T>());
+			}
 
 	private:
 		EntityManagerBaseT* _manager;
@@ -168,5 +195,31 @@ template <typename T, typename TT>
 void swap(Entity<T, TT>& lhs, Entity<T, TT>& rhs) {
 	lhs.swap(rhs);
 }
+
+
+template <typename ComponentBase, typename ComponentType, typename EntityT>
+class EntityManager : public EntityManagerBase<ComponentBase,ComponentType> {
+	friend EntityT;
+
+	public:
+		ID createEntity() {
+			return _entities.insert(EntityT(*this));
+		}
+
+		EntityT* getEntity(ID eid) {
+			if(_entities.indexValid(eid))
+				return &_entities[eid];
+			else
+				return nullptr;
+		}
+
+		void removeEntity(ID eid) {
+			if(_entities.indexValid(eid))
+				_entities.remove(eid);
+		}
+
+	private:
+		SolidVector<EntityT> _entities;
+};
 
 #endif /* ENTITY_HPP_17_04_20_11_22_33 */

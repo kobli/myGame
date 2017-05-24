@@ -1,31 +1,13 @@
 #ifndef OBSERVABLEENTITYMANAGER_HPP_17_04_28_11_28_05
 #define OBSERVABLEENTITYMANAGER_HPP_17_04_28_11_28_05 
-
-#include "entityTemplates.hpp"
+#include "entityComponent.hpp"
 #include "observer.hpp"
 
 template <typename ComponentType>
 struct EntityEvent {
-	ID entityID 							= NULLID;
-	ID componentID 						= NULLID; // TODO this is maybe redundant ... but not if ComponentType does not have NULLType
-	ComponentType componentT 	= ComponentType{};
-	bool created 							= false;
-	bool destroyed 						= false;
+	ID entityID;
+	ComponentType componentT 	= ComponentType::NONE; // for entity created / destroyed - component non-related events
 };
-
-
-/*
- * need to observe:
- * component:
- * 	- change
- * 	- creation
- * 	- destruction
- * entity:
- * 	- creation
- * 	- destruction
- *
- * 	! it would be logical to be able to observe an entity to get changes in components
- */
 
 
 template <typename ComponentBase, typename ComponentType>
@@ -38,7 +20,7 @@ class ObservableEntity : public Entity<ComponentBase,ComponentType>, public Obse
 	static_assert(std::is_base_of<Observable<EventT>, ComponentBase>::value, "ComponentBase must be Observable");
 
 	public:
-		ObservableEntity(EntityManagerBaseT& manager) : EntityBaseT{manager}, Observabler<EventT>(EventT(), EventT()) {
+		ObservableEntity(EntityManagerBaseT& manager) : EntityBaseT{manager}, Observabler<EventT>() {
 		}
 
 		ObservableEntity(EntityBaseT&& other) noexcept : EntityBaseT{other} {
