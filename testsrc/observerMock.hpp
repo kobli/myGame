@@ -18,28 +18,47 @@ class Msg
 std::ostream& operator<<(std::ostream& o, const Msg& m);
 
 
-
-class ObserverMock: public Observer<Msg>
+template <typename MsgT>
+class ObserverMock_: public Observer<MsgT>
 {
 	public:
-		typedef std::queue<Msg> MessageSequence;
-		typedef MessageSequence::container_type MsgSeqCont;
-		ObserverMock(MsgSeqCont s = MsgSeqCont());
+		typedef std::queue<MsgT> MessageSequence;
+		typedef typename MessageSequence::container_type MsgSeqCont;
 
-		ObserverMock(ObserverMock&) = delete;
-		ObserverMock(ObserverMock&&) = delete; //unnecessary
-		ObserverMock& operator=(ObserverMock&& other);
+		ObserverMock_(MsgSeqCont s = MsgSeqCont()) : _s{s} {
+		}
 
-		~ObserverMock();
+		ObserverMock_& operator=(ObserverMock_&& other) {
+			Observer<MsgT>::operator=(std::move(other));
+			std::swap(_s, other._s);
+			return *this;
+		}
+
+		~ObserverMock_() {
+			EXPECT_EQ(_s.empty(), true);
+		}
 
 		MessageSequence _s;
 	private:
+		virtual void onObservableAdd(Observable_<MsgT>& caller, const MsgT& m) {
+			onMsg(caller, m);
+			//std::cout << "add\n";
+		}
 
-		virtual void onObservableAdd(Observable_<Msg>& caller, const Msg& m);
-		virtual void onObservableUpdate(Observable_<Msg>& caller, const Msg& m);
-		virtual void onObservableRemove(Observable_<Msg>& caller, const Msg& m);
-		void onMsg(Observable_<Msg>& caller, const Msg& m);
+		virtual void onObservableUpdate(Observable_<MsgT>& caller, const MsgT& m) {
+			onMsg(caller, m);
+		}
+
+		virtual void onObservableRemove(Observable_<MsgT>& caller, const MsgT& m) {
+			onMsg(caller, m);
+			//std::cout << "remove\n";
+		}
+
+		virtual void onMsg(Observable_<MsgT>&, const MsgT& m) {
+			//std::cout << m << std::endl;
+			EXPECT_EQ(_s.empty(), false);
+			EXPECT_EQ(m, _s.front());
+			_s.pop();
+		}
 };
-
-typedef ObserverMock::MsgSeqCont MsgSeq;
 #endif /* OBSERVERMOCK_HPP_17_05_25_18_03_23 */
