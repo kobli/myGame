@@ -2,6 +2,9 @@
 #include "gtest/gtest.h"
 #include "observerMock.hpp"
 
+typedef ObserverMock_<Msg> ObserverMock;
+typedef ObserverMock::MsgSeqCont MsgSeq;
+
 TEST(Observer, ObservableAdded) {
 	Observable<Msg> observable(Msg(0, true), Msg(0, false, true));
 	ObserverMock observer(MsgSeq{Msg(0, true)});
@@ -78,21 +81,6 @@ TEST(Observabler, create) {
 	Observabler<Msg> observabler(Msg(0, true), Msg(0, false, true));
 }
 
-TEST(Observabler, ObserverReceivesAddMsgsWhenObservablerAdded) {
-	Observable<Msg> observable1(Msg(1, true), Msg(1, false, true));
-	Observable<Msg> observable2(Msg(2, true), Msg(2, false, true));
-	Observabler<Msg> observabler(Msg(0, true), Msg(0, false, true));
-	// no remove messages because observer dies before observabler or observables
-	ObserverMock observer(MsgSeq{
-			Msg(1, true),
-			Msg(2, true),
-			});
-	observable1.addObserver(observabler);
-	observable2.addObserver(observabler);
-
-	observabler.addObserver(observer);
-}
-
 TEST(Observabler, DeadObservedIgnored) { // ignored ...  since we cannot test if the dead observer was removed
 	ObserverMock observer(MsgSeq{
 			});
@@ -106,20 +94,39 @@ TEST(Observabler, DeadObservedIgnored) { // ignored ...  since we cannot test if
 	observabler.addObserver(observer);
 }
 
-TEST(Observabler, ObservablerSendsNoAddMsg) {
+TEST(Observabler, ObservablerSendsAddMsg) {
 	Observabler<Msg> observabler(Msg(0, true), Msg(0, false, true));
 	// observer is declared later, therefore dies before observabler
 	ObserverMock observer(MsgSeq{
+			Msg(0, true),
 			});
 
 	observabler.addObserver(observer);
 }
 
-TEST(Observabler, ObservablerSendsNoRemMsg) {
+TEST(Observabler, ObservablerSendsRemMsg) {
 	ObserverMock observer(MsgSeq{
+			Msg(0, true),
+			Msg(0, false, true),
 			});
 	// observabler is declared later, therefore dies before observer
-	Observabler<Msg> observabler;
+	Observabler<Msg> observabler(Msg(0, true), Msg(0, false, true));
+
+	observabler.addObserver(observer);
+}
+
+TEST(Observabler, ObserverReceivesAddMsgsWhenObservablerAdded) {
+	Observable<Msg> observable1(Msg(1, true), Msg(1, false, true));
+	Observable<Msg> observable2(Msg(2, true), Msg(2, false, true));
+	Observabler<Msg> observabler(Msg(0, true), Msg(0, false, true));
+	// no remove messages because observer dies before observabler or observables
+	ObserverMock observer(MsgSeq{
+			Msg(0, true),
+			Msg(1, true),
+			Msg(2, true),
+			});
+	observable1.addObserver(observabler);
+	observable2.addObserver(observabler);
 
 	observabler.addObserver(observer);
 }
