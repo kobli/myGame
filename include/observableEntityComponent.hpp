@@ -5,9 +5,21 @@
 
 template <typename ComponentType>
 struct EntityEvent {
+	EntityEvent(ID eID, ComponentType compT = ComponentType::NONE): entityID{eID}, componentT{compT} {
+	}
+
+	bool operator==(const EntityEvent& other) const {
+		return entityID == other.entityID && componentT == other.componentT;
+	}
+
 	ID entityID;
 	ComponentType componentT 	= ComponentType::NONE; // for entity created / destroyed - component non-related events
 };
+
+template <typename CompT>
+std::ostream& operator<<(std::ostream& o, const EntityEvent<CompT>& e) {
+	return o << e.entityID << " " << e.componentT;
+}
 
 
 template <typename ComponentBase, typename ComponentType>
@@ -20,10 +32,8 @@ class ObservableEntity : public Entity<ComponentBase,ComponentType>, public Obse
 	static_assert(std::is_base_of<Observable<EventT>, ComponentBase>::value, "ComponentBase must be Observable");
 
 	public:
-		ObservableEntity(EntityManagerBaseT& manager) : EntityBaseT{manager}, Observabler<EventT>() {
-		}
-
-		ObservableEntity(EntityBaseT&& other) noexcept : EntityBaseT{other} {
+		ObservableEntity(EntityManagerBaseT& manager, ID id) : EntityBaseT{manager, id}
+		, Observabler<EventT>(EventT{id}, EventT{id}) {
 		}
 
 		virtual void addComponent(ComponentType t) {
@@ -50,7 +60,7 @@ class ObservableEntityManager : public EntityManager<ComponentBase,ComponentType
 	static_assert(std::is_base_of<Observable<EventT>, EntityT>::value, "EntityT must be Observable");
 
 	public:
-		ObservableEntityManager(): Observabler<EventT>(EventT(), EventT()) {
+		ObservableEntityManager(): Observabler<EventT>() {
 		}
 			
 		ID createEntity() {

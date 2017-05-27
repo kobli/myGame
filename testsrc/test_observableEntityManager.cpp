@@ -1,5 +1,7 @@
 #include "gtest/gtest.h"
 #include "observableEntityComponent.hpp"
+#include "observerMock.hpp"
+
 enum ComponentType {
 	NONE,
 	t1,
@@ -7,20 +9,25 @@ enum ComponentType {
 };
 
 class ObservableComponentBase : public Observable<EntityEvent<ComponentType>> {
+	protected:
 	typedef EntityEvent<ComponentType> EventT;
 	public:
-	ObservableComponentBase() : Observable<EventT>{EventT{}, EventT{}} {
+	ObservableComponentBase(const EventT& addEvent, const EventT& remEvent) : Observable<EventT>{addEvent, remEvent} {
 	}
 };
 
 class ObservableComponent1 : public ObservableComponentBase {
+	public:
+	ObservableComponent1(ID parentEntID) : ObservableComponentBase(EventT{parentEntID, t1}, EventT{parentEntID, t1}) {
+	}
 };
 
 class ObservableComponent2 : public ObservableComponentBase {
+	public:
+	ObservableComponent2(ID parentEntID) : ObservableComponentBase(EventT{parentEntID, t2}, EventT{parentEntID, t2}) {
+	}
 };
 
-
-using namespace std;
 
 template <typename T>
 void ignoreUnused(T&) {
@@ -28,6 +35,10 @@ void ignoreUnused(T&) {
 
 typedef ObservableEntity<ObservableComponentBase,ComponentType> EntityT;
 typedef ObservableEntityManager<ObservableComponentBase,ComponentType,EntityT> EntityManagerT;
+
+typedef EntityEvent<ComponentType> EventT;
+typedef ObserverMock_<EventT> ObserverMock;
+typedef ObserverMock::MsgSeqCont MsgSeq;
 
 
 TEST(ObservableEntityManager, getNonExistingEntity) {
@@ -79,7 +90,24 @@ TEST(ObservableEntityManager, removeComponent) {
 	ASSERT_EQ(e.getComponent(ComponentType::t1), nullptr);
 }
 
-/*TODO
- * make sure creating/removing entities and components emits events with all Event members set properly
- *
- */
+TEST(ObservableEntityManager, messages) {
+	// on EntityManager death the observer should receive remMsg from each tree node 
+	ObserverMock observer(MsgSeq{
+			// add events
+			EventT{0},
+			EventT{0, ComponentType::t1},
+
+			//remove events
+			EventT{0},
+			EventT{0, ComponentType::t1},
+			});
+	EntityManagerT em;
+	em.registerComponentType<ObservableComponent1>(ComponentType::t1);
+
+	em.addObserver(observer);
+
+	ID eID = em.createEntity();
+	auto& e = *em.getEntity(eID); // should not return nullptr now
+
+	e.addComponent(ComponentType::t1);
+}

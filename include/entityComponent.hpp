@@ -1,6 +1,6 @@
 #ifndef ENTITY_HPP_17_04_20_11_22_33
 #define ENTITY_HPP_17_04_20_11_22_33 
-
+#include <iostream>
 #include <vector>
 #include <memory>
 #include <array>
@@ -8,8 +8,10 @@
 #include "solidVector.hpp"
 #include <typeindex>
 #include <typeinfo>
+#include <cassert>
 
 typedef uint16_t ID;
+const ID NULLID = ID{}-1;
 
 template <typename ComponentBase, typename ComponentType>
 class Entity;
@@ -20,7 +22,7 @@ class EntityManagerBase {
 	protected:
 	class ComponentContainerBase {
 		public:
-			virtual ID emplace() = 0;
+			virtual ID emplace(ID parentEntID) = 0;
 			virtual ComponentBase* get(ID cid) = 0;
 			virtual void remove(ID cid) = 0;
 	};
@@ -40,8 +42,8 @@ class EntityManagerBase {
 			}
 
 			private:
-			virtual ID emplace() {
-				return _vec.emplace();
+			virtual ID emplace(ID parentEntID) {
+				return _vec.emplace(parentEntID);
 			}
 
 			virtual ComponentBase* get(ID cid) {
@@ -84,9 +86,9 @@ class EntityManagerBase {
 		std::map<std::type_index, ComponentType> _componentClassToType;
 
 
-		virtual ID addComponent(ComponentType t) {
+		virtual ID addComponent(ComponentType t, ID parentEntID) {
 			if(existsBucketFor(t))
-				return _componentBuckets[t]->emplace();
+				return _componentBuckets[t]->emplace(parentEntID);
 			else
 				throw std::invalid_argument("Component type " + std::to_string(t) + " not registred.");
 		}
@@ -125,10 +127,10 @@ class Entity {
 	typedef EntityManagerBase<ComponentBase,ComponentType> EntityManagerBaseT;
 
 	public:
-		Entity(EntityManagerBaseT& manager) : _manager{&manager} {
+		Entity(EntityManagerBaseT& manager, ID id) : _manager{&manager}, _id{id} {
 		}
 
-		Entity(Entity&& other) noexcept : _manager{other._manager} {
+		Entity(Entity&& other) noexcept : _manager{other._manager}, _id{NULLID} {
 			swap(other);
 		}
 
@@ -139,13 +141,14 @@ class Entity {
 
 		void swap(Entity& other) {
 			using std::swap;
+			swap(_id, other._id);
 			swap(_manager, other._manager);
 			swap(_componentID, other._componentID);
 		}
 
 		void addComponent(ComponentType t) {
 			if(!hasComponent(t))
-				_componentID[t] = _manager->addComponent(t);
+				_componentID[t] = _manager->addComponent(t, _id);
 		}
 
 		void removeComponent(ComponentType t) {
@@ -186,9 +189,14 @@ class Entity {
 				return hasComponent(_manager->template componentClassToType<T>());
 			}
 
+		ID getID() {
+			return _id;
+		}
+
 	private:
 		EntityManagerBaseT* _manager;
 		std::map<ComponentType,ID> _componentID;
+		ID _id;
 };
 
 template <typename T, typename TT>
@@ -203,7 +211,10 @@ class EntityManager : public EntityManagerBase<ComponentBase,ComponentType> {
 
 	public:
 		ID createEntity() {
-			return _entities.insert(EntityT(*this));
+			ID id = _entities.peekNextI();
+			ID insertedID = _entities.insert(EntityT(*this, id));
+			assert(id == insertedID);
+			return id;
 		}
 
 		EntityT* getEntity(ID eid) {

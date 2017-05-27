@@ -10,12 +10,18 @@ class ComponentBase {
 
 class Component1 : public ComponentBase {
 	public:
+		Component1(ID parentEntID) {
+		}
+
 		int get42() {
 			return 42;
 		}
 };
 
 class Component2 : public ComponentBase {
+	public:
+	Component2(ID parentEntID) {
+	}
 };
 
 
