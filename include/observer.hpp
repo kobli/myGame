@@ -5,7 +5,8 @@
 #include <memory>
 #include <algorithm>
 #include "reallocable.hpp"
-
+#include "copyOrNull.hpp"
+#include <iostream>
 
 template <typename messageT>
 class Observer_;
@@ -32,6 +33,8 @@ class Observer_ {
 		// - either because the observable was destroyed or 
 		// because Observable::removeObserver was called
 		virtual void onObservableRemove(Observable_<messageT>& o, const messageT& m) = 0;
+		virtual void onDirectObservableAdd(Observable_<messageT>& o) {
+		}
 	public:
 		virtual ~Observer_()
 		{}
@@ -43,17 +46,16 @@ class Observer_ {
 template <typename messageT>
 class Observable_ {
 	public:
-		Observable_(messageT obsAddMsg, messageT obsRemMsg): _obsAddMsg{obsAddMsg}, _obsRemMsg{obsRemMsg}, _sendAddRemMsg(true)
+		Observable_(messageT obsAddMsg, messageT obsRemMsg): _obsAddMsg{obsAddMsg}, _obsRemMsg{obsRemMsg}
 		{}
 
-		Observable_(): _sendAddRemMsg(false)
+		Observable_()
 		{}
 
 		Observable_(Observable_& other) noexcept:
 			_observers{other._observers},
 			_obsAddMsg{other._obsAddMsg},
-			_obsRemMsg{other._obsRemMsg},
-		 _sendAddRemMsg{other._sendAddRemMsg}	{
+			_obsRemMsg{other._obsRemMsg} {
 		}
 
 		Observable_(Observable_&& other) noexcept {
@@ -77,11 +79,11 @@ class Observable_ {
 			swap(_observers, other._observers);
 			swap(_obsAddMsg, other._obsAddMsg);
 			swap(_obsRemMsg, other._obsRemMsg);
-			swap(_sendAddRemMsg, other._sendAddRemMsg);
 		}
 
 		virtual void addObserver(Observer<messageT>& obs) {
 			_observers.push_back(obs.getSelf());
+			obs.onDirectObservableAdd(*this);
 			sendAddMsgTo(obs);
 		}
 
@@ -102,13 +104,14 @@ class Observable_ {
 		}
 
 		virtual void sendAddMsgTo(Observer<messageT>& observer) {
-			if(_sendAddRemMsg)
-				observer.onObservableAdd(*this, _obsAddMsg);
+			if(!_obsAddMsg.isNull())
+				observer.onObservableAdd(*this, _obsAddMsg.get());
 		}
 
 		virtual void sendRemMsgTo(Observer<messageT>& observer) {
-			if(_sendAddRemMsg)
-				observer.onObservableRemove(*this, _obsRemMsg);
+			if(!_obsRemMsg.isNull()) {
+				observer.onObservableRemove(*this, _obsRemMsg.get());
+			}
 		}
 		
 		void broadcastUpdMsg(const messageT& m) {
@@ -127,8 +130,9 @@ class Observable_ {
 		virtual void broadcastAddMsg(const messageT& m) {
 			for(int i = 0; i < _observers.size(); i++) {
 				auto& observer = _observers[i];
-				if(auto ospt = observer.lock())
+				if(auto ospt = observer.lock()) {
 					(*ospt)->onObservableAdd(*this, m);
+				}
 				else {
 					_observers.erase(_observers.begin()+i);
 					i--;
@@ -150,9 +154,8 @@ class Observable_ {
 
 	private:
 		std::vector<std::weak_ptr<Observer<messageT>*>> _observers;
-		messageT _obsAddMsg;
-		messageT _obsRemMsg;
-		bool _sendAddRemMsg;
+		CopyOrNull<messageT> _obsAddMsg;
+		CopyOrNull<messageT> _obsRemMsg;
 };
 
 template <typename messageT>
@@ -213,14 +216,16 @@ class Observabler: public Observable<messageT>, public Observer<messageT> {
 			swap(_observed, other._observed);
 		}
 
-		// when new observer starts observing, send him addMessages from all observed objects
+		// when new observer starts observing, send him addMessages from all observed objects and mine
 		virtual void sendAddMsgTo(Observer<messageT>& observer) {
+			Observable<messageT>::sendAddMsgTo(observer);
 			for(auto& o : _observed)
 				if(auto spt = o.lock())
 					(*spt)->sendAddMsgTo(observer);
 		}
 
 		virtual void sendRemMsgTo(Observer<messageT>& observer) {
+			Observable<messageT>::sendRemMsgTo(observer);
 			for(auto& o : _observed)
 				if(auto spt = o.lock())
 					(*spt)->sendRemMsgTo(observer);
@@ -229,8 +234,6 @@ class Observabler: public Observable<messageT>, public Observer<messageT> {
 		virtual void onObservableAdd(Observable_<messageT>& o, const messageT& m) {
 			// this method is called when the observabler starts observing an observable
 			this->broadcastAddMsg(m);
-			auto& ro = dynamic_cast<Observable<messageT>&>(o);
-			_observed.push_back(ro.getSelf());
 		}
 
 		virtual void onObservableUpdate(Observable_<messageT>&, const messageT& m) {
@@ -246,6 +249,11 @@ class Observabler: public Observable<messageT>, public Observer<messageT> {
 				else
 				return false;
 			});
+		}
+
+		virtual void onDirectObservableAdd(Observable_<messageT>& o) {
+			auto& ro = dynamic_cast<Observable<messageT>&>(o);
+			_observed.push_back(ro.getSelf());
 		}
 
 		std::list<std::weak_ptr<Observable<messageT>*>> _observed;
