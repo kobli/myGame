@@ -17,8 +17,9 @@ class SolidVector {
 		 * \return index of the constructed object
 		 */
 		//TODO
-		size_t emplace() {
-			return insert(T{});
+		template <typename... Args>
+		size_t emplace(Args... args) {
+			return insert(T(args...));
 		}
 
 		/** Inserts a copy of the object into the container.
@@ -35,6 +36,13 @@ class SolidVector {
 		size_t insert(T&& elem) {
 			size_t pi = insertPhysical(std::move(elem));
 			return insertLogical(pi);
+		}
+
+		/** 
+		 * \return index of the next inserted object
+		 */
+		size_t peekNextI() {
+			return _mapSlot.peek();
 		}
 
 		/** Access specified element with validity check.
@@ -88,6 +96,14 @@ class SolidVector {
 			// mark slot as free
 			_mapSlot.remit(i);
 			_map[i] = NONE;
+		}
+
+		/** Removes all elements.
+		 */
+		void clear() {
+			_map.clear();
+			_mapSlot.reset();
+			_v.clear();
 		}
 
 		/**
