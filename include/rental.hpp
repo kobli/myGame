@@ -19,8 +19,21 @@ class Rental {
 			}
 		}
 
+		T peek() {
+			if(_store.empty())
+				return _gen;
+			else {
+				return *_store.begin();
+			}
+		}
+
 		void remit(T i) {
 			_store.insert(i);
+		}
+		
+		void reset() {
+			_gen = {};
+			_store.clear();
 		}
 
 	private:
