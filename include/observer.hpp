@@ -26,13 +26,13 @@ class Observer_ {
 	friend Observable_<messageT>;
 	protected:
 		// called when the observer is starting to observe an object
-		virtual void onObservableAdd(Observable_<messageT>& o, const messageT& m) = 0;
+		virtual void onObservableAdd(const messageT& m) = 0;
 		// called when the observable is changed
-		virtual void onObservableUpdate(Observable_<messageT>& o, const messageT& m) = 0;
+		virtual void onObservableUpdate(const messageT& m) = 0;
 		// called when the observable stops observing an object
 		// - either because the observable was destroyed or 
 		// because Observable::removeObserver was called
-		virtual void onObservableRemove(Observable_<messageT>& o, const messageT& m) = 0;
+		virtual void onObservableRemove(const messageT& m) = 0;
 		virtual void onDirectObservableAdd(Observable_<messageT>& o) {
 		}
 	public:
@@ -105,12 +105,12 @@ class Observable_ {
 
 		virtual void sendAddMsgTo(Observer<messageT>& observer) {
 			if(!_obsAddMsg.isNull())
-				observer.onObservableAdd(*this, _obsAddMsg.get());
+				observer.onObservableAdd(_obsAddMsg.get());
 		}
 
 		virtual void sendRemMsgTo(Observer<messageT>& observer) {
 			if(!_obsRemMsg.isNull()) {
-				observer.onObservableRemove(*this, _obsRemMsg.get());
+				observer.onObservableRemove(_obsRemMsg.get());
 			}
 		}
 		
@@ -118,7 +118,7 @@ class Observable_ {
 			for(int i = 0; i < _observers.size(); i++) {
 				auto& observer = _observers[i];
 				if(auto ospt = observer.lock())
-					(*ospt)->onObservableUpdate(*this, m);
+					(*ospt)->onObservableUpdate(m);
 				else {
 					_observers.erase(_observers.begin()+i);
 					i--;
@@ -131,7 +131,7 @@ class Observable_ {
 			for(int i = 0; i < _observers.size(); i++) {
 				auto& observer = _observers[i];
 				if(auto ospt = observer.lock()) {
-					(*ospt)->onObservableAdd(*this, m);
+					(*ospt)->onObservableAdd(m);
 				}
 				else {
 					_observers.erase(_observers.begin()+i);
@@ -144,7 +144,7 @@ class Observable_ {
 			for(int i = 0; i < _observers.size(); i++) {
 				auto& observer = _observers[i];
 				if(auto ospt = observer.lock())
-					(*ospt)->onObservableRemove(*this, m);
+					(*ospt)->onObservableRemove(m);
 				else {
 					_observers.erase(_observers.begin()+i);
 					i--;
@@ -210,12 +210,6 @@ class Observabler: public Observable<messageT>, public Observer<messageT> {
 			}
 		}
 
-	protected:
-		void swapSelf(Observabler& other) {
-			using std::swap;
-			swap(_observed, other._observed);
-		}
-
 		// when new observer starts observing, send him addMessages from all observed objects and mine
 		virtual void sendAddMsgTo(Observer<messageT>& observer) {
 			Observable<messageT>::sendAddMsgTo(observer);
@@ -231,16 +225,22 @@ class Observabler: public Observable<messageT>, public Observer<messageT> {
 					(*spt)->sendRemMsgTo(observer);
 		}
 
-		virtual void onObservableAdd(Observable_<messageT>& o, const messageT& m) {
+	protected:
+		void swapSelf(Observabler& other) {
+			using std::swap;
+			swap(_observed, other._observed);
+		}
+
+		virtual void onObservableAdd(const messageT& m) {
 			// this method is called when the observabler starts observing an observable
 			this->broadcastAddMsg(m);
 		}
 
-		virtual void onObservableUpdate(Observable_<messageT>&, const messageT& m) {
+		virtual void onObservableUpdate(const messageT& m) {
 			this->broadcastUpdMsg(m);
 		}
 
-		virtual void onObservableRemove(Observable_<messageT>& o, const messageT& m) {
+		virtual void onObservableRemove(const messageT& m) {
 			// this method is called when the observabler stops observing an observable
 			this->broadcastRemMsg(m);
 			_observed.remove_if([](auto& v) -> bool {
