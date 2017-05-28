@@ -9,6 +9,9 @@
 #include <typeindex>
 #include <typeinfo>
 #include <cassert>
+#include "iterateOnly.hpp"
+
+namespace ec {
 
 typedef uint16_t ID;
 const ID NULLID = ID{}-1;
@@ -146,12 +149,12 @@ class Entity {
 			swap(_componentID, other._componentID);
 		}
 
-		void addComponent(ComponentType t) {
+		virtual void addComponent(ComponentType t) {
 			if(!hasComponent(t))
 				_componentID[t] = _manager->addComponent(t, _id);
 		}
 
-		void removeComponent(ComponentType t) {
+		virtual void removeComponent(ComponentType t) {
 			if(hasComponent(t)) {
 				_manager->removeComponent(t, _componentID[t]);
 				_componentID.erase(t);
@@ -169,10 +172,17 @@ class Entity {
 			return _componentID.find(t) != _componentID.end();
 		}
 
+		template<typename T, typename ...Args>
+			void addComponent(Args... args) {
+				addComponent(_manager->template componentClassToType<T>());
+				(*getComponent<T>()) = T(_id, args...);
+			}
+		/*TODO - remove if above is OK
 		template<typename T>
 			void addComponent() {
 				addComponent(_manager->template componentClassToType<T>());
 			}
+			*/
 
 		template<typename T>
 			void removeComponent() {
@@ -224,13 +234,23 @@ class EntityManager : public EntityManagerBase<ComponentBase,ComponentType> {
 				return nullptr;
 		}
 
+		EntityT& createAndGetEntity() {
+			return *getEntity(createEntity());
+		}
+
 		void removeEntity(ID eid) {
 			if(_entities.indexValid(eid))
 				_entities.remove(eid);
 		}
 
+		IterateOnly<SolidVector<EntityT>> getEntities() {
+			return IterateOnly<SolidVector<EntityT>>(_entities);
+		}
+
 	private:
 		SolidVector<EntityT> _entities;
 };
+
+}
 
 #endif /* ENTITY_HPP_17_04_20_11_22_33 */

@@ -5,6 +5,9 @@ enum ComponentType {
 	t2,
 };
 
+using ec::ID;
+using ec::NULLID;
+
 class ComponentBase {
 };
 
@@ -31,22 +34,22 @@ template <typename T>
 void ignoreUnused(T&) {
 }
 
-typedef Entity<ComponentBase,ComponentType> EntityT;
-typedef EntityManager<ComponentBase,ComponentType,EntityT> EntityManagerT;
+typedef ec::Entity<ComponentBase,ComponentType> Entity;
+typedef ec::EntityManager<ComponentBase,ComponentType,Entity> EntityManager;
 
 
 TEST(EntityManager, getNonExistingEntity) {
-	EntityManagerT em;
+	EntityManager em;
 	ASSERT_EQ(em.getEntity(0), nullptr);
 }
 
 TEST(EntityManager, createEntity) {
-	EntityManagerT em;
+	EntityManager em;
 	em.createEntity();
 }
 
 TEST(EntityManager, getEntity) {
-	EntityManagerT em;
+	EntityManager em;
 	ID eID = em.createEntity();
 	ASSERT_EQ(eID, 0);
 	auto* e = em.getEntity(eID);
@@ -56,7 +59,7 @@ TEST(EntityManager, getEntity) {
 ///////////////////// component tests ///////////////////////
 
 TEST(EntityManager, registerComponentTypeEntityEmpty) {
-	EntityManagerT em;
+	EntityManager em;
 	em.registerComponentType<Component1>(ComponentType::t1);
 	ID eID = em.createEntity();
 	auto& e = *em.getEntity(eID); // should not return nullptr now
@@ -65,7 +68,7 @@ TEST(EntityManager, registerComponentTypeEntityEmpty) {
 }
 
 TEST(EntityManager, createComponent) {
-	EntityManagerT em;
+	EntityManager em;
 	em.registerComponentType<Component1>(ComponentType::t1);
 
 	ID eID = em.createEntity();
@@ -76,7 +79,7 @@ TEST(EntityManager, createComponent) {
 }
 
 TEST(EntityManager, componentAccessTemplated) {
-	EntityManagerT em;
+	EntityManager em;
 	em.registerComponentType<Component1>(ComponentType::t1);
 
 	ID eID = em.createEntity();
@@ -86,7 +89,7 @@ TEST(EntityManager, componentAccessTemplated) {
 }
 
 TEST(EntityManager, removeComponent) {
-	EntityManagerT em;
+	EntityManager em;
 	em.registerComponentType<Component1>(ComponentType::t1);
 
 	ID eID = em.createEntity();
