@@ -8,23 +8,25 @@ enum ComponentType {
 	t2,
 };
 
-class ObservableComponentBase : public Observable<EntityEvent<ComponentType>> {
-	protected:
-	typedef EntityEvent<ComponentType> EventT;
+using ec::ID;
+using ec::NULLID;
+typedef ec::EntityEvent<ComponentType> Event;
+
+class ObservableComponentBase : public Observable<Event> {
 	public:
-	ObservableComponentBase(const EventT& addEvent, const EventT& remEvent) : Observable<EventT>{addEvent, remEvent} {
+	ObservableComponentBase(const Event& addEvent, const Event& remEvent) : Observable<Event>{addEvent, remEvent} {
 	}
 };
 
 class ObservableComponent1 : public ObservableComponentBase {
 	public:
-	ObservableComponent1(ID parentEntID) : ObservableComponentBase(EventT{parentEntID, t1}, EventT{parentEntID, t1}) {
+	ObservableComponent1(ID parentEntID) : ObservableComponentBase(Event{parentEntID, t1}, Event{parentEntID, t1}) {
 	}
 };
 
 class ObservableComponent2 : public ObservableComponentBase {
 	public:
-	ObservableComponent2(ID parentEntID) : ObservableComponentBase(EventT{parentEntID, t2}, EventT{parentEntID, t2}) {
+	ObservableComponent2(ID parentEntID) : ObservableComponentBase(Event{parentEntID, t2}, Event{parentEntID, t2}) {
 	}
 };
 
@@ -33,26 +35,25 @@ template <typename T>
 void ignoreUnused(T&) {
 }
 
-typedef ObservableEntity<ObservableComponentBase,ComponentType> EntityT;
-typedef ObservableEntityManager<ObservableComponentBase,ComponentType,EntityT> EntityManagerT;
+typedef ec::ObservableEntity<ObservableComponentBase,ComponentType> Entity;
+typedef ec::ObservableEntityManager<ObservableComponentBase,ComponentType,Entity> EntityManager;
 
-typedef EntityEvent<ComponentType> EventT;
-typedef ObserverMock_<EventT> ObserverMock;
+typedef ObserverMock_<Event> ObserverMock;
 typedef ObserverMock::MsgSeqCont MsgSeq;
 
 
 TEST(ObservableEntityManager, getNonExistingEntity) {
-	EntityManagerT em;
+	EntityManager em;
 	ASSERT_EQ(em.getEntity(0), nullptr);
 }
 
 TEST(ObservableEntityManager, createEntity) {
-	EntityManagerT em;
+	EntityManager em;
 	em.createEntity();
 }
 
 TEST(ObservableEntityManager, getEntity) {
-	EntityManagerT em;
+	EntityManager em;
 	ID eID = em.createEntity();
 	ASSERT_EQ(eID, 0);
 	auto* e = em.getEntity(eID);
@@ -62,12 +63,12 @@ TEST(ObservableEntityManager, getEntity) {
 ///////////////////// component tests ///////////////////////
 
 TEST(ObservableEntityManager, registerComponentType) {
-	EntityManagerT em;
+	EntityManager em;
 	em.registerComponentType<ObservableComponent1>(ComponentType::t1);
 }
 
 TEST(ObservableEntityManager, createComponent) {
-	EntityManagerT em;
+	EntityManager em;
 	em.registerComponentType<ObservableComponent1>(ComponentType::t1);
 
 	ID eID = em.createEntity();
@@ -79,7 +80,7 @@ TEST(ObservableEntityManager, createComponent) {
 }
 
 TEST(ObservableEntityManager, removeComponent) {
-	EntityManagerT em;
+	EntityManager em;
 	em.registerComponentType<ObservableComponent1>(ComponentType::t1);
 
 	ID eID = em.createEntity();
@@ -94,14 +95,14 @@ TEST(ObservableEntityManager, messages) {
 	// on EntityManager death the observer should receive remMsg from each tree node 
 	ObserverMock observer(MsgSeq{
 			// add events
-			EventT{0},
-			EventT{0, ComponentType::t1},
+			Event{0},
+			Event{0, ComponentType::t1},
 
 			//remove events
-			EventT{0},
-			EventT{0, ComponentType::t1},
+			Event{0},
+			Event{0, ComponentType::t1},
 			});
-	EntityManagerT em;
+	EntityManager em;
 	em.registerComponentType<ObservableComponent1>(ComponentType::t1);
 
 	em.addObserver(observer);
@@ -109,5 +110,6 @@ TEST(ObservableEntityManager, messages) {
 	ID eID = em.createEntity();
 	auto& e = *em.getEntity(eID); // should not return nullptr now
 
-	e.addComponent(ComponentType::t1);
+	//e.addComponent(ComponentType::t1);
+	e.addComponent<ObservableComponent1>();
 }

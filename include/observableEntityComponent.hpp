@@ -3,6 +3,8 @@
 #include "entityComponent.hpp"
 #include "observer.hpp"
 
+namespace ec {
+
 template <typename ComponentType>
 struct EntityEvent {
 	EntityEvent(ID eID, ComponentType compT = ComponentType::NONE): entityID{eID}, componentT{compT} {
@@ -29,15 +31,15 @@ class ObservableEntity : public Entity<ComponentBase,ComponentType>, public Obse
 	typedef Entity<ComponentBase,ComponentType> EntityBaseT;
 	typedef EntityEvent<ComponentType> EventT;
 
-	static_assert(std::is_base_of<Observable<EventT>, ComponentBase>::value, "ComponentBase must be Observable");
+	//TODO static_assert(std::is_base_of<Observable<EventT>, ComponentBase>::value, "ComponentBase must be Observable");
+	//allow EntityT to be derived from any template instantiation of Observable
 
 	public:
 		ObservableEntity(EntityManagerBaseT& manager, ID id) : EntityBaseT{manager, id}
 		, Observabler<EventT>(EventT{id}, EventT{id}) {
 		}
 
-		virtual void addComponent(ComponentType t) {
-			EntityBaseT::addComponent(t);
+		virtual void afterAddComponent(ComponentType t) override {
 			auto* c = static_cast<ComponentBase*>(EntityBaseT::getComponent(t));
 			assert(c != nullptr);
 			c->addObserver(*this); 
@@ -57,16 +59,15 @@ class ObservableEntityManager : public EntityManager<ComponentBase,ComponentType
 	typedef EntityManager<ComponentBase,ComponentType,EntityT> BaseEM;
 	typedef EntityEvent<ComponentType> EventT;
 
-	static_assert(std::is_base_of<Observable<EventT>, EntityT>::value, "EntityT must be Observable");
+	//TODO static_assert(std::is_base_of<Observable<EventT>, EntityT>::value, "EntityT must be Observable");
 
 	public:
-		ObservableEntityManager(): Observabler<EventT>() {
-		}
-			
 		ID createEntity() {
 			ID id = BaseEM::createEntity();
 			this->getEntity(id)->addObserver(*this);
 			return id;
 		}
 };
+
+}
 #endif /* OBSERVABLEENTITYMANAGER_HPP_17_04_28_11_28_05 */

@@ -149,12 +149,12 @@ class Entity {
 			swap(_componentID, other._componentID);
 		}
 
-		virtual void addComponent(ComponentType t) {
-			if(!hasComponent(t))
-				_componentID[t] = _manager->addComponent(t, _id);
+		void addComponent(ComponentType t) {
+			doAddComponent(t);
+			afterAddComponent(t);
 		}
 
-		virtual void removeComponent(ComponentType t) {
+		void removeComponent(ComponentType t) {
 			if(hasComponent(t)) {
 				_manager->removeComponent(t, _componentID[t]);
 				_componentID.erase(t);
@@ -174,15 +174,11 @@ class Entity {
 
 		template<typename T, typename ...Args>
 			void addComponent(Args... args) {
-				addComponent(_manager->template componentClassToType<T>());
+				ComponentType t = _manager->template componentClassToType<T>();
+				doAddComponent(t);
 				(*getComponent<T>()) = T(_id, args...);
+				afterAddComponent(t);
 			}
-		/*TODO - remove if above is OK
-		template<typename T>
-			void addComponent() {
-				addComponent(_manager->template componentClassToType<T>());
-			}
-			*/
 
 		template<typename T>
 			void removeComponent() {
@@ -203,10 +199,19 @@ class Entity {
 			return _id;
 		}
 
+	protected:
+		virtual void afterAddComponent(ComponentType) {
+		}
+
 	private:
 		EntityManagerBaseT* _manager;
 		std::map<ComponentType,ID> _componentID;
 		ID _id;
+
+		void doAddComponent(ComponentType t) {
+			if(!hasComponent(t))
+				_componentID[t] = _manager->addComponent(t, _id);
+		}
 };
 
 template <typename T, typename TT>
