@@ -1,12 +1,6 @@
 #include <world.hpp>
 #include <cassert>
 
-EntityEvent::EntityEvent(ID eID, ComponentType compT, bool c, bool d)
-	: base_t{eID, compT}, created{c}, destroyed{d} {
-}
-
-////////////////////////////////////////////////////////////
-
 ObservableComponentBase::ObservableComponentBase(ID parentEntID, ComponentType realCompType)
  	: Observable<EntityEvent>{EntityEvent{parentEntID, realCompType}, EntityEvent{parentEntID, realCompType}}
 {
@@ -362,7 +356,7 @@ ID World::createEntity(ID hintEntID)
 	return _entManager.createEntity();
 }
 
-Entity& World::createAndGetEntity(ID hintEntID = 0)
+Entity& World::createAndGetEntity(ID hintEntID)
 {
 	// TODO hint entID
 	// TODO check for existing entities with same ID
@@ -386,12 +380,9 @@ ID World::createCharacter(vec3f position)
 	Entity& e = *getEntity(eID);
 
 	e.addComponent<BodyComponent>(position);
-	/*TODO
-	e.setBodyComponent(make_shared<BodyComponent>(e, position));
-	e.setGraphicsComponent(make_shared<MeshGraphicsComponent>(e, "ninja.b3d", true, vec3f(0), vec3f(0,90,0), vec3f(0.2)));
-	e.setCollisionComponent(make_shared<CollisionComponent>(e, 0.4, 1, vec3f(0, -0.9, 0)));
-	e.setWizardComponent(make_shared<WizardComponent>(e));
-	*/
+	e.addComponent<MeshGraphicsComponent>("ninja.b3d", true, vec3f(0), vec3f(0,90,0), vec3f(0.2));
+	e.addComponent<CollisionComponent>(0.4, 1, vec3f(0, -0.9, 0));
+	e.addComponent<WizardComponent>();
 	return eID;
 }
 

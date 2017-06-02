@@ -30,10 +30,10 @@ sf::Packet& operator >>(sf::Packet& packet, PacketType& m) {
 }
 
 sf::Packet& operator <<(sf::Packet& packet, const EntityEvent& m) {
-  return packet << m.entityID << m.componentT;//TODO send create/destroy events  << m._created << m._destroyed;
+  return packet << m.entityID << m.componentT << m.created << m.destroyed;
 }
 sf::Packet& operator >>(sf::Packet& packet, EntityEvent& m) {
-  return packet >> m.entityID >> m.componentT; // >> m._created >> m._destroyed;
+  return packet >> m.entityID >> m.componentT >> m.created >> m.destroyed;
 }
 
 sf::Packet& operator <<(sf::Packet& packet, const Command& m) {

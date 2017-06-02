@@ -46,9 +46,7 @@ class Updater: public Observer<EntityEvent>
 	private:
 		Sender _send;
 
-		void onObservableAdd(const EntityEvent& m) final;
-		void onObservableUpdate(const EntityEvent& m) final;
-		void onObservableRemove(const EntityEvent& m) final;
+		void onMsg(const EntityEvent& m) final;
 };
 
 ////////////////////////////////////////////////////////////

@@ -11,9 +11,7 @@ class System: public Observer<EntityEvent>
 	public:
 		System(World& world);
 		inline virtual void update(float /*timeDelta*/) {}
-		inline virtual void onObservableAdd(const EntityEvent&) {}
-		inline virtual void onObservableUpdate(const EntityEvent&) {}
-		inline virtual void onObservableRemove(const EntityEvent&) {}
+		inline virtual void onMsg(const EntityEvent&) {}
 	protected:
 		World& _world;
 };
@@ -24,9 +22,7 @@ class Physics: public System
 		Physics(World& world, scene::ISceneManager* smgr = nullptr);
 		vec3f getObjVelocity(u32 ID);
 		virtual void update(float timeDelta);
-		virtual void onObservableAdd(const EntityEvent& m);
-		virtual void onObservableUpdate(const EntityEvent& m);
-		virtual void onObservableRemove(const EntityEvent& m);
+		virtual void onMsg(const EntityEvent& m);
 		void registerCollisionCallback(std::function<void(u32, u32)> callback);
 		void registerPairCollisionCallback(std::function<void(u32, u32)> callback);
 
@@ -51,9 +47,7 @@ class ViewSystem: public System
 {
 	public:
 		ViewSystem(irr::scene::ISceneManager* smgr, World& world);
-		virtual void onObservableAdd(const EntityEvent& m);
-		virtual void onObservableUpdate(const EntityEvent& m);
-		virtual void onObservableRemove(const EntityEvent& m);
+		virtual void onMsg(const EntityEvent& m);
 		virtual void update(float timeDelta);
 
 	private:
@@ -70,7 +64,7 @@ class SpellSystem: public System
 		SpellSystem(World& world);
 		~SpellSystem();
 		virtual void update(float timeDelta);
-		virtual void onObservableUpdate(const EntityEvent& m);
+		virtual void onMsg(const EntityEvent& m);
 		void reload();
 		void addWizard(u32 ID);
 		void removeWizard(u32 ID);

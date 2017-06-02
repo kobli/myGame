@@ -348,10 +348,7 @@ void Physics::callCollisionCBs()
 	}
 }
 
-void Physics::onObservableAdd(EntityEvent&)
-{}
-
-void Physics::onObservableUpdate(EntityEvent& m)
+void Physics::onMsg(const EntityEvent& m)
 {
 	switch(m.componentT)
 	{
@@ -434,9 +431,6 @@ void Physics::onObservableUpdate(EntityEvent& m)
 	}
 }
 
-void Physics::onObservableRemove(EntityEvent&)
-{}
-
 btCollisionObject* Physics::getCollisionObjectByID(int entityID)
 {
 	for(int i = 0; i < _physicsWorld->getNumCollisionObjects(); i++)
@@ -465,13 +459,10 @@ void Physics::registerPairCollisionCallback(std::function<void(u32, u32)> callba
 
 ViewSystem::ViewSystem(irr::scene::ISceneManager* smgr, World& world): System{world}, _smgr{smgr}
 {
-	observe(_world);
+	_world.addObserver(*this);
 }
 
-void ViewSystem::onObservableAdd(EntityEvent&)
-{}
-
-void ViewSystem::onObservableUpdate(EntityEvent& m)
+void ViewSystem::onMsg(const EntityEvent& m)
 {
 	switch(m.componentT)
 	{
@@ -508,8 +499,8 @@ void ViewSystem::onObservableUpdate(EntityEvent& m)
 					sn->remove();
 				if(m.destroyed)
 					return;
-				if(auto sgc = e->getComponent<GraphicsSphere>())
-					sn = _smgr->addSphereSceneNode(sgc->getRadius(), 64, bsn, -1, gc->getPosOffset());
+				if(auto sgc = e->getComponent<SphereGraphicsComponent>())
+					sn = _smgr->addSphereSceneNode(sgc->getRadius(), 64, bsn, -1, sgc->getPosOffset());
 				sn->setName("graphics");
 				sn->setDebugDataVisible(scene::EDS_FULL);
 				break;
@@ -530,14 +521,14 @@ void ViewSystem::onObservableUpdate(EntityEvent& m)
 					sn->remove();
 				if(m.destroyed)
 					return;
-				if(auto sgc = e->getComponent<MeshGraphicsComponent>())
+				if(auto mgc = e->getComponent<MeshGraphicsComponent>())
 				{
-					if(sgc->getFileName() == "")
+					if(mgc->getFileName() == "")
 						return;
-					if(sgc->isAnimated())
-						sn = _smgr->addAnimatedMeshSceneNode(_smgr->getMesh(("./media/" + sgc->getFileName()).c_str()), bsn, -1, gc->getPosOffset(), gc->getRotOffset(), gc->getScale());
+					if(mgc->isAnimated())
+						sn = _smgr->addAnimatedMeshSceneNode(_smgr->getMesh(("./media/" + mgc->getFileName()).c_str()), bsn, -1, mgc->getPosOffset(), mgc->getRotOffset(), mgc->getScale());
 					else
-						sn = _smgr->addMeshSceneNode(_smgr->getMesh(("./media/" + sgc->getFileName()).c_str()), bsn, -1, gc->getPosOffset(), gc->getRotOffset(), gc->getScale());
+						sn = _smgr->addMeshSceneNode(_smgr->getMesh(("./media/" + mgc->getFileName()).c_str()), bsn, -1, mgc->getPosOffset(), mgc->getRotOffset(), mgc->getScale());
 				}
 				sn->setMaterialFlag(video::EMF_LIGHTING, false);
 				sn->setName("graphics");
@@ -548,9 +539,6 @@ void ViewSystem::onObservableUpdate(EntityEvent& m)
 			break;
 	}
 }
-
-void ViewSystem::onObservableRemove(EntityEvent&)
-{}
 
 void ViewSystem::update(float timeDelta)
 {
@@ -564,7 +552,7 @@ void ViewSystem::updateTransforms(float timeDelta)
 		Entity* e;
 		BodyComponent* bc;
 		scene::ISceneNode* sn;
-		if((e = _world.getEntity(eID)) && (bc = e->getComponent<BodyComponent>().get()) && (sn = _smgr->getSceneNodeFromId(eID)))
+		if((e = _world.getEntity(eID)) && (bc = e->getComponent<BodyComponent>()) && (sn = _smgr->getSceneNodeFromId(eID)))
 		{
 			vec3f r;
 			bc->getRotation().toEuler(r);
@@ -618,7 +606,7 @@ void SpellSystem::update(float timeDelta)
 	}
 }
 
-void SpellSystem::onObservableUpdate(const EntityEvent& m)
+void SpellSystem::onMsg(const EntityEvent& m)
 {
 	if(m.componentT == ComponentType::Wizard)
 	{
@@ -758,10 +746,9 @@ u32 SpellSystem::launchSpell(float radius, float speed, u32 wizard)
 	dir.normalize();
 	vec3f pos = wBody->getPosition() + vec3f(0,1,0) + dir*(radius + 1);
 	std::cout << "spell vel: " << dir*speed << endl;
-	spellE.setBodyComponent(make_shared<BodyComponent>(spellE, pos, quaternion(), dir*speed));
-	spellE.setCollisionComponent(make_shared<CollisionComponent>(spellE, radius, 0, vec3f(0), true));
-	auto gc = make_shared<SphereGraphicsComponent>(spellE, radius);
-	spellE.setGraphicsComponent(gc);
+	spellE.addComponent<BodyComponent>(pos, quaternion(), dir*speed);
+	spellE.addComponent<CollisionComponent>(radius, 0, vec3f(0), true);
+	spellE.addComponent<SphereGraphicsComponent>(radius);
 
 	return spellE.getID();
 }

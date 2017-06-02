@@ -96,12 +96,7 @@ bool Session::isClosed()
 Updater::Updater(Sender s): _send{s}
 {}
 
-void Updater::onObservableAdd(const EntityEvent& m)
-{
-//TODO	onObservableUpdate(m);
-}
-
-void Updater::onObservableUpdate(const EntityEvent& m)
+void Updater::onMsg(const EntityEvent& m)
 {
 	/*TODO
 	// do not send position and rotation updates
@@ -121,11 +116,6 @@ void Updater::onObservableUpdate(const EntityEvent& m)
 	if(m._componentModified != nullptr && !m._destroyed)
 		cout << "\tcomponent: " << Serializer<ostream>(*m._componentModified) << endl;
 		*/
-}
-
-void Updater::onObservableRemove(const EntityEvent&)
-{
-	//TODO
 }
 
 ////////////////////////////////////////////////////////////
@@ -222,7 +212,7 @@ void ServerApplication::onClientConnect(std::unique_ptr<sf::TcpSocket>&& sock)
 	_sessions.back().setCommandHandler([this](Command& c, u32 objID){
 			_input.handleCommand(c, objID);
 			});
-	_gameWorld.sendAddMsgTo(_updater); // TODO send updates only to newly connected client
+	_gameWorld.sendHelloMsgTo(_updater); // TODO send updates only to newly connected client
 }
 
 void ServerApplication::onClientDisconnect(Session& s)

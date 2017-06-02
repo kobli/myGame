@@ -21,26 +21,7 @@ enum ComponentType: u8
 	Wizard,
 };
 
-//TODO somewhere fill the created and destroyed event flags
-
-struct EntityEvent: public ec::EntityEvent<ComponentType> {
-	EntityEvent(ID eID, ComponentType compT = ComponentType::NONE
-			, bool c = false, bool d = false);
-
-	/* unnecessary
-	bool operator==(const EntityEvent& other) const {
-		return base_t::operator==(other)
-			&& created == other.created
-			&& destroyed == other.destroyed;
-	}
-	*/
-
-	bool created;
-	bool destroyed;
-
-	private:
-		typedef ec::EntityEvent<ComponentType> base_t;
-};
+typedef ec::EntityEvent<ComponentType> EntityEvent;
 
 class ObservableComponentBase : public Observable<EntityEvent> {
 	public:
@@ -49,9 +30,9 @@ class ObservableComponentBase : public Observable<EntityEvent> {
 		void notifyObservers();
 };
 
-typedef ec::ObservableEntity<ObservableComponentBase,ComponentType>
+typedef ec::ObservableEntity<ObservableComponentBase,ComponentType,EntityEvent>
 	Entity;
-typedef ec::ObservableEntityManager<ObservableComponentBase,ComponentType,Entity>
+typedef ec::ObservableEntityManager<ObservableComponentBase,ComponentType,Entity,EntityEvent>
 	EntityManager;
 
 ////////////////////////////////////////////////////////////
