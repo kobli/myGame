@@ -7,7 +7,9 @@ namespace ec {
 
 template <typename ComponentType>
 struct EntityEvent {
-	EntityEvent(ID eID, ComponentType compT = ComponentType::NONE): entityID{eID}, componentT{compT} {
+	EntityEvent(ID eID, ComponentType compT = ComponentType::NONE, 
+			bool c = false, bool d = false)
+		: entityID{eID}, componentT{compT}, created{c}, destroyed{d} {
 	}
 
 	bool operator==(const EntityEvent& other) const {
@@ -15,7 +17,9 @@ struct EntityEvent {
 	}
 
 	ID entityID;
-	ComponentType componentT 	= ComponentType::NONE; // for entity created / destroyed - component non-related events
+	ComponentType componentT = ComponentType::NONE; // for entity created / destroyed - component non-related events
+	bool created;
+	bool destroyed;
 };
 
 template <typename CompT>
@@ -24,19 +28,19 @@ std::ostream& operator<<(std::ostream& o, const EntityEvent<CompT>& e) {
 }
 
 
-template <typename ComponentBase, typename ComponentType>
-class ObservableEntity : public Entity<ComponentBase,ComponentType>, public Observabler<EntityEvent<ComponentType>> {
+template <typename ComponentBase, typename ComponentType, typename EventT>
+class ObservableEntity : public Entity<ComponentBase,ComponentType>, public Observabler<EventT> {
 
 	typedef EntityManagerBase<ComponentBase,ComponentType> EntityManagerBaseT;
 	typedef Entity<ComponentBase,ComponentType> EntityBaseT;
-	typedef EntityEvent<ComponentType> EventT;
 
-	//TODO static_assert(std::is_base_of<Observable<EventT>, ComponentBase>::value, "ComponentBase must be Observable");
-	//allow EntityT to be derived from any template instantiation of Observable
+	static_assert(std::is_base_of<Observable<EventT>, ComponentBase>::value, "ComponentBase must be Observable");
 
 	public:
 		ObservableEntity(EntityManagerBaseT& manager, ID id) : EntityBaseT{manager, id}
-		, Observabler<EventT>(EventT{id}, EventT{id}) {
+		, Observabler<EventT>(
+				EventT{id, ComponentType::NONE, true}, 
+				EventT{id, ComponentType::NONE, false, true}) {
 		}
 
 		virtual void afterAddComponent(ComponentType t) override {
@@ -52,14 +56,13 @@ class ObservableEntity : public Entity<ComponentBase,ComponentType>, public Obse
 };
 
 
-template <typename ComponentBase, typename ComponentType, typename EntityT>
-class ObservableEntityManager : public EntityManager<ComponentBase,ComponentType,EntityT>, public Observabler<EntityEvent<ComponentType>>{
+template <typename ComponentBase, typename ComponentType, typename EntityT, typename EventT>
+class ObservableEntityManager : public EntityManager<ComponentBase,ComponentType,EntityT>, public Observabler<EventT>{
 	
 	friend EntityT;
 	typedef EntityManager<ComponentBase,ComponentType,EntityT> BaseEM;
-	typedef EntityEvent<ComponentType> EventT;
 
-	//TODO static_assert(std::is_base_of<Observable<EventT>, EntityT>::value, "EntityT must be Observable");
+	static_assert(std::is_base_of<Observable<EventT>, EntityT>::value, "EntityT must be Observable");
 
 	public:
 		ID createEntity() {

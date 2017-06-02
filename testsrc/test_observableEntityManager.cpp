@@ -35,8 +35,8 @@ template <typename T>
 void ignoreUnused(T&) {
 }
 
-typedef ec::ObservableEntity<ObservableComponentBase,ComponentType> Entity;
-typedef ec::ObservableEntityManager<ObservableComponentBase,ComponentType,Entity> EntityManager;
+typedef ec::ObservableEntity<ObservableComponentBase,ComponentType,Event> Entity;
+typedef ec::ObservableEntityManager<ObservableComponentBase,ComponentType,Entity,Event> EntityManager;
 
 typedef ObserverMock_<Event> ObserverMock;
 typedef ObserverMock::MsgSeqCont MsgSeq;
