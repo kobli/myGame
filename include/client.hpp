@@ -1,10 +1,11 @@
-#include <main.hpp>
-#include <SFML/Network.hpp>
-#include <world.hpp>
-#include <system.hpp>
-
 #ifndef CLIENT_HPP_16_11_26_10_46_45
+#define CLIENT_HPP_16_11_26_10_46_45 
+#include <SFML/Network.hpp>
+#include "main.hpp"
+#include "world.hpp"
+#include "system.hpp"
 
+/*
 class Animator: public Observer<EntityEvent>
 {
 	public:
@@ -53,6 +54,6 @@ class ClientApplication
 		void handleEntityEvent(EntityEvent& e);
 };
 
+*/
 
-#define CLIENT_HPP_16_11_26_10_46_45 
 #endif /* CLIENT_HPP_16_11_26_10_46_45 */

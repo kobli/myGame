@@ -55,7 +55,7 @@ class ObserverMock_: public Observer<MsgT>
 		}
 
 		virtual void onMsg(const MsgT& m) {
-			std::cout << m << std::endl;
+			//std::cout << m << std::endl;
 			EXPECT_EQ(_s.empty(), false);
 			EXPECT_EQ(m, _s.front());
 			_s.pop();

@@ -96,13 +96,14 @@ bool Session::isClosed()
 Updater::Updater(Sender s): _send{s}
 {}
 
-void Updater::onObservableAdd(EntityEvent& m)
+void Updater::onObservableAdd(const EntityEvent& m)
 {
-	onObservableUpdate(m);
+//TODO	onObservableUpdate(m);
 }
 
-void Updater::onObservableUpdate(EntityEvent& m)
+void Updater::onObservableUpdate(const EntityEvent& m)
 {
+	/*TODO
 	// do not send position and rotation updates
 	if(m._componentModifiedType == ComponentType::Body && m._componentModified && !m._destroyed
 			&& static_cast<BodyComponent*>(m._componentModified)->posOrRotChanged())
@@ -113,6 +114,7 @@ void Updater::onObservableUpdate(EntityEvent& m)
 	if(m._componentModified && !m._destroyed)
 		p << Serializer<sf::Packet>(*m._componentModified);
 	_send(p, [](WorldEntity*){ return true; });
+	*/
 	/*
 	cout << "sent an update:\n\tentityID: " << m._entityID 
 		<< "\n\tcomponent modified type: " << m._componentModifiedType << endl;
@@ -121,8 +123,10 @@ void Updater::onObservableUpdate(EntityEvent& m)
 		*/
 }
 
-void Updater::onObservableRemove(EntityEvent&)
-{}
+void Updater::onObservableRemove(const EntityEvent&)
+{
+	//TODO
+}
 
 ////////////////////////////////////////////////////////////
 
@@ -133,8 +137,8 @@ ServerApplication::ServerApplication(IrrlichtDevice* irrDev)
 	_updater(std::bind(&ServerApplication::send, ref(*this), placeholders::_1, placeholders::_2))
 {
 	_listener.setBlocking(false);
-	_updater.observe(_gameWorld);
-	_spells.observe(_gameWorld);
+	_gameWorld.addObserver(_updater);
+	_gameWorld.addObserver(_spells);
 	_physics.registerCollisionCallback(std::bind(&SpellSystem::collisionCallback, std::ref(_spells), placeholders::_1, placeholders::_2));
 }
 
@@ -205,31 +209,32 @@ void ServerApplication::acceptClient()
 void ServerApplication::send(sf::Packet& p, Updater::ClientFilterPredicate fp)
 {
 	for(auto& s : _sessions)
-		if(fp(_gameWorld.getEntityByID(s.getControlledObjID())))
+		if(fp(_gameWorld.getEntity(s.getControlledObjID())))
 			s.send(p);
 }
 
 void ServerApplication::onClientConnect(std::unique_ptr<sf::TcpSocket>&& sock)
 {
 	cout << "Client connected from " << sock->getRemoteAddress() << endl;
-	auto& e = _gameWorld.createCharacter(vec3f(0,50,0));
+	ID cID = _gameWorld.createCharacter(vec3f(0,50,0));
+	auto& e = *_gameWorld.getEntity(cID);
 	_sessions.emplace_back(std::move(sock), e.getID());
 	_sessions.back().setCommandHandler([this](Command& c, u32 objID){
 			_input.handleCommand(c, objID);
 			});
-	_gameWorld.sendAddMsg(_updater); // TODO send updates only to newly connected client
+	_gameWorld.sendAddMsgTo(_updater); // TODO send updates only to newly connected client
 }
 
 void ServerApplication::onClientDisconnect(Session& s)
 {
 	cout << "Client disconnected: " << s.getSocket().getRemoteAddress() << endl;
-	auto* cc = _gameWorld.getEntityByID(s.getControlledObjID());
+	auto* cc = _gameWorld.getEntity(s.getControlledObjID());
 	auto it = _sessions.begin();
 	while(&*it != &s && it != _sessions.end())
 		it++;
 	_sessions.erase(it);
 	if(cc)
-		_gameWorld.removeEntity(*cc);
+		_gameWorld.removeEntity(cc->getID());
 }
 
 ServerApplication::~ServerApplication()

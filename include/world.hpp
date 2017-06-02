@@ -1,17 +1,19 @@
-#include <main.hpp>
+#ifndef WORLD_HPP_16_11_18_17_15_20
+#define WORLD_HPP_16_11_18_17_15_20 
 #include <vector>
 #include <list>
 #include <memory>
-#include <controller.hpp>
-#include <observer.hpp>
-#include <serializable.hpp>
+#include "main.hpp"
+#include "controller.hpp"
+#include "serializable.hpp"
+#include "observableEntityComponent.hpp"
 
-#ifndef WORLD_HPP_16_11_18_17_15_20
-#define WORLD_HPP_16_11_18_17_15_20 
+using ec::ID;
+using ec::NULLID;
 
 enum ComponentType: u8
 {
-	None, 
+	NONE, 
 	Body,
 	GraphicsSphere,
 	GraphicsMesh,
@@ -19,58 +21,45 @@ enum ComponentType: u8
 	Wizard,
 };
 
-class WorldEntityComponent;
-class EntityEvent
-{
-	public:
-		EntityEvent(u32 entityID = 0, ComponentType componentModifiedType = ComponentType::None
-				, WorldEntityComponent* componentModified = nullptr, bool created = false, bool destroyed = false);
-		u32 _entityID;
-		ComponentType _componentModifiedType;
-		WorldEntityComponent* _componentModified;
-		bool _created;
-		bool _destroyed;
-};
+//TODO somewhere fill the created and destroyed event flags
 
-class World;
-class WorldEntity;
+struct EntityEvent: public ec::EntityEvent<ComponentType> {
+	EntityEvent(ID eID, ComponentType compT = ComponentType::NONE
+			, bool c = false, bool d = false);
 
-class WorldMap
-{
-	public:
-		WorldMap(float patchSize, scene::ISceneManager* scene);
-		float* getHeightMap();
-		unsigned getVertexCount();
-		float getPatchSize();
-		float getHeightScale();
+	/* unnecessary
+	bool operator==(const EntityEvent& other) const {
+		return base_t::operator==(other)
+			&& created == other.created
+			&& destroyed == other.destroyed;
+	}
+	*/
+
+	bool created;
+	bool destroyed;
 
 	private:
-		const float _patchSize;
-		scene::ISceneManager* _scene;
-		std::unique_ptr<float[]> _heightMap;
-		float _heightScale;
-		unsigned _vertexC;
+		typedef ec::EntityEvent<ComponentType> base_t;
 };
 
-////////////////////////////////////////////////////////////
-
-class WorldEntityComponent: public Observable<EntityEvent>, public Serializable
-{
+class ObservableComponentBase : public Observable<EntityEvent> {
 	public:
-		WorldEntityComponent(WorldEntity& parent, ComponentType _compType);
-		void notifyObservers();
-
+		ObservableComponentBase(ID parentEntID, ComponentType realCompType);
 	protected:
-		WorldEntity& _parent;
-		const ComponentType _compType;
+		void notifyObservers();
 };
+
+typedef ec::ObservableEntity<ObservableComponentBase,ComponentType>
+	Entity;
+typedef ec::ObservableEntityManager<ObservableComponentBase,ComponentType,Entity>
+	EntityManager;
 
 ////////////////////////////////////////////////////////////
 
-class BodyComponent: public WorldEntityComponent
+class BodyComponent: public ObservableComponentBase
 {
 	public:
-		BodyComponent(WorldEntity& parent, vec3f position = vec3f(0), quaternion rotation = quaternion(0,0,0,0), vec3f velocity = vec3f(0));
+		BodyComponent(ID parentEntID, vec3f position = vec3f(0), quaternion rotation = quaternion(0,0,0,0), vec3f velocity = vec3f(0));
 		vec3f getPosition() const;
 		quaternion getRotation() const;
 		vec3f getVelocity() const;
@@ -110,10 +99,10 @@ class BodyComponent: public WorldEntityComponent
 
 ////////////////////////////////////////////////////////////
 
-class GraphicsComponent: public WorldEntityComponent
+class GraphicsComponent: public ObservableComponentBase
 {
 	public:
-		GraphicsComponent(ComponentType t, WorldEntity& parent, vec3f posOffset = vec3f(0), vec3f rotOffset = vec3f(0), vec3f scale = vec3f(1));
+		GraphicsComponent(ID parentEntID, ComponentType t, vec3f posOffset = vec3f(0), vec3f rotOffset = vec3f(0), vec3f scale = vec3f(1));
 		vec3f getPosOffset();
 		vec3f getRotOffset();
 		vec3f getScale();
@@ -138,7 +127,7 @@ class GraphicsComponent: public WorldEntityComponent
 class SphereGraphicsComponent: public GraphicsComponent 
 {
 	public:
-		SphereGraphicsComponent(WorldEntity& parent, float radius = 0, vec3f posOffset = vec3f(0), vec3f rotOffset = vec3f(0), vec3f scale = vec3f(1));
+		SphereGraphicsComponent(ID parentEntID, float radius = 0, vec3f posOffset = vec3f(0), vec3f rotOffset = vec3f(0), vec3f scale = vec3f(1));
 		virtual void serDes(SerDesBase& s);
 		template <typename T>
 			void doSerDes(T& t)
@@ -155,7 +144,7 @@ class SphereGraphicsComponent: public GraphicsComponent
 class MeshGraphicsComponent: public GraphicsComponent
 {
 	public:
-		MeshGraphicsComponent(WorldEntity& parent, string fileName = "", bool animated = false, vec3f posOffset = vec3f(0), vec3f rotOffset = vec3f(0), vec3f scale = vec3f(1));
+		MeshGraphicsComponent(ID parentEntID, string fileName = "", bool animated = false, vec3f posOffset = vec3f(0), vec3f rotOffset = vec3f(0), vec3f scale = vec3f(1));
 		virtual void serDes(SerDesBase& s);
 		template <typename T>
 			void doSerDes(T& t)
@@ -173,10 +162,10 @@ class MeshGraphicsComponent: public GraphicsComponent
 
 ////////////////////////////////////////////////////////////
 
-class CollisionComponent: public WorldEntityComponent
+class CollisionComponent: public ObservableComponentBase
 {
 	public:
-		CollisionComponent(WorldEntity& parent, float radius = 1, float height = 0, vec3f posOffset = vec3f(0,0,0), bool kinematic = false);
+		CollisionComponent(ID parentEntID, float radius = 1, float height = 0, vec3f posOffset = vec3f(0,0,0), bool kinematic = false);
 		float getRadius() const;
 		void setRadius(float);
 		float getHeight() const;
@@ -204,10 +193,10 @@ class CollisionComponent: public WorldEntityComponent
 
 ////////////////////////////////////////////////////////////
 
-class WizardComponent: public WorldEntityComponent
+class WizardComponent: public ObservableComponentBase
 {
 	public:
-		WizardComponent(WorldEntity& parent);
+		WizardComponent(ID parentEntID);
 		virtual void serDes(SerDesBase& s);
 		template <typename T>
 			void doSerDes(T&)
@@ -217,28 +206,21 @@ class WizardComponent: public WorldEntityComponent
 
 ////////////////////////////////////////////////////////////
 
-class WorldEntity: public Observabler<EntityEvent>
+class WorldMap
 {
 	public:
-		WorldEntity(World& w, u32 ID);
-		u32 getID();
-		shared_ptr<BodyComponent> setBodyComponent(shared_ptr<BodyComponent> bc);
-		shared_ptr<BodyComponent> getBodyComponent();
-		shared_ptr<GraphicsComponent> setGraphicsComponent(shared_ptr<GraphicsComponent> gc);
-		shared_ptr<GraphicsComponent> getGraphicsComponent();
-		shared_ptr<CollisionComponent> setCollisionComponent(shared_ptr<CollisionComponent> cc);
-		shared_ptr<CollisionComponent> getCollisionComponent();
-		shared_ptr<WizardComponent> setWizardComponent(shared_ptr<WizardComponent> cc);
-		shared_ptr<WizardComponent> getWizardComponent();
-
-		World& _world;
+		WorldMap(float patchSize, scene::ISceneManager* scene);
+		float* getHeightMap();
+		unsigned getVertexCount();
+		float getPatchSize();
+		float getHeightScale();
 
 	private:
-		const u32 _ID;
-		shared_ptr<BodyComponent> _body;
-		shared_ptr<GraphicsComponent> _graphics;
-		shared_ptr<CollisionComponent> _collision;
-		shared_ptr<WizardComponent> _wizard;
+		const float _patchSize;
+		scene::ISceneManager* _scene;
+		std::unique_ptr<float[]> _heightMap;
+		float _heightScale;
+		unsigned _vertexC;
 };
 
 ////////////////////////////////////////////////////////////
@@ -247,29 +229,27 @@ class World: public Observabler<EntityEvent>
 {
 	public:
 		World(WorldMap& wm);
-		WorldEntity& createEntity(u32 ID = 0);
-		void removeEntity(WorldEntity& e);
-		void removeEntity(u32 ID);
-		WorldEntity& createCharacter(vec3f position);
+		ID createEntity(ID hintEntID = 0);
+		Entity& createAndGetEntity(ID hintEntID = 0);
+		void removeEntity(ID entID);
+		Entity* getEntity(ID entID);
+		ID createCharacter(vec3f position);
 		WorldMap& getMap();
-		std::list<WorldEntity>& getEntities();
-		//void update(float timeDelta);
-		WorldEntity* getEntityByID(u32 ID);
+		IterateOnly<SolidVector<Entity>> getEntities();
 
 	private:
 		WorldMap& _map;
-		u32 _nextEntityID;
-		std::list<WorldEntity> _entities; // so that entityComponents can have references to entities
+		EntityManager _entManager;
 };
 
 template <typename T>
-T& operator <<(T& t, const WorldEntityComponent& m)
+T& operator <<(T& t, const ObservableComponentBase& m)
 {
 	m >> t;
 	return t;
 }
 template <typename T>
-T& operator >>(T& t, WorldEntityComponent& m)
+T& operator >>(T& t, ObservableComponentBase& m)
 {
 	m << t;
 	return t;

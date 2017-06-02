@@ -44,10 +44,10 @@ class DebugDrawer: public btIDebugDraw
 class MyMotionState : public btMotionState
 {
 	protected:
-		std::function<WorldEntity*()> _getEntity;
+		std::function<Entity*()> _getEntity;
 
 	public:
-		MyMotionState(std::function<WorldEntity*()> getEntity): _getEntity{getEntity}
+		MyMotionState(std::function<Entity*()> getEntity): _getEntity{getEntity}
 		{}
 
 		virtual ~MyMotionState()
@@ -59,7 +59,7 @@ class MyMotionState : public btMotionState
 			auto e = _getEntity();
 			if(!e)
 				return;
-			auto bc = e->getBodyComponent();
+			auto bc = e->getComponent<BodyComponent>();
 			if(!bc)
 				return;
 			worldTrans.setOrigin(V3f2btV3f(bc->getPosition()));
@@ -71,10 +71,10 @@ class MyMotionState : public btMotionState
 			auto e = _getEntity();
 			if(!e)
 				return;
-			auto bc = e->getBodyComponent();
+			auto bc = e->getComponent<BodyComponent>();
 			if(!bc)
 				return;
-			auto cc = e->getCollisionComponent();
+			auto cc = e->getComponent<CollisionComponent>();
 			if(!cc)
 				return;
 			/*
@@ -97,7 +97,7 @@ System::System(World& world): _world{world}
 
 Physics::Physics(World& world, scene::ISceneManager* smgr): System{world}, _tAcc{0}, _updating{false}
 {
-	observe(_world);
+	_world.addObserver(*this);
 	//TODO cleanup
 	btBroadphaseInterface* broadphase = new btDbvtBroadphase();
 	btDefaultCollisionConfiguration* collisionConfiguration = new btDefaultCollisionConfiguration();
@@ -225,7 +225,7 @@ void Physics::bodyDoStrafe(float timeDelta)
 	//TODO do this only for the bodies that collide with terrain (could be called from collision checking)
 	for(auto& e: _world.getEntities())
 	{
-		auto bc = e.getBodyComponent();
+		auto bc = e.getComponent<BodyComponent>();
 		if(!bc)
 			continue;
 		auto o = getCollisionObjectByID(e.getID());
@@ -310,8 +310,8 @@ void Physics::moveKinematics(float timeDelta)
 {
 	for(auto& e: _world.getEntities())
 	{
-		auto cc = e.getCollisionComponent();
-		auto bc = e.getBodyComponent();
+		auto cc = e.getComponent<CollisionComponent>();
+		auto bc = e.getComponent<BodyComponent>();
 		if(bc && cc)
 			if(cc->isKinematic())
 			{
@@ -353,32 +353,32 @@ void Physics::onObservableAdd(EntityEvent&)
 
 void Physics::onObservableUpdate(EntityEvent& m)
 {
-	switch(m._componentModifiedType)
+	switch(m.componentT)
 	{
 		case ComponentType::Collision:
 			{
-				auto e = _world.getEntityByID(m._entityID);
+				auto e = _world.getEntity(m.entityID);
 				if(!e)
 					break;
-				auto col = e->getCollisionComponent();
+				auto col = e->getComponent<CollisionComponent>();
 				if(!col)
 					break;
 				btScalar mass = 80;
 				btScalar iner = 1;
 				btVector3 fallInertia(iner, iner, iner);
-				auto eID = m._entityID;
+				auto eID = m.entityID;
 
 				btCollisionObject* o = getCollisionObjectByID(eID);
 				if(o)
 					_physicsWorld->removeCollisionObject(o);
 
-				if(m._destroyed)
+				if(m.destroyed)
 					break;
 
 				_objData.emplace(eID, ObjData{});
 				btCollisionShape* pShape = new btCapsuleShape(col->getRadius(), col->getHeight());
 				pShape->calculateLocalInertia(mass,fallInertia);
-				MyMotionState* motionState = new MyMotionState([this, eID]()->WorldEntity* { return _world.getEntityByID(eID); });
+				MyMotionState* motionState = new MyMotionState([this, eID]()->Entity* { return _world.getEntity(eID); });
 				btRigidBody::btRigidBodyConstructionInfo bodyCI(mass,motionState,pShape,fallInertia);
 				btRigidBody* body = new btRigidBody(bodyCI);
 				_physicsWorld->addRigidBody(body);
@@ -399,16 +399,16 @@ void Physics::onObservableUpdate(EntityEvent& m)
 			{
 				if(_updating)
 					return;
-				auto e = _world.getEntityByID(m._entityID);
+				auto e = _world.getEntity(m.entityID);
 				if(!e)
 					break;
-				auto cc = e->getCollisionComponent();
+				auto cc = e->getComponent<CollisionComponent>();
 				if(!cc)
 					break;
-				btCollisionObject* o = getCollisionObjectByID(m._entityID);
+				btCollisionObject* o = getCollisionObjectByID(m.entityID);
 				if(!o)
 					break;
-				auto b = e->getBodyComponent();
+				auto b = e->getComponent<BodyComponent>();
 				if(!b)
 					break;
 				auto rigB = dynamic_cast<btRigidBody*>(o);
@@ -473,43 +473,42 @@ void ViewSystem::onObservableAdd(EntityEvent&)
 
 void ViewSystem::onObservableUpdate(EntityEvent& m)
 {
-	switch(m._componentModifiedType)
+	switch(m.componentT)
 	{
 		case ComponentType::Body:
 			{
-				scene::ISceneNode* sn = _smgr->getSceneNodeFromId(m._entityID);
-				if(m._destroyed && sn)
+				scene::ISceneNode* sn = _smgr->getSceneNodeFromId(m.entityID);
+				if(m.destroyed && sn)
 				{
 					sn->remove();
 					return;
 				}
 				if(!sn)
 				{
-					sn = _smgr->addEmptySceneNode(nullptr, m._entityID);
+					sn = _smgr->addEmptySceneNode(nullptr, m.entityID);
 					sn->setName("body");
 					sn->setDebugDataVisible(scene::EDS_FULL);
 				}
-				_transformedEntities.push_back(m._entityID);
+				_transformedEntities.push_back(m.entityID);
 				break;
 			}
 		case ComponentType::GraphicsSphere:
 			{
-				auto e = _world.getEntityByID(m._entityID);
+				auto e = _world.getEntity(m.entityID);
 				if(!e)
 					return;
-				auto bc = e->getBodyComponent();
+				auto bc = e->getComponent<BodyComponent>();
 				if(!bc)
 					return;
-				auto bsn = _smgr->getSceneNodeFromId(m._entityID);
+				auto bsn = _smgr->getSceneNodeFromId(m.entityID);
 				if(!bsn)
 					std::cout << "BSN NOT FOUND\n";
 				auto sn = _smgr->getSceneNodeFromName("graphics", bsn);
 				if(sn)
 					sn->remove();
-				if(m._destroyed)
+				if(m.destroyed)
 					return;
-				auto gc = e->getGraphicsComponent();
-				if(auto sgc = dynamic_cast<SphereGraphicsComponent*>(gc.get()))
+				if(auto sgc = e->getComponent<GraphicsSphere>())
 					sn = _smgr->addSphereSceneNode(sgc->getRadius(), 64, bsn, -1, gc->getPosOffset());
 				sn->setName("graphics");
 				sn->setDebugDataVisible(scene::EDS_FULL);
@@ -517,22 +516,21 @@ void ViewSystem::onObservableUpdate(EntityEvent& m)
 			}
 		case ComponentType::GraphicsMesh:
 			{
-				auto e = _world.getEntityByID(m._entityID);
+				auto e = _world.getEntity(m.entityID);
 				if(!e)
 					return;
-				auto bc = e->getBodyComponent();
+				auto bc = e->getComponent<BodyComponent>();
 				if(!bc)
 					return;
-				auto bsn = _smgr->getSceneNodeFromId(m._entityID);
+				auto bsn = _smgr->getSceneNodeFromId(m.entityID);
 				if(!bsn)
 					std::cout << "BSN NOT FOUND\n";
 				auto sn = _smgr->getSceneNodeFromName("graphics", bsn);
 				if(sn)
 					sn->remove();
-				if(m._destroyed)
+				if(m.destroyed)
 					return;
-				auto gc = e->getGraphicsComponent();
-				if(auto sgc = dynamic_cast<MeshGraphicsComponent*>(gc.get()))
+				if(auto sgc = e->getComponent<MeshGraphicsComponent>())
 				{
 					if(sgc->getFileName() == "")
 						return;
@@ -563,10 +561,10 @@ void ViewSystem::updateTransforms(float timeDelta)
 {
 	for(auto it = _transformedEntities.begin(); it != _transformedEntities.end(); it++) {
 		auto eID = *it;
-		WorldEntity* e;
+		Entity* e;
 		BodyComponent* bc;
 		scene::ISceneNode* sn;
-		if((e = _world.getEntityByID(eID)) && (bc = e->getBodyComponent().get()) && (sn = _smgr->getSceneNodeFromId(eID)))
+		if((e = _world.getEntity(eID)) && (bc = e->getComponent<BodyComponent>().get()) && (sn = _smgr->getSceneNodeFromId(eID)))
 		{
 			vec3f r;
 			bc->getRotation().toEuler(r);
@@ -620,17 +618,17 @@ void SpellSystem::update(float timeDelta)
 	}
 }
 
-void SpellSystem::onObservableUpdate(EntityEvent& m)
+void SpellSystem::onObservableUpdate(const EntityEvent& m)
 {
-	if(m._componentModifiedType == ComponentType::Wizard)
+	if(m.componentT == ComponentType::Wizard)
 	{
-		if(m._created)
+		if(m.created)
 		{
 			reload(); // TODO just for testing - every time a player connects reload 
-			addWizard(m._entityID);
+			addWizard(m.entityID);
 		}
-		else if(m._destroyed)
-			removeWizard(m._entityID);
+		else if(m.destroyed)
+			removeWizard(m.entityID);
 	}
 }
 
@@ -742,14 +740,14 @@ void SpellSystem::deinit()
 
 u32 SpellSystem::launchSpell(float radius, float speed, u32 wizard)
 {
-	auto e = _world.getEntityByID(wizard);
+	auto e = _world.getEntity(wizard);
 	if(!e)
 		return 0; //TODO fail in a better way
-	auto wBody = e->getBodyComponent();
+	auto wBody = e->getComponent<BodyComponent>();
 	if(!wBody)
 		return 0; //TODO fail in a better way
 
-	WorldEntity& spellE = _world.createEntity();
+	Entity& spellE = _world.createAndGetEntity();
 	vec3f dir{1,0,0};
 	vec3f rot;
 	wBody->getRotation().toEuler(rot);
@@ -812,11 +810,9 @@ void InputSystem::handleCommand(Command& c, u32 controlledObjID)
 
 BodyComponent* InputSystem::getBodyComponent(u32 objID)
 {
-	auto e = _world.getEntityByID(objID);
+	auto e = _world.getEntity(objID);
 	if(e)
-	{
-		auto bc = e->getBodyComponent().get();
-		return bc;
-	}
-	return nullptr;
+		return e->getComponent<BodyComponent>();
+	else
+		return nullptr;
 }

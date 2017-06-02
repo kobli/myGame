@@ -1,186 +1,31 @@
 #include <world.hpp>
 #include <cassert>
 
-EntityEvent::EntityEvent(u32 entityID, ComponentType componentModifiedType
-		, WorldEntityComponent* componentModified, bool created, bool destroyed)
-	: _entityID{entityID}, _componentModifiedType{componentModifiedType}
-	, _componentModified{componentModified}, _created{created}, _destroyed{destroyed}
-{}
-
-////////////////////////////////////////////////////////////
-
-WorldMap::WorldMap(float patchSize, scene::ISceneManager* scene): _patchSize{patchSize}, _scene{scene}, _heightScale{0.05}
-{
-	scene::ITerrainSceneNode* terrain = _scene->addTerrainSceneNode(
-		"./media/terrain-heightmap.bmp",
-		0,					// parent node
-		-1,					// node id
-		core::vector3df(0),		// position
-		core::vector3df(0),		// rotation
-		core::vector3df(1)		// scale
-		);
-	terrain->setScale(core::vector3df(_patchSize/terrain->getBoundingBox().getExtent().X, 
-				_heightScale,
-				_patchSize/terrain->getBoundingBox().getExtent().Z));
-	terrain->setPosition(terrain->getBoundingBox().getCenter()*core::vector3df(-1,0,-1));
-
-
-	terrain->setMaterialFlag(video::EMF_LIGHTING, false);
-	terrain->setMaterialTexture(0, _scene->getVideoDriver()->getTexture("./media/terrain-texture.jpg"));
-	terrain->setMaterialTexture(1, _scene->getVideoDriver()->getTexture("./media/detailmap3.jpg"));
-	terrain->setMaterialType(video::EMT_DETAIL_MAP);
-	terrain->scaleTexture(1.0f, 40.0f);
-
-	scene::CDynamicMeshBuffer* buffer = new scene::CDynamicMeshBuffer(video::EVT_2TCOORDS, video::EIT_16BIT);
-	terrain->getMeshBufferForLOD(*buffer, 0);
-	video::S3DVertex2TCoords* data = (video::S3DVertex2TCoords*)buffer->getVertexBuffer().getData();
-	_vertexC = buffer->getVertexBuffer().size();
-	unsigned w = sqrt(_vertexC);
-	_heightMap.reset(new float[_vertexC]);
-	assert((((w-1) & ((w-1)-1)) == 0) && "heightmap size must be 2^n+1");
-	float min = data[0].Pos.Y;
-	float max = data[0].Pos.Y;
-	for(unsigned y = 0; y<w; y++)
-	{
-		for(unsigned x = 0; x<w; x++)
-		{
-			core::vector3df p = data[x*w + y].Pos; // data is stored top-to-bottom, right-to-left
-			(_heightMap.get())[x + y*w] = p.Y; // need to remap it back to left-to-right, top-to-bottom
-
-			if(p.Y > max)
-				max = p.Y;
-			if(p.Y < min)
-				min = p.Y;
-		}
-	}
-}
-
-float WorldMap::getPatchSize()
-{
-	return _patchSize;
-}
-
-float WorldMap::getHeightScale()
-{
-	return _heightScale;
-}
-
-float* WorldMap::getHeightMap()
-{
-	return _heightMap.get();
-}
-
-unsigned WorldMap::getVertexCount()
-{
-	return _vertexC;
+EntityEvent::EntityEvent(ID eID, ComponentType compT, bool c, bool d)
+	: base_t{eID, compT}, created{c}, destroyed{d} {
 }
 
 ////////////////////////////////////////////////////////////
 
-WorldEntityComponent::WorldEntityComponent(WorldEntity& parent, ComponentType compType)
-	//TODO /this/ should not be passed, because the object is invalid both during construction and destruction
-	: Observable(EntityEvent(parent.getID(), compType, this,  true)
-			, EntityEvent(parent.getID(), compType, this, false, true))
-		, _parent{parent}, _compType{compType}
-{}
-
-void WorldEntityComponent::notifyObservers()
+ObservableComponentBase::ObservableComponentBase(ID parentEntID, ComponentType realCompType)
+ 	: Observable<EntityEvent>{EntityEvent{parentEntID, realCompType}, EntityEvent{parentEntID, realCompType}}
 {
-	EntityEvent m;
-	m._entityID =  _parent.getID();
-	m._componentModifiedType = _compType;
-	m._componentModified = this;
-	Observable<EntityEvent>::notifyObservers(m);
+}
+
+void ObservableComponentBase::notifyObservers()
+{
+	//TODO .. store entID and compT in ctor
+	//here create and send event
+	//or create upd msg and store it in ctor .. !!!better
 }
 
 ////////////////////////////////////////////////////////////
 
-WorldEntity::WorldEntity(World& w, u32 ID)
-	: Observabler(EntityEvent(ID, ComponentType::None, nullptr, true)
-			, EntityEvent(ID, ComponentType::None, nullptr, false, true)), _world{w}, _ID{ID}
-{}
-
-u32 WorldEntity::getID()
-{
-	return _ID;
-}
-
-shared_ptr<BodyComponent> WorldEntity::setBodyComponent(shared_ptr<BodyComponent> bc)
-{
-	_body.swap(bc);
-	if(_body)
-		observe(*_body);
-	return _body;
-}
-
-shared_ptr<BodyComponent> WorldEntity::getBodyComponent()
-{
-	return _body;
-}
-
-shared_ptr<GraphicsComponent> WorldEntity::setGraphicsComponent(shared_ptr<GraphicsComponent> gc)
-{
-	_graphics.swap(gc);
-	if(_graphics)
-		observe(*_graphics);
-	return _graphics;
-}
-
-shared_ptr<GraphicsComponent> WorldEntity::getGraphicsComponent()
-{
-	return _graphics;
-}
-
-shared_ptr<CollisionComponent> WorldEntity::setCollisionComponent(shared_ptr<CollisionComponent> cc)
-{
-	_collision.swap(cc);
-	if(_collision)
-		observe(*_collision);
-	return _collision;
-}
-
-shared_ptr<CollisionComponent> WorldEntity::getCollisionComponent()
-{
-	return _collision;
-}
-
-shared_ptr<WizardComponent> WorldEntity::setWizardComponent(shared_ptr<WizardComponent> cc)
-{
-	_wizard.swap(cc);
-	if(_wizard)
-		observe(*_wizard);
-	return _wizard;
-
-}
-
-shared_ptr<WizardComponent> WorldEntity::getWizardComponent()
-{
-	return _wizard;
-}
-
-////////////////////////////////////////////////////////////
-
-BodyComponent::BodyComponent(WorldEntity& parent, vec3f position, quaternion rotation, vec3f velocity)
-	: WorldEntityComponent{parent, ComponentType::Body}, _position{position}, _rotation{rotation}, _velocity{velocity}
+BodyComponent::BodyComponent(ID parentEntID, vec3f position, quaternion rotation, vec3f velocity)
+	: ObservableComponentBase{parentEntID, ComponentType::Body}, _position{position}, _rotation{rotation}, _velocity{velocity}
 	, _strafeDir{vec2f(0,0)}, _strafeSpeed{120}, _rotDir{0}, _posRotChanged{false}
 {}
 	
-/*
-void BodyComponent::update(float timeDelta)
-{
-	vec3f newRot = _rotation,
-				newPos = _position;
-	newRot.Y = fmod(_rotation.Y+(_rotSpeed*_rotDir*timeDelta), 360);
-	setRotation(newRot);
-	auto cc = _parent.getCollisionComponent();
-	if(cc)
-		newPos = cc->getCollisionResultPosition(timeDelta);
-	else
-		newPos += getTotalVelocity()*timeDelta;
-	setPosition(newPos);
-}
-*/
-
 vec3f BodyComponent::getPosition() const
 {
 	return _position;
@@ -250,24 +95,6 @@ bool BodyComponent::posOrRotChanged()
 	return _posRotChanged;
 }
 
-/*
-vec3f BodyComponent::getTotalVelocity() const
-{
-	vec3f vel = _velocity;
-	if(_strafeDir.getLength() != 0)
-	{
-		vec3f strDir{_strafeDir.X, 0, _strafeDir.Y};
-		strDir.rotateYZBy(-_rotation.X);
-		strDir.rotateXZBy(-_rotation.Y);
-		strDir.rotateXYBy(-_rotation.Z);
-		strDir.normalize();
-		strDir.Y = 0;
-		vel += strDir*_strafeSpeed;
-	}
-	return vel;
-}
-*/
-
 vec2f BodyComponent::getStrafeDir() const
 {
 	return _strafeDir;
@@ -285,9 +112,9 @@ void BodyComponent::serDes(SerDesBase& s)
 
 ////////////////////////////////////////////////////////////
 
-GraphicsComponent::GraphicsComponent(ComponentType t, WorldEntity& parent
+GraphicsComponent::GraphicsComponent(ID parentEntID, ComponentType t
 		, vec3f posOffset, vec3f rotOffset, vec3f scale)
-	: WorldEntityComponent(parent, t)
+	: ObservableComponentBase(parentEntID, t)
 	, _posOff{posOffset}, _rotOff{rotOffset}, _scale{scale}
 {}
 
@@ -337,8 +164,8 @@ void GraphicsComponent::serDes(SerDesBase& s)
 
 // // // // // // // // // // // // // // // // // // // //
 
-SphereGraphicsComponent::SphereGraphicsComponent(WorldEntity& parent, float radius, vec3f posOffset, vec3f rotOffset, vec3f scale)
-	: GraphicsComponent{ComponentType::GraphicsSphere, parent, posOffset, rotOffset, scale}, _radius{radius}
+SphereGraphicsComponent::SphereGraphicsComponent(ID parentEntID, float radius, vec3f posOffset, vec3f rotOffset, vec3f scale)
+	: GraphicsComponent{parentEntID, ComponentType::GraphicsSphere, posOffset, rotOffset, scale}, _radius{radius}
 {}
 
 float SphereGraphicsComponent::getRadius()
@@ -362,8 +189,8 @@ void SphereGraphicsComponent::serDes(SerDesBase& s)
 
 // // // // // // // // // // // // // // // // // // // //
 
-MeshGraphicsComponent::MeshGraphicsComponent(WorldEntity& parent, string fileName, bool animated, vec3f posOffset, vec3f rotOffset, vec3f scale)
-	: GraphicsComponent{ComponentType::GraphicsMesh, parent, posOffset, rotOffset, scale}, _fileName{fileName}, _animated{animated}
+MeshGraphicsComponent::MeshGraphicsComponent(ID parentEntID, string fileName, bool animated, vec3f posOffset, vec3f rotOffset, vec3f scale)
+	: GraphicsComponent{parentEntID, ComponentType::GraphicsMesh, posOffset, rotOffset, scale}, _fileName{fileName}, _animated{animated}
 {}
 
 void MeshGraphicsComponent::serDes(SerDesBase& s)
@@ -384,8 +211,11 @@ bool MeshGraphicsComponent::isAnimated()
 
 ////////////////////////////////////////////////////////////
 
-CollisionComponent::CollisionComponent(WorldEntity& parent, float radius, float height, vec3f posOffset, bool kinematic)
-	: WorldEntityComponent(parent, ComponentType::Collision), _radius{radius}, _height{height}, _posOff{posOffset}, _kinematic{kinematic}
+CollisionComponent::CollisionComponent(ID parentEntID
+		, float radius, float height, vec3f posOffset, bool kinematic)
+	: ObservableComponentBase(parentEntID, ComponentType::Collision)
+		, _radius{radius}, _height{height}, _posOff{posOffset}
+		, _kinematic{kinematic}
 {}
 
 float CollisionComponent::getRadius() const
@@ -430,7 +260,8 @@ bool CollisionComponent::isKinematic()
 
 ////////////////////////////////////////////////////////////
 
-WizardComponent::WizardComponent(WorldEntity& parent): WorldEntityComponent(parent, ComponentType::Wizard)
+WizardComponent::WizardComponent(ID parentEntID):
+ 	ObservableComponentBase(parentEntID, ComponentType::Wizard)
 {
 }
 
@@ -441,50 +272,127 @@ void WizardComponent::serDes(SerDesBase&)
 
 ////////////////////////////////////////////////////////////
 
-World::World(WorldMap& wm): Observabler(EntityEvent(0, ComponentType::None, nullptr,  true)
-			, EntityEvent(0, ComponentType::None, nullptr, false, true)), _map{wm}, _nextEntityID{1}
-{}
-
-WorldEntity& World::createEntity(u32 ID)
+WorldMap::WorldMap(float patchSize, scene::ISceneManager* scene)
+	: _patchSize{patchSize}, _scene{scene}, _heightScale{0.05}
 {
-	// TODO check for existing entities with same ID
-	u32 nID = ID;
-	if(nID == 0)
+	scene::ITerrainSceneNode* terrain = _scene->addTerrainSceneNode(
+		"./media/terrain-heightmap.bmp",
+		0,					// parent node
+		-1,					// node id
+		core::vector3df(0),		// position
+		core::vector3df(0),		// rotation
+		core::vector3df(1)		// scale
+		);
+	terrain->setScale(core::vector3df(_patchSize/terrain->getBoundingBox().getExtent().X, 
+				_heightScale,
+				_patchSize/terrain->getBoundingBox().getExtent().Z));
+	terrain->setPosition(terrain->getBoundingBox().getCenter()*core::vector3df(-1,0,-1));
+
+
+	terrain->setMaterialFlag(video::EMF_LIGHTING, false);
+	terrain->setMaterialTexture(0, _scene->getVideoDriver()->getTexture("./media/terrain-texture.jpg"));
+	terrain->setMaterialTexture(1, _scene->getVideoDriver()->getTexture("./media/detailmap3.jpg"));
+	terrain->setMaterialType(video::EMT_DETAIL_MAP);
+	terrain->scaleTexture(1.0f, 40.0f);
+
+	scene::CDynamicMeshBuffer* buffer = new scene::CDynamicMeshBuffer(video::EVT_2TCOORDS, video::EIT_16BIT);
+	terrain->getMeshBufferForLOD(*buffer, 0);
+	video::S3DVertex2TCoords* data = (video::S3DVertex2TCoords*)buffer->getVertexBuffer().getData();
+	_vertexC = buffer->getVertexBuffer().size();
+	unsigned w = sqrt(_vertexC);
+	_heightMap.reset(new float[_vertexC]);
+	assert((((w-1) & ((w-1)-1)) == 0) && "heightmap size must be 2^n+1");
+	float min = data[0].Pos.Y;
+	float max = data[0].Pos.Y;
+	for(unsigned y = 0; y<w; y++)
 	{
-		nID = _nextEntityID;
-		_nextEntityID++;	
+		for(unsigned x = 0; x<w; x++)
+		{
+			// data is stored top-to-bottom, right-to-left
+			core::vector3df p = data[x*w + y].Pos;
+			// need to remap it back to left-to-right, top-to-bottom
+			(_heightMap.get())[x + y*w] = p.Y;
+
+			if(p.Y > max)
+				max = p.Y;
+			if(p.Y < min)
+				min = p.Y;
+		}
 	}
-	_entities.emplace_back(*this, nID);
-	observe(_entities.back());
-	return _entities.back();
 }
 
-void World::removeEntity(WorldEntity& e)
+float WorldMap::getPatchSize()
 {
-	cout << "REMOVING ENTITY WITH ID " << e.getID() << endl;
-	auto it = _entities.begin();
-	while(&*it != &e && it != _entities.end())
-		it++;
-	_entities.erase(it);
+	return _patchSize;
 }
 
-void World::removeEntity(u32 ID)
+float WorldMap::getHeightScale()
 {
-	removeEntity(*getEntityByID(ID));
+	return _heightScale;
 }
 
-WorldEntity& World::createCharacter(vec3f position)
+float* WorldMap::getHeightMap()
 {
-	WorldEntity& e = createEntity();
-	e.setBodyComponent(make_shared<BodyComponent>(e, position));
-	/*
-	e.setGraphicsComponent(make_shared<SphereGraphicsComponent>(e, 1));
-	e.setCollisionComponent(make_shared<CollisionComponent>(e, 1, 0));
+	return _heightMap.get();
+}
+
+unsigned WorldMap::getVertexCount()
+{
+	return _vertexC;
+}
+
+////////////////////////////////////////////////////////////
+
+
+World::World(WorldMap& wm): _map{wm}
+{
+	/* TODO .. just for fun / test
+	_entManager.registerComponentType<BodyComponent>(ComponentType::Body);
+	_entManager.registerComponentType<SphereGraphicsComponent>(ComponentType::GraphicsSphere);
+	_entManager.registerComponentType<MeshGraphicsComponent>(ComponentType::GraphicsMesh);
+	_entManager.registerComponentType<CollisionComponent>(ComponentType::Collision);
+	_entManager.registerComponentType<WizardComponent>(ComponentType::Wizard);
 	*/
+}
+
+ID World::createEntity(ID hintEntID)
+{
+	// TODO hint entID
+	// TODO check for existing entities with same ID
+	return _entManager.createEntity();
+}
+
+Entity& World::createAndGetEntity(ID hintEntID = 0)
+{
+	// TODO hint entID
+	// TODO check for existing entities with same ID
+	return _entManager.createAndGetEntity();
+}
+
+void World::removeEntity(ID entID)
+{
+	cout << "REMOVING ENTITY WITH ID " << entID << endl;
+	_entManager.removeEntity(entID);
+}
+
+Entity* World::getEntity(ID entID)
+{
+	return _entManager.getEntity(entID);
+}
+
+ID World::createCharacter(vec3f position)
+{
+	ID eID = createEntity();
+	Entity& e = *getEntity(eID);
+
+	e.addComponent<BodyComponent>(position);
+	/*TODO
+	e.setBodyComponent(make_shared<BodyComponent>(e, position));
 	e.setGraphicsComponent(make_shared<MeshGraphicsComponent>(e, "ninja.b3d", true, vec3f(0), vec3f(0,90,0), vec3f(0.2)));
 	e.setCollisionComponent(make_shared<CollisionComponent>(e, 0.4, 1, vec3f(0, -0.9, 0)));
 	e.setWizardComponent(make_shared<WizardComponent>(e));
-	return e;
+	*/
+	return eID;
 }
 
 WorldMap& World::getMap()
@@ -492,15 +400,7 @@ WorldMap& World::getMap()
 	return _map;
 }
 
-std::list<WorldEntity>& World::getEntities()
+IterateOnly<SolidVector<Entity>> World::getEntities()
 {
-	return _entities;
-}
-
-WorldEntity* World::getEntityByID(u32 ID)
-{
-	for(auto& e: _entities)
-		if(e.getID() == ID)
-			return &e;
-	return nullptr;
+	return _entManager.getEntities();
 }

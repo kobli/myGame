@@ -1,8 +1,8 @@
-#include <client.hpp>
 #include <cassert>
-#include <network.hpp>
-#include <serdes.hpp>
-
+#include "client.hpp"
+#include "network.hpp"
+#include "serdes.hpp"
+/*
 Animator::Animator(scene::ISceneManager* smgr, function<WorldEntity*(u32)> entityResolver, function<vec3f(u32)> entityVelocityGetter)
 	: _smgr{smgr}, _entityResolver{entityResolver}, _velGetter{entityVelocityGetter}
 {}
@@ -207,14 +207,13 @@ void ClientApplication::createCamera()
 	if(!_worldMap)
 		return;
 	// create collision response animator and attach it to the camera
-	/*
-	scene::ISceneNodeAnimatorCollisionResponse* anim = _device->getSceneManager()->createCollisionResponseAnimator(
-		_worldMap->getMetaTriangleSelector(), _camera, core::vector3df(40,100,40),
-		core::vector3df(0,-50,0),
-		core::vector3df(0,50,0),
-		0.1);
-	_camera->addAnimator(anim);
-	*/
+	
+//	scene::ISceneNodeAnimatorCollisionResponse* anim = _device->getSceneManager()->createCollisionResponseAnimator(
+//		_worldMap->getMetaTriangleSelector(), _camera, core::vector3df(40,100,40),
+//		core::vector3df(0,-50,0),
+//		core::vector3df(0,50,0),
+//		0.1);
+//	_camera->addAnimator(anim);
 }
 
 void ClientApplication::sendCommand(Command& c)
@@ -332,3 +331,4 @@ void ClientApplication::handleEntityEvent(EntityEvent& e)
 			break;
 	}
 }
+*/

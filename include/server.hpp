@@ -38,7 +38,7 @@ class Session
 class Updater: public Observer<EntityEvent>
 {
 	public:
-		using ClientFilterPredicate = function<bool(WorldEntity* e)>; 
+		using ClientFilterPredicate = function<bool(Entity* e)>; 
 			// decides, if the client controlling entity "e" should be informed about these WorldChanges
 		using Sender = function<void(sf::Packet& p, ClientFilterPredicate fp)>;
 		Updater(Sender s);
@@ -46,9 +46,9 @@ class Updater: public Observer<EntityEvent>
 	private:
 		Sender _send;
 
-		void onObservableAdd(EntityEvent& m);
-		void onObservableUpdate(EntityEvent& m);
-		void onObservableRemove(EntityEvent& m);
+		void onObservableAdd(const EntityEvent& m) final;
+		void onObservableUpdate(const EntityEvent& m) final;
+		void onObservableRemove(const EntityEvent& m) final;
 };
 
 ////////////////////////////////////////////////////////////
