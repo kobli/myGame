@@ -137,6 +137,11 @@ class Entity {
 			swap(other);
 		}
 
+		Entity& operator=(Entity&& other) noexcept {
+			swap(other);
+			return *this;
+		}
+
 		~Entity() noexcept {
 			for(auto& v : _componentID)
 				removeComponent(v.first);
