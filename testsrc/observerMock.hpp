@@ -40,20 +40,6 @@ class ObserverMock_: public Observer<MsgT>
 
 		MessageSequence _s;
 	private:
-		virtual void onObservableAdd(const MsgT& m) {
-			onMsg(m);
-			//std::cout << "add\n";
-		}
-
-		virtual void onObservableUpdate(const MsgT& m) {
-			onMsg(m);
-		}
-
-		virtual void onObservableRemove(const MsgT& m) {
-			onMsg(m);
-			//std::cout << "remove\n";
-		}
-
 		virtual void onMsg(const MsgT& m) {
 			//std::cout << m << std::endl;
 			EXPECT_EQ(_s.empty(), false);

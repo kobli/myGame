@@ -20,7 +20,7 @@ TEST(Observer, ObservableUpdated) {
 			});
 
 	observable.addObserver(observer);
-	observable.broadcastUpdMsg(Msg(5));
+	observable.broadcastMsg(Msg(5));
 }
 
 TEST(Observer, ObservableDeath) {
@@ -42,9 +42,9 @@ TEST(Observer, ObservableRemove) {
 			});
 	Observable<Msg> observable(Msg(0, true), Msg(0, false, true));
 	observable.addObserver(observer);
-	observable.broadcastUpdMsg(Msg(0));
+	observable.broadcastMsg(Msg(0));
 	observable.removeObserver(observer);
-	observable.broadcastUpdMsg(Msg(0));
+	observable.broadcastMsg(Msg(0));
 }
 
 TEST(Observer, ObserverMove) {
@@ -61,7 +61,7 @@ TEST(Observer, ObserverMove) {
 		}
 		observer2._s.push(Msg(0));
 		observer2._s.push(Msg(0, false, true));
-		observable.broadcastUpdMsg(Msg(0));
+		observable.broadcastMsg(Msg(0));
 	}
 }
 
@@ -74,7 +74,7 @@ TEST(Observer, ObservableUpdateAfterObserverDead) {
 		observable.addObserver(observer);
 	}
 	// this shouldn't crash the program
-	observable.broadcastUpdMsg(Msg(0)); 
+	observable.broadcastMsg(Msg(0)); 
 }
 
 TEST(Observabler, create) {
