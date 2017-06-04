@@ -1,5 +1,6 @@
-#include <system.hpp>
 #define _USE_MATH_DEFINES
+#include "system.hpp"
+
 class DebugDrawer: public btIDebugDraw
 {
 	public:
@@ -97,7 +98,6 @@ System::System(World& world): _world{world}
 
 Physics::Physics(World& world, scene::ISceneManager* smgr): System{world}, _tAcc{0}, _updating{false}
 {
-	_world.addObserver(*this);
 	//TODO cleanup
 	btBroadphaseInterface* broadphase = new btDbvtBroadphase();
 	btDefaultCollisionConfiguration* collisionConfiguration = new btDefaultCollisionConfiguration();
@@ -111,7 +111,7 @@ Physics::Physics(World& world, scene::ISceneManager* smgr): System{world}, _tAcc
 	{
 		DebugDrawer* debugDrawer = new DebugDrawer(smgr);
 		_physicsWorld->setDebugDrawer(debugDrawer);
-		_physicsWorld->getDebugDrawer()->setDebugMode(btIDebugDraw::DBG_MAX_DEBUG_DRAW_MODE);
+		_physicsWorld->getDebugDrawer()->setDebugMode(btIDebugDraw::DBG_DrawText);
 	}
 
 	WorldMap& m = _world.getMap();
@@ -155,14 +155,14 @@ Physics::Physics(World& world, scene::ISceneManager* smgr): System{world}, _tAcc
 	btRigidBody::btRigidBodyConstructionInfo terrCI(0.0, terrMS, terrS);
 	btRigidBody* terrB = new btRigidBody(terrCI);
 	_physicsWorld->addRigidBody(terrB);
-	terrB->setUserIndex(0);
+	terrB->setUserIndex(ObjStaticID::Map);
 	terrB->setAnisotropicFriction(btVector3(0.8,0.3,0.8));
 	//terrB->setFriction(1);
 }
 
-vec3f Physics::getObjVelocity(u32 ID)
+vec3f Physics::getObjVelocity(ID objID)
 {
-	auto co = getCollisionObjectByID(ID);
+	auto co = getCollisionObjectByID(objID);
 	if(!co)
 		return vec3f(0);
 	auto dco = dynamic_cast<btRigidBody*>(co);
@@ -215,7 +215,7 @@ void Physics::update(float timeDelta)
 		fn++;
 	}
 	callCollisionCBs();
-	//_physicsWorld->debugDrawWorld();
+	_physicsWorld->debugDrawWorld();
 }
 
 void Physics::bodyDoStrafe(float timeDelta)
@@ -340,7 +340,7 @@ void Physics::callCollisionCBs()
 			// set onGround flags
 			int obj0ID = min(obA->getUserIndex(), obB->getUserIndex());
 			int obj1ID = max(obA->getUserIndex(), obB->getUserIndex());
-			if(obj0ID == 0)
+			if(obj0ID == ObjStaticID::Map)
 				_objData[obj1ID].onGround = true;	
 			for(auto& colCB : _collCallbacks)
 				colCB(obj0ID, obj1ID);
@@ -431,7 +431,7 @@ void Physics::onMsg(const EntityEvent& m)
 	}
 }
 
-btCollisionObject* Physics::getCollisionObjectByID(int entityID)
+btCollisionObject* Physics::getCollisionObjectByID(ID entityID)
 {
 	for(int i = 0; i < _physicsWorld->getNumCollisionObjects(); i++)
 	{
@@ -442,15 +442,15 @@ btCollisionObject* Physics::getCollisionObjectByID(int entityID)
 	return nullptr;
 }
 
-void Physics::registerCollisionCallback(std::function<void(u32, u32)> callback)
+void Physics::registerCollisionCallback(std::function<void(ID, ID)> callback)
 {
 	_collCallbacks.push_back(callback);
-	_collCallbacks.push_back([callback](u32 first, u32 second) {
+	_collCallbacks.push_back([callback](ID first, ID second) {
 				callback(second, first);
 			});
 }
 
-void Physics::registerPairCollisionCallback(std::function<void(u32, u32)> callback)
+void Physics::registerPairCollisionCallback(std::function<void(ID, ID)> callback)
 {
 	_collCallbacks.push_back(callback);
 }
@@ -459,7 +459,6 @@ void Physics::registerPairCollisionCallback(std::function<void(u32, u32)> callba
 
 ViewSystem::ViewSystem(irr::scene::ISceneManager* smgr, World& world): System{world}, _smgr{smgr}
 {
-	_world.addObserver(*this);
 }
 
 void ViewSystem::onMsg(const EntityEvent& m)
@@ -469,16 +468,17 @@ void ViewSystem::onMsg(const EntityEvent& m)
 		case ComponentType::Body:
 			{
 				scene::ISceneNode* sn = _smgr->getSceneNodeFromId(m.entityID);
-				if(m.destroyed && sn)
+				if(sn && m.destroyed)
 				{
+					sn->removeAll();// remove children
 					sn->remove();
 					return;
 				}
-				if(!sn)
+				else if(!sn && !m.destroyed)
 				{
 					sn = _smgr->addEmptySceneNode(nullptr, m.entityID);
 					sn->setName("body");
-					sn->setDebugDataVisible(scene::EDS_FULL);
+					//sn->setDebugDataVisible(scene::EDS_FULL);
 				}
 				_transformedEntities.push_back(m.entityID);
 				break;
@@ -488,21 +488,22 @@ void ViewSystem::onMsg(const EntityEvent& m)
 				auto e = _world.getEntity(m.entityID);
 				if(!e)
 					return;
-				auto bc = e->getComponent<BodyComponent>();
-				if(!bc)
+				if(!e->hasComponent(ComponentType::Body))
 					return;
 				auto bsn = _smgr->getSceneNodeFromId(m.entityID);
 				if(!bsn)
-					std::cout << "BSN NOT FOUND\n";
+					return;
 				auto sn = _smgr->getSceneNodeFromName("graphics", bsn);
 				if(sn)
 					sn->remove();
 				if(m.destroyed)
 					return;
-				if(auto sgc = e->getComponent<SphereGraphicsComponent>())
+				if(auto sgc = e->getComponent<SphereGraphicsComponent>()) {
 					sn = _smgr->addSphereSceneNode(sgc->getRadius(), 64, bsn, -1, sgc->getPosOffset());
-				sn->setName("graphics");
-				sn->setDebugDataVisible(scene::EDS_FULL);
+					sn->setMaterialFlag(video::EMF_LIGHTING, false);
+					sn->setName("graphics");
+					//sn->setDebugDataVisible(scene::EDS_FULL);
+				}
 				break;
 			}
 		case ComponentType::GraphicsMesh:
@@ -510,12 +511,11 @@ void ViewSystem::onMsg(const EntityEvent& m)
 				auto e = _world.getEntity(m.entityID);
 				if(!e)
 					return;
-				auto bc = e->getComponent<BodyComponent>();
-				if(!bc)
+				if(!e->hasComponent(ComponentType::Body))
 					return;
 				auto bsn = _smgr->getSceneNodeFromId(m.entityID);
 				if(!bsn)
-					std::cout << "BSN NOT FOUND\n";
+					return;
 				auto sn = _smgr->getSceneNodeFromName("graphics", bsn);
 				if(sn)
 					sn->remove();
@@ -529,10 +529,10 @@ void ViewSystem::onMsg(const EntityEvent& m)
 						sn = _smgr->addAnimatedMeshSceneNode(_smgr->getMesh(("./media/" + mgc->getFileName()).c_str()), bsn, -1, mgc->getPosOffset(), mgc->getRotOffset(), mgc->getScale());
 					else
 						sn = _smgr->addMeshSceneNode(_smgr->getMesh(("./media/" + mgc->getFileName()).c_str()), bsn, -1, mgc->getPosOffset(), mgc->getRotOffset(), mgc->getScale());
+					sn->setMaterialFlag(video::EMF_LIGHTING, false);
+					sn->setName("graphics");
+					//sn->setDebugDataVisible(scene::EDS_FULL);
 				}
-				sn->setMaterialFlag(video::EMF_LIGHTING, false);
-				sn->setName("graphics");
-				//sn->setDebugDataVisible(scene::EDS_FULL);
 				break;
 			}
 		default:
@@ -547,6 +547,7 @@ void ViewSystem::update(float timeDelta)
 
 void ViewSystem::updateTransforms(float timeDelta)
 {
+	//TODO remove the list
 	for(auto it = _transformedEntities.begin(); it != _transformedEntities.end(); it++) {
 		auto eID = *it;
 		Entity* e;
@@ -571,6 +572,13 @@ void ViewSystem::updateTransforms(float timeDelta)
 			else
 				resPos = oldPos + d.normalize()*interpolSpeed*timeDelta;
 			//resPos = newPos; //TODO remove
+			/*
+			std::cout << "obj desired p: " << resPos << std::endl;
+			std::cout << "obj abs p: " << _smgr->getSceneNodeFromId(0)->getAbsolutePosition() << std::endl;
+			std::cout << "obj p: " << _smgr->getSceneNodeFromId(0)->getPosition() << std::endl;
+			std::cout << "cam abs p: " << _smgr->getSceneNodeFromId(-2)->getAbsolutePosition() << std::endl;
+			std::cout << "cam p: " << _smgr->getSceneNodeFromId(ObjStaticID::Camera)->getPosition() << std::endl;
+			*/
 			sn->setPosition(resPos);
 			sn->updateAbsolutePosition();
 			if(resPos != newPos)
@@ -626,12 +634,12 @@ void SpellSystem::reload()
 	init();
 }
 
-void SpellSystem::addWizard(u32 ID)
+void SpellSystem::addWizard(ID entID)
 {
 	if(_luaState != nullptr)
 	{
 		lua_getglobal(_luaState, "addWizard");
-		lua_pushinteger(_luaState, ID);
+		lua_pushinteger(_luaState, entID);
 		if(lua_pcall(_luaState, 1, 0, 0) != 0)
 		{
 			cerr << "something went wrong with addWizard: " << lua_tostring(_luaState, -1) << endl;
@@ -640,12 +648,12 @@ void SpellSystem::addWizard(u32 ID)
 	}
 }
 
-void SpellSystem::removeWizard(u32 ID)
+void SpellSystem::removeWizard(ID entID)
 {
 	if(_luaState != nullptr)
 	{
 		lua_getglobal(_luaState, "removeWizard");
-		lua_pushinteger(_luaState, ID);
+		lua_pushinteger(_luaState, entID);
 		if(lua_pcall(_luaState, 1, 0, 0) != 0)
 		{
 			cerr << "something went wrong with removeWizard: " << lua_tostring(_luaState, -1) << endl;
@@ -654,7 +662,7 @@ void SpellSystem::removeWizard(u32 ID)
 	}
 }
 
-void SpellSystem::cast(std::string& incantation, u32 authorID)
+void SpellSystem::cast(std::string& incantation, ID authorID)
 {
 	lua_getglobal(_luaState, "handleIncantation");
 	lua_pushinteger(_luaState, authorID);
@@ -666,9 +674,9 @@ void SpellSystem::cast(std::string& incantation, u32 authorID)
 	}
 }
 
-void SpellSystem::collisionCallback(u32 objID, u32 otherObjID)
+void SpellSystem::collisionCallback(ID objID, ID otherObjID)
 {
-	//cout << "WIZ COMP: collision of " << objID << " and " << otherObjID << endl;
+	//std::cout << "WIZ COMP: collision of " << objID << " and " << otherObjID << std::endl;
 	lua_getglobal(_luaState, "handleCollision");
 	lua_pushinteger(_luaState, objID);
 	lua_pushinteger(_luaState, otherObjID);
@@ -692,11 +700,11 @@ void SpellSystem::init()
 			std::cerr << "callLaunchSpell: wrong number of arguments\n";
 			return 0;		
 		}
-		u32 wizard = lua_tointeger(s, 1);
+		ID wizard = lua_tointeger(s, 1);
 		float sRadius = lua_tonumber(s, 2);
 		float sSpeed = lua_tonumber(s, 3);
 		SpellSystem* ss = (SpellSystem*)lua_touserdata(s, lua_upvalueindex(1));
-		u32 spell = ss->launchSpell(sRadius, sSpeed, wizard);
+		ID spell = ss->launchSpell(sRadius, sSpeed, wizard);
 		lua_pushinteger(s, spell);
 		return 1;
 	};
@@ -711,7 +719,7 @@ void SpellSystem::init()
 			std::cerr << "callRemoveSpell: wrong number of arguments\n";
 			return 0;		
 		}
-		u32 spell = lua_tointeger(s, 1);
+		ID spell = lua_tointeger(s, 1);
 		SpellSystem* ss = (SpellSystem*)lua_touserdata(s, lua_upvalueindex(1));
 		ss->removeSpell(spell);
 		return 1;
@@ -726,7 +734,7 @@ void SpellSystem::deinit()
 	lua_close(_luaState);
 }
 
-u32 SpellSystem::launchSpell(float radius, float speed, u32 wizard)
+ID SpellSystem::launchSpell(float radius, float speed, ID wizard)
 {
 	auto e = _world.getEntity(wizard);
 	if(!e)
@@ -753,8 +761,9 @@ u32 SpellSystem::launchSpell(float radius, float speed, u32 wizard)
 	return spellE.getID();
 }
 
-void SpellSystem::removeSpell(u32 spell)
+void SpellSystem::removeSpell(ID spell)
 {
+	std::cout << "removing spell #" << spell << std::endl;
 	_world.removeEntity(spell);
 }
 
@@ -764,7 +773,7 @@ InputSystem::InputSystem(World& world, SpellSystem& spells): System{world}, _spe
 {
 }
 
-void InputSystem::handleCommand(Command& c, u32 controlledObjID)
+void InputSystem::handleCommand(Command& c, ID controlledObjID)
 {
 	switch(c._type)
 	{
@@ -795,7 +804,7 @@ void InputSystem::handleCommand(Command& c, u32 controlledObjID)
 	}
 }
 
-BodyComponent* InputSystem::getBodyComponent(u32 objID)
+BodyComponent* InputSystem::getBodyComponent(ID objID)
 {
 	auto e = _world.getEntity(objID);
 	if(e)

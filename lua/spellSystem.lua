@@ -4,6 +4,8 @@
 -- InvocationQ limit
 require("lua/list")
 
+MAPOBJID = 10
+
 -------------------- config --------------------
 
 Config = {}
@@ -46,6 +48,7 @@ end
 
 function Wizard:handleIncantation(inc)
 	dout(LF,"======= Spell system <handleIncantation> called =======",inc)
+	dout("Wizard ID: "..self.ID)
 	if(string.match(inc, "[^%s]+_now%s.+") ~= nil) then
 		-- execute the _now commands immediately
 		dout("exec now")
@@ -181,7 +184,7 @@ end
 
 function Spell:handleCollision(otherID)
 	what = ""
-	if otherID == 0 then
+	if otherID == MAPOBJID then
 		what = "terrain"
 	elseif otherID == self.ID then
 		dout("spell hit itself - WTF?")
@@ -251,6 +254,7 @@ function addWizard(ID)
 		removeWizard(ID)
 	end
 	WIZARDS[ID] = Wizard:new(ID)
+	dout("Added wizard "..ID)
 end
 
 function removeWizard(ID)
@@ -259,6 +263,7 @@ function removeWizard(ID)
 	else
 		WIZARDS[ID].ID = nil
 		WIZARDS[ID] = nil
+		dout("Removed wizard "..ID)
 	end
 end
 

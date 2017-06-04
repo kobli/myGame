@@ -40,8 +40,6 @@ bool Session::receive()
 	else if(r == sf::Socket::Status::NotReady)
 	{
 	 	// this just means that there is no data available
-		//cerr << "Attept to receive data from a socket that was not ready.\n";
-		//_closed = true;
 		return false;
 	}
 	handlePacket(p);
@@ -93,29 +91,30 @@ bool Session::isClosed()
 
 ////////////////////////////////////////////////////////////
 
-Updater::Updater(Sender s): _send{s}
+Updater::Updater(Sender s, EntityResolver getEntity): _send{s}, _getEntity{getEntity}
 {}
 
-void Updater::onMsg(const EntityEvent& m)
+void Updater::onMsg(const EntityEvent& e)
 {
-	/*TODO
+	ObservableComponentBase* modifiedComponent = nullptr;
+	auto* entity = _getEntity(e.entityID);
+	if(entity)
+		modifiedComponent = entity->getComponent(e.componentT);
 	// do not send position and rotation updates
-	if(m._componentModifiedType == ComponentType::Body && m._componentModified && !m._destroyed
-			&& static_cast<BodyComponent*>(m._componentModified)->posOrRotChanged())
-		;//return;
+	if(e.componentT == ComponentType::Body && e.componentT && !e.destroyed
+			&& static_cast<BodyComponent*>(modifiedComponent)->posOrRotChanged())
+		return;
 	//TODO send destroy updates
 	sf::Packet p;
-	p << PacketType::WorldUpdate << m;
-	if(m._componentModified && !m._destroyed)
-		p << Serializer<sf::Packet>(*m._componentModified);
-	_send(p, [](WorldEntity*){ return true; });
-	*/
-	/*
-	cout << "sent an update:\n\tentityID: " << m._entityID 
-		<< "\n\tcomponent modified type: " << m._componentModifiedType << endl;
-	if(m._componentModified != nullptr && !m._destroyed)
-		cout << "\tcomponent: " << Serializer<ostream>(*m._componentModified) << endl;
-		*/
+	p << PacketType::WorldUpdate << e;
+	if(modifiedComponent && !e.destroyed)
+		p << Serializer<sf::Packet>(*modifiedComponent);
+	_send(p, [](Entity*){ return true; });
+
+	cout << "sent an update:\n\tentityID: " << e.entityID 
+		<< "\n\tcomponent modified type: " << e.componentT << endl;
+	if(modifiedComponent != nullptr && !e.destroyed)
+		cout << "\tcomponent: " << Serializer<ostream>(*modifiedComponent) << endl;
 }
 
 ////////////////////////////////////////////////////////////
@@ -124,11 +123,13 @@ void Updater::onMsg(const EntityEvent& m)
 ServerApplication::ServerApplication(IrrlichtDevice* irrDev)
 	: _irrDevice{irrDev}, _map{70, irrDev->getSceneManager()->createNewSceneManager()}, _gameWorld{_map}
 	, _physics{_gameWorld}, _spells{_gameWorld}, _input{_gameWorld, _spells},
-	_updater(std::bind(&ServerApplication::send, ref(*this), placeholders::_1, placeholders::_2))
+	_updater(std::bind(&ServerApplication::send, ref(*this), placeholders::_1, placeholders::_2),
+			std::bind(&World::getEntity, ref(_gameWorld), placeholders::_1))
 {
 	_listener.setBlocking(false);
 	_gameWorld.addObserver(_updater);
 	_gameWorld.addObserver(_spells);
+	_gameWorld.addObserver(_physics);
 	_physics.registerCollisionCallback(std::bind(&SpellSystem::collisionCallback, std::ref(_spells), placeholders::_1, placeholders::_2));
 }
 
@@ -139,15 +140,9 @@ bool ServerApplication::listen(short port)
 
 void ServerApplication::run()
 {
-	//auto driver = _irrDevice->getVideoDriver();
 	sf::Clock c;
 	while(true)
 	{
-		/*
-		_irrDevice->run();
-		_irrDevice->getVideoDriver()->beginScene();
-		_irrDevice->getSceneManager()->drawAll();
-		*/
 		acceptClient();
 		for(auto& s : _sessions)
 		{
@@ -158,27 +153,9 @@ void ServerApplication::run()
 				break;
 			}
 		}
-		//_gameWorld.update(1./driver->getFPS());
 		float timeDelta = c.restart().asSeconds();
 		_physics.update(timeDelta);
 		_spells.update(timeDelta);
-		/*
-		for(WorldEntity& e : _gameWorld.getEntities())
-		{
-			auto bc = e.getBodyComponent();
-			if(bc)
-			{
-				float rotSpeed = 180; // degrees per second
-				vec3f rot = bc->getRotation(),
-							posDiff = bc->getPosition();
-				rot.Y = fmod(rot.Y+(rotSpeed*bc->getRotDir()*timeDelta), 360);
-				bc->setRotation(rot);
-				posDiff = bc->getTotalVelocity()*timeDelta;
-				bc->setPosition(_snmgr.getEntityResultPos(e, posDiff));
-			}
-		}
-		*/
-
 
 		sf::sleep(sf::milliseconds(50));
 		_irrDevice->getVideoDriver()->endScene();

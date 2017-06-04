@@ -10,10 +10,17 @@
 
 using ec::ID;
 using ec::NULLID;
+enum ObjStaticID: ID {
+	FIRST,
+	Map = 10,
+	Camera = 20,
+	FIRSTFREE = 30
+};
+static_assert(ObjStaticID::FIRST != NULLID, "");
 
 enum ComponentType: u8
 {
-	NONE, 
+	NONE = 0, 
 	Body,
 	GraphicsSphere,
 	GraphicsMesh,
@@ -23,11 +30,12 @@ enum ComponentType: u8
 
 typedef ec::EntityEvent<ComponentType> EntityEvent;
 
-class ObservableComponentBase : public Observable<EntityEvent> {
+class ObservableComponentBase : public Observable<EntityEvent>, public Serializable {
 	public:
 		ObservableComponentBase(ID parentEntID, ComponentType realCompType);
-	protected:
 		void notifyObservers();
+	private:
+		EntityEvent _updMsg;
 };
 
 typedef ec::ObservableEntity<ObservableComponentBase,ComponentType,EntityEvent>
@@ -210,13 +218,13 @@ class World: public Observabler<EntityEvent>
 {
 	public:
 		World(WorldMap& wm);
-		ID createEntity(ID hintEntID = 0);
-		Entity& createAndGetEntity(ID hintEntID = 0);
+		ID createEntity(ID hintEntID = NULLID);
+		Entity& createAndGetEntity(ID hintEntID = NULLID);
 		void removeEntity(ID entID);
 		Entity* getEntity(ID entID);
 		ID createCharacter(vec3f position);
 		WorldMap& getMap();
-		IterateOnly<SolidVector<Entity>> getEntities();
+		IterateOnly<SolidVector<Entity,ID,NULLID>> getEntities();
 
 	private:
 		WorldMap& _map;

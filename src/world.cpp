@@ -2,15 +2,14 @@
 #include <cassert>
 
 ObservableComponentBase::ObservableComponentBase(ID parentEntID, ComponentType realCompType)
- 	: Observable<EntityEvent>{EntityEvent{parentEntID, realCompType}, EntityEvent{parentEntID, realCompType}}
+ 	: Observable<EntityEvent>{EntityEvent{parentEntID, realCompType, true}, EntityEvent{parentEntID, realCompType, false, true}},
+	_updMsg{parentEntID, realCompType}
 {
 }
 
 void ObservableComponentBase::notifyObservers()
 {
-	//TODO .. store entID and compT in ctor
-	//here create and send event
-	//or create upd msg and store it in ctor .. !!!better
+	broadcastMsg(_updMsg);
 }
 
 ////////////////////////////////////////////////////////////
@@ -271,8 +270,8 @@ WorldMap::WorldMap(float patchSize, scene::ISceneManager* scene)
 {
 	scene::ITerrainSceneNode* terrain = _scene->addTerrainSceneNode(
 		"./media/terrain-heightmap.bmp",
-		0,					// parent node
-		-1,					// node id
+		nullptr,					// parent node
+		ObjStaticID::Map,			// node id
 		core::vector3df(0),		// position
 		core::vector3df(0),		// rotation
 		core::vector3df(1)		// scale
@@ -338,29 +337,28 @@ unsigned WorldMap::getVertexCount()
 ////////////////////////////////////////////////////////////
 
 
-World::World(WorldMap& wm): _map{wm}
+World::World(WorldMap& wm): _map{wm}, _entManager{ObjStaticID::FIRSTFREE}
 {
-	/* TODO .. just for fun / test
 	_entManager.registerComponentType<BodyComponent>(ComponentType::Body);
 	_entManager.registerComponentType<SphereGraphicsComponent>(ComponentType::GraphicsSphere);
 	_entManager.registerComponentType<MeshGraphicsComponent>(ComponentType::GraphicsMesh);
 	_entManager.registerComponentType<CollisionComponent>(ComponentType::Collision);
 	_entManager.registerComponentType<WizardComponent>(ComponentType::Wizard);
-	*/
+	_entManager.addObserver(*this);
 }
 
 ID World::createEntity(ID hintEntID)
 {
-	// TODO hint entID
-	// TODO check for existing entities with same ID
-	return _entManager.createEntity();
+	ID eID = _entManager.createEntity(hintEntID);
+	assert(hintEntID == NULLID || eID == hintEntID);
+	return eID;
 }
 
 Entity& World::createAndGetEntity(ID hintEntID)
 {
-	// TODO hint entID
-	// TODO check for existing entities with same ID
-	return _entManager.createAndGetEntity();
+	auto& e = _entManager.createAndGetEntity(hintEntID);
+	assert(hintEntID == NULLID || e.getID() == hintEntID);
+	return e;
 }
 
 void World::removeEntity(ID entID)
@@ -391,7 +389,7 @@ WorldMap& World::getMap()
 	return _map;
 }
 
-IterateOnly<SolidVector<Entity>> World::getEntities()
+IterateOnly<SolidVector<Entity,ID,NULLID>> World::getEntities()
 {
 	return _entManager.getEntities();
 }

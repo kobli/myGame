@@ -20,11 +20,11 @@ class Physics: public System
 {
 	public:
 		Physics(World& world, scene::ISceneManager* smgr = nullptr);
-		vec3f getObjVelocity(u32 ID);
+		vec3f getObjVelocity(ID objID);
 		virtual void update(float timeDelta);
 		virtual void onMsg(const EntityEvent& m);
-		void registerCollisionCallback(std::function<void(u32, u32)> callback);
-		void registerPairCollisionCallback(std::function<void(u32, u32)> callback);
+		void registerCollisionCallback(std::function<void(ID, ID)> callback);
+		void registerPairCollisionCallback(std::function<void(ID, ID)> callback);
 
 	private:
 		unique_ptr<btDiscreteDynamicsWorld> _physicsWorld;
@@ -32,12 +32,12 @@ class Physics: public System
 			float walkTimer = 0;
 			bool onGround = false;
 		};
-		std::map<u32, ObjData> _objData;
-		std::vector<std::function<void(u32, u32)>> _collCallbacks;
+		std::map<ID, ObjData> _objData;
+		std::vector<std::function<void(ID, ID)>> _collCallbacks;
 		float _tAcc;
 		bool _updating;
 
-		btCollisionObject* getCollisionObjectByID(int entityID);
+		btCollisionObject* getCollisionObjectByID(ID objID);
 		void bodyDoStrafe(float timeDelta);
 		void moveKinematics(float timeDelta);
 		void callCollisionCBs();
@@ -52,8 +52,7 @@ class ViewSystem: public System
 
 	private:
 		irr::scene::ISceneManager* _smgr;
-		std::list<u32> _transformedEntities;
-		//irr::scene::IMetaTriangleSelector* _worldTS;
+		std::list<ID> _transformedEntities;
 		
 		void updateTransforms(float timeDelta);
 };
@@ -66,28 +65,28 @@ class SpellSystem: public System
 		virtual void update(float timeDelta);
 		virtual void onMsg(const EntityEvent& m);
 		void reload();
-		void addWizard(u32 ID);
-		void removeWizard(u32 ID);
-		void cast(std::string& incantation, u32 authorID);
-		void collisionCallback(u32 objID, u32 otherObjID);
+		void addWizard(ID entID);
+		void removeWizard(ID entID);
+		void cast(std::string& incantation, ID author);
+		void collisionCallback(ID objID, ID otherObjID);
 
 	private:
 		lua_State* _luaState;
 
 		void init();
 		void deinit();
-		u32 launchSpell(float radius, float speed, u32 wizard);
-		void removeSpell(u32 spell);
+		ID launchSpell(float radius, float speed, ID wizard);
+		void removeSpell(ID spell);
 };
 
 class InputSystem: public System
 {
 	public:
 		InputSystem(World& world, SpellSystem& spells);
-		void handleCommand(Command& c, u32 controlledObjID);
+		void handleCommand(Command& c, ID controlledObjID);
 
 	private:
-		BodyComponent* getBodyComponent(u32 objID);
+		BodyComponent* getBodyComponent(ID entID);
 		SpellSystem& _spells;
 };
 

@@ -1,9 +1,9 @@
 #include <cstring>
-#include <main.hpp>
-#include <controller.hpp>
-#include <world.hpp>
-#include <server.hpp>
-//#include <client.hpp>
+#include "main.hpp"
+#include "controller.hpp"
+#include "world.hpp"
+#include "server.hpp"
+#include "client.hpp"
 
 int main(int argc, char* argv[]) {
 	if(argc != 2) {
@@ -23,15 +23,13 @@ int main(int argc, char* argv[]) {
 		s.run();
 		device->drop();
 	}
-	/*
 	else if(!strcmp(argv[1], "-c")) {
 		ClientApplication c;
 		if(!c.connect("localhost", 5555)) {
 			cerr << "Failed to connect to the server.\n";
-			//return 1;
+			return 1;
 		}
 		c.run();
 	}
-	*/
 	return 0;
 }

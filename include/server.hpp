@@ -41,10 +41,12 @@ class Updater: public Observer<EntityEvent>
 		using ClientFilterPredicate = function<bool(Entity* e)>; 
 			// decides, if the client controlling entity "e" should be informed about these WorldChanges
 		using Sender = function<void(sf::Packet& p, ClientFilterPredicate fp)>;
-		Updater(Sender s);
+		using EntityResolver = function<Entity*(ID entID)>;
+		Updater(Sender s, EntityResolver getEntity);
 
 	private:
 		Sender _send;
+		EntityResolver _getEntity;
 
 		void onMsg(const EntityEvent& m) final;
 };

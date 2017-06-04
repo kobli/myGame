@@ -2,12 +2,11 @@
 #include "client.hpp"
 #include "network.hpp"
 #include "serdes.hpp"
-/*
-Animator::Animator(scene::ISceneManager* smgr, function<WorldEntity*(u32)> entityResolver, function<vec3f(u32)> entityVelocityGetter)
+Animator::Animator(scene::ISceneManager* smgr, function<Entity*(u32)> entityResolver, function<vec3f(u32)> entityVelocityGetter)
 	: _smgr{smgr}, _entityResolver{entityResolver}, _velGetter{entityVelocityGetter}
 {}
 
-void Animator::setEntityResolver(std::function<WorldEntity*(u32 ID)> entityResolver)
+void Animator::setEntityResolver(std::function<Entity*(u32 ID)> entityResolver)
 {
 	_entityResolver = entityResolver;
 }
@@ -22,32 +21,25 @@ void Animator::setSceneManager(scene::ISceneManager* smgr)
 	_smgr = smgr;
 }
 
-void Animator::onObservableAdd(EntityEvent& m)
+void Animator::onMsg(const EntityEvent& m)
 {
-	onObservableUpdate(m);
-}
-
-void Animator::onObservableUpdate(EntityEvent& m)
-{
-	if(m._componentModifiedType != ComponentType::Body)
+	if(m.componentT != ComponentType::Body)
 		return;
-	WorldEntity* ePtr = _entityResolver(m._entityID);
+	Entity* ePtr = _entityResolver(m.entityID);
 	if(!ePtr)
 		return;
-	WorldEntity& e = *ePtr;
-	if(e.getGraphicsComponent() == nullptr)
-		return;
-	auto b = e.getBodyComponent();
+	Entity& e = *ePtr;
+	auto b = e.getComponent<BodyComponent>();
 	if(!b)
 		return;
-	MeshGraphicsComponent* mgc = dynamic_cast<MeshGraphicsComponent*>(e.getGraphicsComponent().get());
+	auto* mgc = e.getComponent<MeshGraphicsComponent>();
 	if(!mgc || !mgc->isAnimated())
 		return;
 	// play idle anim
 	int firstFrame = 190;
 	int lastFrame = 290;
 	float animSpeed = 5;
-	float speed = _velGetter(m._entityID).getLength();
+	float speed = _velGetter(m.entityID).getLength();
 	{
 		if(b->getStrafeDir().X == 1) {
 			// play walk forward anim
@@ -64,7 +56,7 @@ void Animator::onObservableUpdate(EntityEvent& m)
 	}
 	if(!_smgr)
 		return;
-	scene::ISceneNode* bsn = _smgr->getSceneNodeFromId(m._entityID);
+	scene::ISceneNode* bsn = _smgr->getSceneNodeFromId(m.entityID);
 	if(!bsn)
 		return;
 	scene::ISceneNode* sn = _smgr->getSceneNodeFromName("graphics", bsn);
@@ -78,10 +70,6 @@ void Animator::onObservableUpdate(EntityEvent& m)
 	if(firstFrame != asn->getStartFrame() || lastFrame != asn->getEndFrame())
 		asn->setFrameLoop(firstFrame, lastFrame);
 	asn->setAnimationSpeed(animSpeed);
-}
-
-void Animator::onObservableRemove(EntityEvent&)
-{
 }
 
 ////////////////////////////////////////////////////////////
@@ -132,19 +120,14 @@ void ClientApplication::run()
 			if(ar != _camera->getAspectRatio() && _camera)
 				_camera->setAspectRatio(ar);
 			float timeDelta = c.restart().asSeconds();
-
-			//if(_gameWorld)
-				//_gameWorld->update(1./lastFPS);
 				
 			if(_physics)
 				_physics->update(timeDelta);
 			if(_vs)
 				_vs->update(timeDelta);
 
-
 			_device->getSceneManager()->drawAll();
 			//_device->getGUIEnvironment()->drawAll();
-
 			driver->endScene();
 
 			// display frames per second in window title
@@ -160,6 +143,7 @@ void ClientApplication::run()
 				lastFPS = fps;
 			}
 		}
+		sf::sleep(sf::milliseconds(1));
 	}
 }
 
@@ -169,10 +153,12 @@ void ClientApplication::createWorld()
 	_gameWorld.reset(new World(*_worldMap));
 	_vs.reset(new ViewSystem(_device->getSceneManager(), *_gameWorld));
 	_physics.reset(new Physics(*_gameWorld, _device->getSceneManager()));
-	_animator.setEntityResolver(bind(&World::getEntityByID, ref(*_gameWorld), placeholders::_1));
+	_animator.setEntityResolver(bind(&World::getEntity, ref(*_gameWorld), placeholders::_1));
 	_animator.setSceneManager(_device->getSceneManager());
 	_animator.setEntityVelocityGetter([this](u32 ID)->vec3f {	return _physics->getObjVelocity(ID); });
-	_animator.observe(*_gameWorld);
+	_gameWorld->addObserver(_animator);
+	_gameWorld->addObserver(*_physics);
+	_gameWorld->addObserver(*_vs);
 }
 
 void ClientApplication::createCamera()
@@ -198,7 +184,7 @@ void ClientApplication::createCamera()
 	keyMap[8].KeyCode = KEY_SPACE;
 	f32 camWalkSpeed = 0.05f;
 	_camera = 
-		_device->getSceneManager()->addCameraSceneNodeFPS(0,100.0f,camWalkSpeed,0,keyMap,9,false);
+		_device->getSceneManager()->addCameraSceneNodeFPS(nullptr,100.0f,camWalkSpeed,ObjStaticID::Camera,keyMap,9,false);
 	
 	_camera->setPosition(core::vector3df(0,10,50));
 	//_camera->setTarget(core::vector3df(2397*2,343*2,2700*2));
@@ -265,21 +251,23 @@ void ClientApplication::handlePacket(sf::Packet& p)
 	{
 		case PacketType::WorldUpdate:
 			{
-				EntityEvent e;	
+				EntityEvent e(NULLID);	
 				p >> e;
 				handleEntityEvent(e);
-				if(e._componentModified != nullptr)
+				auto* entity = _gameWorld->getEntity(e.entityID);
+				ObservableComponentBase* modifiedComponent = nullptr;
+				if(entity && (modifiedComponent = entity->getComponent(e.componentT)))
 				{
-					p >> Deserializer<sf::Packet>(*e._componentModified);
-					e._componentModified->notifyObservers();
-					cout << "updated component: " << Serializer<ostream>(*e._componentModified) << endl;
+					p >> Deserializer<sf::Packet>(*modifiedComponent);
+					modifiedComponent->notifyObservers();
+					cout << "updated component: " << Serializer<ostream>(*modifiedComponent) << endl;
 				}
-				if(e._created)
+				if(e.created)
 					cout << "CREATED!\n";
-				if(e._destroyed && e._componentModifiedType == ComponentType::None) // TODO respond to component deletes
+				if(e.destroyed && e.componentT == ComponentType::NONE) // TODO respond to component deletes
 				{
 					cout << "SHOULD DELETE ENTITY\n";
-					_gameWorld->removeEntity(e._entityID);
+					_gameWorld->removeEntity(e.entityID);
 				}
 				break;
 			}
@@ -290,45 +278,16 @@ void ClientApplication::handlePacket(sf::Packet& p)
 
 void ClientApplication::handleEntityEvent(EntityEvent& e)
 {
-	cout << "received entity update: " << e._entityID << " " << e._componentModifiedType << endl;
+	cout << "received entity update: " << e.entityID << " " << e.componentT << endl;
 	if(!_gameWorld)
 		return;
-	WorldEntity* entity = _gameWorld->getEntityByID(e._entityID);
-	if(!entity)
-		entity = &_gameWorld->createEntity(e._entityID);
-	if(entity->getID() != e._entityID)
-		cerr << "ENTITY IDs DO NOT MATCH\n";
-	switch(e._componentModifiedType)
-	{
-		case ComponentType::Collision:
-			e._componentModified = entity->getCollisionComponent().get();
-			if(!e._componentModified)
-				e._componentModified = entity->setCollisionComponent(make_shared<CollisionComponent>(*entity)).get();
-			break;
-		case ComponentType::Body:
-			e._componentModified = entity->getBodyComponent().get();
-			if(!e._componentModified)
-				e._componentModified = entity->setBodyComponent(make_shared<BodyComponent>(*entity)).get();
-			break;
-		case ComponentType::GraphicsSphere:
-			e._componentModified = entity->getGraphicsComponent().get();
-			if(!e._componentModified)
-				e._componentModified = entity->setGraphicsComponent(make_shared<SphereGraphicsComponent>(*entity)).get();
-			break;
-		case ComponentType::GraphicsMesh:
-			e._componentModified = entity->getGraphicsComponent().get();
-			if(!e._componentModified)
-				e._componentModified = entity->setGraphicsComponent(make_shared<MeshGraphicsComponent>(*entity)).get();
-			break;
-		case ComponentType::Wizard:
-			cout << "someone has become a wizard\n";
-			break;
-		case ComponentType::None:
-			cout << "update of component of type None\n";
-			break;
-		default:
-			cerr << "Received update of unknown component type.\n";
-			break;
+	Entity* entity = _gameWorld->getEntity(e.entityID);
+	if(!entity) {
+		entity = &_gameWorld->createAndGetEntity(e.entityID);
+		std::cout << "HAD TO CREATE NEW ENTITY\n";
 	}
+	if(entity->getID() != e.entityID)
+		cerr << "ENTITY IDs DO NOT MATCH - requested " << e.entityID << " - got " << entity->getID() << "\n";
+	//TODO no need to create wizard component
+	entity->addComponent(e.componentT);
 }
-*/
