@@ -163,7 +163,7 @@ class Observabler: public Observable<messageT>, public Observer<messageT> {
 		}
 
 		void swap(Observabler& other) {
-			swapSelf();
+			swapSelf(other);
 			Observable<messageT>::swap(other);
 			Observer<messageT>::swap(other);
 		}
