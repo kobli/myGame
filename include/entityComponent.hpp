@@ -29,6 +29,7 @@ class EntityManagerBase {
 			virtual ComponentBase* get(ID cid) = 0;
 			virtual void remove(ID cid) = 0;
 	};
+
 	public:
 	template <typename T>
 		class ComponentContainer : public ComponentContainerBase {
@@ -148,6 +149,7 @@ class Entity {
 		}
 
 		void swap(Entity& other) {
+			std::cout << "swapping Ent " << _id << " " << other._id <<"\n";
 			using std::swap;
 			swap(_id, other._id);
 			swap(_manager, other._manager);
@@ -155,8 +157,8 @@ class Entity {
 		}
 
 		void addComponent(ComponentType t) {
-			doAddComponent(t);
-			afterAddComponent(t);
+			if(doAddComponent(t))
+				afterAddComponent(t);
 		}
 
 		void removeComponent(ComponentType t) {
@@ -213,9 +215,13 @@ class Entity {
 		std::map<ComponentType,ID> _componentID;
 		ID _id;
 
-		void doAddComponent(ComponentType t) {
-			if(!hasComponent(t))
+		bool doAddComponent(ComponentType t) {
+			if(!hasComponent(t) && t != ComponentType::NONE) {
 				_componentID[t] = _manager->addComponent(t, _id);
+				return true;
+			}
+			else
+				return false;
 		}
 };
 
@@ -230,35 +236,52 @@ class EntityManager : public EntityManagerBase<ComponentBase,ComponentType> {
 	friend EntityT;
 
 	public:
-		ID createEntity() {
-			ID id = _entities.peekNextI();
-			ID insertedID = _entities.insert(EntityT(*this, id));
-			assert(id == insertedID);
-			return id;
+		EntityManager(ID firstFreeI = ID{}): _entities{firstFreeI} {}
+
+		virtual ID createEntity(ID hintID = NULLID) {
+			if(hintID != NULLID && !_entities.indexValid(hintID)) {
+				std::cout << "\t\tCREATE ENT REQ ID\n";
+				ID insertedID = _entities.insert(EntityT(*this, hintID), hintID);
+				assert(hintID == insertedID);
+				assert(insertedID == getEntity(insertedID)->getID());
+				return insertedID;
+			}
+			else {
+				ID id = _entities.peekNextI();
+				ID insertedID = _entities.insert(EntityT(*this, id));
+				assert(id == insertedID);
+				assert(insertedID == getEntity(insertedID)->getID());
+				return insertedID;
+			}
 		}
 
 		EntityT* getEntity(ID eid) {
-			if(_entities.indexValid(eid))
+			if(_entities.indexValid(eid)) {
+				assert(_entities[eid].getID() == eid);
 				return &_entities[eid];
+			}
 			else
 				return nullptr;
 		}
 
-		EntityT& createAndGetEntity() {
-			return *getEntity(createEntity());
+		EntityT& createAndGetEntity(ID hintID = NULLID) {
+			return *getEntity(createEntity(hintID));
 		}
 
 		void removeEntity(ID eid) {
-			if(_entities.indexValid(eid))
+			if(_entities.indexValid(eid)) {
 				_entities.remove(eid);
+				std::cout << "removed E " << eid << std::endl;
+				assert(!_entities.indexValid(eid));
+			}
 		}
 
-		IterateOnly<SolidVector<EntityT>> getEntities() {
-			return IterateOnly<SolidVector<EntityT>>(_entities);
+		IterateOnly<SolidVector<EntityT,ID,NULLID>> getEntities() {
+			return IterateOnly<SolidVector<EntityT,ID,NULLID>>(_entities);
 		}
 
 	private:
-		SolidVector<EntityT> _entities;
+		SolidVector<EntityT,ID,NULLID> _entities;
 };
 
 }

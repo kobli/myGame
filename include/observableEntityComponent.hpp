@@ -45,8 +45,16 @@ class ObservableEntity : public Entity<ComponentBase,ComponentType>, public Obse
 
 		virtual void afterAddComponent(ComponentType t) override {
 			auto* c = static_cast<ComponentBase*>(EntityBaseT::getComponent(t));
-			assert(c != nullptr);
-			c->addObserver(*this); 
+			assert(c != nullptr || !t);
+			if(c) {
+				c->addObserver(*this); 
+				std::cout << "component of type " << t << " added to entity #" << this->getID() << std::endl;
+			}
+		}
+
+		void swap(ObservableEntity& other) {
+			EntityBaseT::swap(other);
+			Observabler<EventT>::swap(other);
 		}
 
 		using EntityBaseT::addComponent;
@@ -54,6 +62,11 @@ class ObservableEntity : public Entity<ComponentBase,ComponentType>, public Obse
 		using EntityBaseT::getComponent;
 		using EntityBaseT::hasComponent;
 };
+
+template <typename T, typename TT, typename TTT>
+void swap(ObservableEntity<T, TT, TTT>& lhs, ObservableEntity<T, TT, TTT>& rhs) {
+	lhs.swap(rhs);
+}
 
 
 template <typename ComponentBase, typename ComponentType, typename EntityT, typename EventT>
@@ -65,8 +78,9 @@ class ObservableEntityManager : public EntityManager<ComponentBase,ComponentType
 	static_assert(std::is_base_of<Observable<EventT>, EntityT>::value, "EntityT must be Observable");
 
 	public:
-		ID createEntity() {
-			ID id = BaseEM::createEntity();
+		ObservableEntityManager(ID firstFree = ID{}): BaseEM(firstFree) {}
+		virtual ID createEntity(ID hintID = NULLID) {
+			ID id = BaseEM::createEntity(hintID);
 			this->getEntity(id)->addObserver(*this);
 			return id;
 		}

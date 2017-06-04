@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 #include "entityComponent.hpp"
 enum ComponentType {
+	NONE,
 	t1,
 	t2,
 };
