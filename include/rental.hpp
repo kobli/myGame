@@ -19,6 +19,24 @@ class Rental {
 			}
 		}
 
+		T borrow(T demand) {
+			auto r = _store.end();
+			if((r = _store.find(demand)) != _store.end()) {
+				auto v = *r;
+				_store.erase(r);
+				return v;
+			}
+			else {
+				while(!(_gen == T{} && !_store.empty())) { // overflow
+					if(_gen == demand)
+						return _gen++;
+					else
+						_store.insert(_gen++);
+				}
+				return borrow();
+			}
+		}
+
 		T peek() {
 			if(_store.empty())
 				return _gen;
