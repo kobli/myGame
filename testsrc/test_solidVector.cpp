@@ -100,6 +100,21 @@ TEST(SolidVector, indexValidFalse) {
 	ASSERT_EQ(false, s.indexValid(32));
 }
 
+TEST(SolidVector, indexValidAfterRemove) {
+	SolidVector<int> s;
+	size_t i = s.insert(4);
+	size_t ii = s.insert(5);
+	ASSERT_EQ(5, s[ii]);
+	ASSERT_EQ(true, s.indexValid(i));
+	ASSERT_EQ(true, s.indexValid(ii));
+
+	s.remove(i);
+
+	ASSERT_EQ(false, s.indexValid(i));
+	ASSERT_EQ(true, s.indexValid(ii));
+	ASSERT_EQ(5, s[ii]);
+}
+
 TEST(SolidVector, indexValidTrue) {
 	SolidVector<int> s;
 	s.insert(34);

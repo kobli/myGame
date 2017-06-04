@@ -3,45 +3,48 @@
 #include <vector>
 #include "rental.hpp"
 #include <stdexcept>
+#include <cassert>
 
 /** A vector-like container which retains indicies after insert/remove.
  * Elements are stored in contignuous memmory.
  */
-template<typename T>
+template<typename T, typename indexT = std::size_t, indexT NULLi = indexT{}-1>
 class SolidVector {
-	typedef std::size_t size_t;
-	static const size_t NONE = 0-1;
+	static_assert(!std::is_signed<indexT>(), "indexT must be unsigned");
 
 	public:
+		SolidVector(indexT firstFree = indexT{}): _mapSlot{firstFree} {
+		}
+
 		/** Constructs an object in place from given arguments.
 		 * \return index of the constructed object
 		 */
 		//TODO
 		template <typename... Args>
-		size_t emplace(Args... args) {
+		indexT emplace(Args... args) {
 			return insert(T(args...));
 		}
 
 		/** Inserts a copy of the object into the container.
 		 * \return index of the inserted object
 		 */
-		size_t insert(const T& elem) {
-			size_t pi = insertPhysical(elem);
-			return insertLogical(pi);
+		indexT insert(const T& elem, indexT reqI = NULLi) {
+			indexT pi = insertPhysical(elem);
+			return insertLogical(pi, reqI);
 		}
 
 		/** Insert an object into the container.
 		 * \return index of the inserted object
 		 */
-		size_t insert(T&& elem) {
-			size_t pi = insertPhysical(std::move(elem));
-			return insertLogical(pi);
+		indexT insert(T&& elem, indexT reqI = NULLi) {
+			indexT pi = insertPhysical(std::move(elem));
+			return insertLogical(pi, reqI);
 		}
 
 		/** 
 		 * \return index of the next inserted object
 		 */
-		size_t peekNextI() {
+		indexT peekNextI() {
 			return _mapSlot.peek();
 		}
 
@@ -49,7 +52,7 @@ class SolidVector {
 		 * Throws std::out_of_range exception if index is not.
 		 * \return reference to the object at given index
 		 */
-		T& at(size_t i) {
+		T& at(indexT i) {
 			return _v[physicalIndexChecked(i)];
 		}
 
@@ -57,21 +60,21 @@ class SolidVector {
 		 * Throws std::out_of_range exception if index is not.
 		 * \return const reference to the object at given index
 		 */
-		const T& at(size_t i) const {
+		const T& at(indexT i) const {
 			return _v[physicalIndexChecked(i)];
 		}
 
 		/** Access specified element.
 		 * \return reference to the object at given index
 		 */
-		T& operator[](size_t i) {
+		T& operator[](indexT i) {
 			return _v[_map[i]];
 		}
 
 		/** Access specified element.
 		 * \return const reference to the object at given index
 		 */
-		const T& operator[](size_t i) const {
+		const T& operator[](indexT i) const {
 			return _v[_map[i]];
 		}
 
@@ -79,23 +82,25 @@ class SolidVector {
 		 * Throws std::out_of_range exception if index is not valid.
 		 * Uses swap function.
 		 */
-		void remove(size_t i) {
+		void remove(indexT i) {
 			// swap elements at pi and last
-			size_t pi = physicalIndexChecked(i);
-			size_t lasti = _v.size()-1;
+			indexT pi = physicalIndexChecked(i);
+			indexT lastpi = _v.size()-1;
 			using std::swap;
-			swap(_v.at(pi), _v.at(lasti));
+			swap(_v.at(pi), _v.at(lastpi));
 			// swap pointers in _map - search _map for record pointing to pi (linear)
 			for(auto& m : _map)
-				if(m == lasti) {
+				if(m == lastpi) {
 					m = pi;
 					break;
 				}
 			// remove last element of vector
+			// - calls the destructor - make sure the container is in valid state
+			_map[i] = lastpi;
 			_v.pop_back();
 			// mark slot as free
 			_mapSlot.remit(i);
-			_map[i] = NONE;
+			_map[i] = NULLi;
 		}
 
 		/** Removes all elements.
@@ -109,7 +114,7 @@ class SolidVector {
 		/**
 		 * \return number of elements in the container.
 		 */
-		size_t size() {
+		indexT size() {
 			return _v.size();
 		}
 
@@ -119,7 +124,7 @@ class SolidVector {
 			public:
 
 				typedef T                          value_type;
-				typedef size_t										 difference_type;
+				typedef indexT										 difference_type;
 				typedef std::forward_iterator_tag iterator_category; //TODO change to random_access
 				typedef T*                         pointer;
 				typedef T&                         reference;
@@ -128,7 +133,7 @@ class SolidVector {
 				}
 				
 				//TODO make this private
-				iterator(SolidVector<T>& v, size_t elemI): _i{elemI}, _v{&v} {
+				iterator(SolidVector<T>& v, indexT elemI): _i{elemI}, _v{&v} {
 				}
 
 				iterator(const iterator& it) : _i{it._i}, _v{it._v} {
@@ -169,7 +174,7 @@ class SolidVector {
 
 			private:
 
-				size_t _i;
+				indexT _i;
 				SolidVector<T>* _v;
 		};
 
@@ -199,11 +204,11 @@ class SolidVector {
 		/** Index validity check
 		 * \return true if index is valid, false otherwise.
 		 */
-		bool indexValid(size_t i) const {
+		bool indexValid(indexT i) const {
 			if(i >= _map.size())
 				return false;
-			size_t pi = _map[i];
-			if(pi == NONE)
+			indexT pi = _map[i];
+			if(pi == NULLi)
 				return false;
 			return true;
 		}
@@ -211,30 +216,33 @@ class SolidVector {
 	private:
 		// inserts the element and returns physical index
 		// (the physical index may change on remove)
-		size_t insertPhysical(T&& elem) {
+		indexT insertPhysical(T&& elem) {
 			_v.push_back(std::move(elem));
 			return _v.size()-1;
 		}
 
 		// creates a new element and returns its logical index
-		size_t insertLogical(size_t pi) {
-			size_t li = _mapSlot.borrow();
-			_map.resize(std::max(li+1, _map.size()));
+		indexT insertLogical(indexT pi, indexT logicalPosHint = NULLi) {
+			indexT li = logicalPosHint==NULLi ?
+				_mapSlot.borrow() :
+				_mapSlot.borrow(logicalPosHint);
+			assert(logicalPosHint == NULLi || logicalPosHint == li);//TODO remove -- not always true (but here now should always be true)
+			_map.resize(std::max<indexT>(li+1, _map.size()), NULLi);
 			_map[li] = pi;
 			return li;
 		}
 		
 		// returns physical index if the logical index is valid
 		// else throws std::out_of_range
-		size_t physicalIndexChecked(size_t logicalI) const {
+		indexT physicalIndexChecked(indexT logicalI) const {
 			if(!indexValid(logicalI))
 				throw std::out_of_range("Index out of range");
 			else
 				return _map[logicalI];
 		}
 
-		std::vector<size_t> _map;
-		Rental<size_t> _mapSlot;
+		std::vector<indexT> _map;
+		Rental<indexT> _mapSlot;
 		std::vector<T> _v;
 };
 
