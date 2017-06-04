@@ -1,4 +1,5 @@
 .SUFFIXES:
+.PRECIOUS: test
 
 PROJECT = myGame
 # ! the builddir is deleted on clean
@@ -49,7 +50,7 @@ win32-static lin64: $(TARGET)
 test: build-test
 	./test
 
-build-test: testsrc/*
+build-test:  testsrc/test_solidVector.cpp testsrc/test_observer.cpp testsrc/test_reallocable.cpp testsrc/test_entityManager.cpp testsrc/test_observableEntityManager.cpp testsrc/observerMock.cpp
 	$(CXX) $(CPPFLAGS) $(INCLUDES) -o test $^ -lpthread -lgtest -lgtest_main
 
 
