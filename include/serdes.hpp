@@ -34,6 +34,9 @@ class Serializer: public SerDesBase
 		virtual void serDes(CollisionComponent& s) {
 			s.doSerDes(*this);
 		}
+		virtual void serDes(AttributeStoreComponent& s) {
+			s.doSerDes(*this);
+		}
 
 	private:
 		Serializable& _s;
@@ -72,6 +75,9 @@ class Deserializer: public SerDesBase
 			s.doSerDes(*this);
 		}
 		virtual void serDes(CollisionComponent& s) {
+			s.doSerDes(*this);
+		}
+		virtual void serDes(AttributeStoreComponent& s) {
 			s.doSerDes(*this);
 		}
 

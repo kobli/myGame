@@ -26,6 +26,7 @@ enum ComponentType: u8
 	GraphicsMesh,
 	Collision,
 	Wizard,
+	AttributeStore,
 };
 
 typedef ec::EntityEvent<ComponentType> EntityEvent;
@@ -191,6 +192,28 @@ class WizardComponent: public ObservableComponentBase
 			void doSerDes(T&)
 			{
 			}
+};
+
+////////////////////////////////////////////////////////////
+class AttributeAffector;
+class AttributeStoreComponent: public ObservableComponentBase
+{
+	public:
+		AttributeStoreComponent(ID parentEntID);
+
+		void setAttribute(std::string key, float value);
+		bool hasAttribute(std::string key);
+		float getAttribute(std::string key, float dummy);
+
+		virtual void serDes(SerDesBase& s);
+		template <typename T>
+			void doSerDes(T& t)
+			{
+				t & _attributeStore;
+			}
+
+	private:
+		std::map<std::string, float> _attributeStore;
 };
 
 ////////////////////////////////////////////////////////////

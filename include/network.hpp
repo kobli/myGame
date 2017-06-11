@@ -63,4 +63,55 @@ sf::Packet& operator >>(sf::Packet& packet, Command::Type& m);
 
 sf::Packet& operator <<(sf::Packet& packet, const irr::scene::ESCENE_NODE_TYPE& m);
 sf::Packet& operator >>(sf::Packet& packet, irr::scene::ESCENE_NODE_TYPE& m);
+
+template <typename T, typename K, typename V>
+T& operator <<(T& t, const std::map<K,V>& m) {
+	t << static_cast<u32>(m.size());
+	for(auto& p : m)
+		t << p;
+	return t;
+}
+template <typename T, typename K, typename V>
+T& operator >>(T& t, std::map<K,V>& m) {
+	m.clear();
+	u32 s;
+	t >> s;
+	std::pair<K,V> p;
+	for(u32 i = 0; i < s; i++) {
+		t >> p;
+		m.insert(p);
+	}
+	return t;
+}
+
+template <typename T, typename K, typename V>
+T& operator <<(T& t, const std::pair<K,V>& p) {
+	return t << p.first << p.second;
+}
+template <typename T, typename K, typename V>
+T& operator >>(T& t, std::pair<K,V>& p) {
+	return t >> p.first >> p.second;
+}
+
+template <typename K, typename V>
+std::ostream& operator <<(std::ostream& t, const std::map<K,V>& m) {
+	t << static_cast<u32>(m.size());
+	t << " ";
+	for(auto& p : m)
+		t << p;
+	return t;
+}
+template <typename K, typename V>
+std::ostream& operator >>(std::ostream& /*t*/, std::map<K,V>& /*m*/) {
+	assert(false); //TODO
+}
+
+template <typename K, typename V>
+std::ostream& operator <<(std::ostream& o, const std::pair<K,V>& p) {
+	return o << p.first << ": " << p.second << "; ";
+}
+template <typename K, typename V>
+std::ostream& operator >>(std::ostream& /*o*/, std::pair<K,V>& /*p*/) {
+	assert(false); //TODO
+}
 #endif /* NETWORK_HPP_16_11_27_11_45_29 */

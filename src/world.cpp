@@ -260,7 +260,36 @@ WizardComponent::WizardComponent(ID parentEntID):
 
 void WizardComponent::serDes(SerDesBase&)
 {
-	//s.serDes(*this);
+	//s.serDes(*this); currently not serialized
+}
+
+////////////////////////////////////////////////////////////
+
+AttributeStoreComponent::AttributeStoreComponent(ID parentEntID): ObservableComponentBase(parentEntID, ComponentType::AttributeStore)
+{}
+
+void AttributeStoreComponent::setAttribute(std::string key, float value)
+{
+	_attributeStore[key] = value;
+}
+
+bool AttributeStoreComponent::hasAttribute(std::string key)
+{
+	return _attributeStore.find(key) != _attributeStore.end();
+}
+
+float AttributeStoreComponent::getAttribute(std::string key, float dummy)
+{
+	auto r = _attributeStore.find(key);
+	if(r != _attributeStore.end())
+		return r->second;
+	else
+		return dummy;
+}
+
+void AttributeStoreComponent::serDes(SerDesBase& s)
+{
+	s.serDes(*this);
 }
 
 ////////////////////////////////////////////////////////////
@@ -344,6 +373,7 @@ World::World(WorldMap& wm): _map{wm}, _entManager{ObjStaticID::FIRSTFREE}
 	_entManager.registerComponentType<MeshGraphicsComponent>(ComponentType::GraphicsMesh);
 	_entManager.registerComponentType<CollisionComponent>(ComponentType::Collision);
 	_entManager.registerComponentType<WizardComponent>(ComponentType::Wizard);
+	_entManager.registerComponentType<AttributeStoreComponent>(ComponentType::AttributeStore);
 	_entManager.addObserver(*this);
 }
 
@@ -381,6 +411,10 @@ ID World::createCharacter(vec3f position)
 	e.addComponent<MeshGraphicsComponent>("ninja.b3d", true, vec3f(0), vec3f(0,90,0), vec3f(0.2));
 	e.addComponent<CollisionComponent>(0.4, 1, vec3f(0, -0.9, 0));
 	e.addComponent<WizardComponent>();
+	e.addComponent<AttributeStoreComponent>();
+	AttributeStoreComponent& attStore = *e.getComponent<AttributeStoreComponent>();
+	attStore.setAttribute("health", 100);
+	attStore.setAttribute("max-health", 100);
 	return eID;
 }
 
