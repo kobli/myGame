@@ -1,23 +1,32 @@
 -- TODO
--- apply effect on body death
 -- when a spell hits a player and has no effect -> append its bodies to his spell
 -- InvocationQ limit
 require("lua/list")
 
+
 MAPOBJID = 10
+
+AttributeAffectorModifierType = {}
+AttributeAffectorModifierType.ADD = 0
+AttributeAffectorModifierType.MUL = 1
 
 -------------------- config --------------------
 
 Config = {}
 Config.Body = {}
+Config.Effect = {}
 
 Config.Body.invocT = 2		-- invocation time [seconds]
 Config.Body.maxC = 50			-- maximum # of bodies 
 Config.Body.maxSpeed = 50			-- maximum traveling speed of the body [?]
 Config.Body.maxRadius = 2			-- maximum radius of the body sphere [?]
 
---Stats = {}
+Config.Effect.InvocT = {fire=2,}
 
+
+-------------------- globals --------------------
+WIZARDS = {}
+SPELLS = {}
 
 -------------------- classes ------------------
 
@@ -155,6 +164,21 @@ end
 
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
+Effect = {}
+
+function Effect:new(name)
+	dout("effect created")
+	local meta = {__index = Effect}
+	local value = {
+		name = name,
+	}
+	return setmetatable(value, meta)
+end
+
+-- TODO func apply 
+
+-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+
 Spell = {}
 
 function Spell:new(ID, baseBody)
@@ -163,18 +187,28 @@ function Spell:new(ID, baseBody)
 	local value = {
 		ID = ID,
 		baseBody = baseBody,
-		bodies = {baseBody}
+		bodies = {baseBody},
+		effects = {},
+		collisionsInLastTick = List.new()
 	}
 	return setmetatable(value, meta)
 end
 
 function Spell:destroy()
-	baseBody = nil
+	self.ID = nil
+	self.baseBody = nil
 	for k,v in pairs(self.bodies) do
 		v:destroy()
-		self.bodies[k] = nil
 	end
+	self.bodies = {};
+	self.effects = {};
+	self.collisionsInLastTick = List.new()
 	dout("spell destroyed")
+end
+
+function Spell:appendEffect(effect)
+	table.insert(self.effects, effect)
+	dout("spell now contains "..#self.effects.." effects")
 end
 
 function Spell:appendBody(body)
@@ -182,34 +216,45 @@ function Spell:appendBody(body)
 	dout("spell now contains "..#self.bodies.." bodies")
 end
 
+function Spell:update(delta)
+	for i=self.collisionsInLastTick.first, self.collisionsInLastTick.last, 1 do
+		dout("shouldDieOnCOl: ",self:shouldDieOnCollisionWith(self.collisionsInLastTick[i]), self.collisionsInLastTick[i])
+		if self:shouldDieOnCollisionWith(self.collisionsInLastTick[i]) then
+			self:die()
+			return
+		end
+	end
+	self.collisionsInLastTick = List.new()
+end
+
 function Spell:handleCollision(otherID)
+	List.pushright(self.collisionsInLastTick, otherID)
+	dout("col with: ", otherID)
+end
+
+function Spell:shouldDieOnCollisionWith(entID)
 	what = ""
-	if otherID == MAPOBJID then
+	if entID == MAPOBJID then
 		what = "terrain"
-	elseif otherID == self.ID then
+	elseif entID == self.ID then
 		dout("spell hit itself - WTF?")
-	elseif SPELLS[otherID] ~= nil then
+	elseif SPELLS[entID] ~= nil then
 		what = "spell"
 	else
 		what = "player"
 	end
-	dout("spell "..self.ID.." hit "..what)
-	if self.baseBody:dieOnCollisionWith(what) then
-		self:die()
-	end
+	return self.baseBody:dieOnCollisionWith(what)
 end
 
 function Spell:die()
-	--TODO if applyEffectOnDeath ... 
+	for i=self.collisionsInLastTick.first, self.collisionsInLastTick.last, 1 do
+		dout("col with on death: ",self.collisionsInLastTick[i])
+		addAttributeAffector(self.collisionsInLastTick[i], "health", AttributeAffectorModifierType.ADD, -30, true);
+	end
 	removeSpell(self.ID)
 	SPELLS[self.ID] = nil
-	self.ID = nil
 	self:destroy()
 end
-
--------------------- globals --------------------
-WIZARDS = {}
-SPELLS = {}
 
 -------------------- helpers --------------------
 
@@ -275,9 +320,11 @@ function handleIncantation(wizID, inc)
 	end
 end
 
---TODO rename to updateWizards
 function update(delta)
 	for k,v in pairs(WIZARDS) do
+		v:update(delta)
+	end
+	for k,v in pairs(SPELLS) do
 		v:update(delta)
 	end
 end
@@ -358,3 +405,25 @@ function Wizard.Command:spell_launch()
 	self.spellInHands = nil
 end
 Wizard.Command.spell_launch_now = Wizard.Command.spell_launch
+
+-- argStr: <effect name>
+function Wizard.Command:spell_effect_create(argStr)
+	dout("create effect: "..argStr)
+	-- validate and parse arg str
+	local effectName = argStr
+	if Config.Effect.InvocT[effectName] == nil then
+		dout("such effect does not exist")
+		return
+	end
+	-- we need something to append the effect to
+	if self.spellInHands == nil then
+		dout("No spell to append the effect to.")
+		return
+	end
+	dout("starting effect invocation...")
+	-- invocation delay
+	self:doInvocation(Config.Effect.InvocT[effectName])
+	-- create and append the effect
+	local effect = Effect:new(effectName)
+	self.spellInHands:appendEffect(effect)
+end

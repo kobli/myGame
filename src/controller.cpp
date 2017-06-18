@@ -53,6 +53,9 @@ bool Controller::OnEvent(const SEvent& event)
 				case KEY_F4:
 					spell_c = "spell_launch_now hello";
 					break;
+				case KEY_F5:
+					spell_c = "spell_effect_create fire";
+					break;
 				default:
 					break;
 			}
