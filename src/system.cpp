@@ -727,6 +727,29 @@ void SpellSystem::init()
 	lua_pushlightuserdata(_luaState, this);
 	lua_pushcclosure(_luaState, callRemoveSpell, 1);
 	lua_setglobal(_luaState, "removeSpell");
+
+	auto callAddAttributeAffector = [](lua_State* s)->int {
+		int argc = lua_gettop(s);
+		if(argc != 5 && argc != 6)
+		{
+			std::cerr << "callAddAttributeAffector: wrong number of arguments\n";
+			return 0;		
+		}
+		ID eID = lua_tointeger(s, 1);
+		std::string attributeName = lua_tostring(s, 2);
+		AttributeAffector::ModifierType modifierType = static_cast<AttributeAffector::ModifierType>(lua_tointeger(s, 3));
+		float modifierValue = lua_tonumber(s, 4);
+		bool permanent = lua_toboolean(s, 5);
+		float period = 0;
+		if(argc == 6)
+			period = lua_tonumber(s, 6);
+		SpellSystem* ss = (SpellSystem*)lua_touserdata(s, lua_upvalueindex(1));
+		ss->addAttributeAffectorTo(eID, attributeName, modifierType, modifierValue, permanent, period);
+		return 1;
+	};
+	lua_pushlightuserdata(_luaState, this);
+	lua_pushcclosure(_luaState, callAddAttributeAffector, 1);
+	lua_setglobal(_luaState, "addAttributeAffector");
 }
 
 void SpellSystem::deinit()
@@ -738,10 +761,10 @@ ID SpellSystem::launchSpell(float radius, float speed, ID wizard)
 {
 	auto e = _world.getEntity(wizard);
 	if(!e)
-		return 0; //TODO fail in a better way
+		return NULLID; //TODO fail in a better way
 	auto wBody = e->getComponent<BodyComponent>();
 	if(!wBody)
-		return 0; //TODO fail in a better way
+		return NULLID; //TODO fail in a better way
 
 	Entity& spellE = _world.createAndGetEntity();
 	vec3f dir{1,0,0};
@@ -765,6 +788,20 @@ void SpellSystem::removeSpell(ID spell)
 {
 	std::cout << "removing spell #" << spell << std::endl;
 	_world.removeEntity(spell);
+}
+
+ID SpellSystem::addAttributeAffectorTo(ID eID, std::string attributeName
+		, AttributeAffector::ModifierType modifierType, float modifierValue
+		, bool permanent, float period)
+{
+	auto e = _world.getEntity(eID);
+	if(!e)
+		return NULLID; //TODO fail in a better way
+	auto attrStore = e->getComponent<AttributeStoreComponent>();
+	if(!attrStore)
+		return NULLID; //TODO fail in a better way
+	std::cout << "adding attribute affector .." << std::endl;
+	return attrStore->addAttributeAffector(AttributeAffector(attributeName, modifierType, modifierValue, permanent, period));
 }
 
 ////////////////////////////////////////////////////////////

@@ -265,12 +265,42 @@ void WizardComponent::serDes(SerDesBase&)
 
 ////////////////////////////////////////////////////////////
 
+AttributeAffector::AttributeAffector(std::string attribute, ModifierType modifierType
+				, float modifierValue, bool permanent, float period): 
+	_attribute{attribute}, _modifierType{modifierType}, _modifierValue{modifierValue},
+	_permanent{permanent}, _period{period} {
+	}
+
+std::string AttributeAffector::getAffectedAttribute() {
+	return _attribute;
+}
+
+AttributeAffector::ModifierType AttributeAffector::getModifierType() {
+	return _modifierType;
+}
+
+float AttributeAffector::getModifierValue() {
+	return _modifierValue;
+}
+
+bool AttributeAffector::isPermanent() {
+	return _permanent;
+}
+
+float AttributeAffector::getPeriod() {
+	return _period;
+}
+
+// // // // // // // // // // // // // // // // // // // // 
+
 AttributeStoreComponent::AttributeStoreComponent(ID parentEntID): ObservableComponentBase(parentEntID, ComponentType::AttributeStore)
 {}
 
-void AttributeStoreComponent::setAttribute(std::string key, float value)
+void AttributeStoreComponent::addAttribute(std::string key, float value)
 {
+	assert(_attributeStore.count(key) == 0);
 	_attributeStore[key] = value;
+	notifyObservers();
 }
 
 bool AttributeStoreComponent::hasAttribute(std::string key)
@@ -278,13 +308,60 @@ bool AttributeStoreComponent::hasAttribute(std::string key)
 	return _attributeStore.find(key) != _attributeStore.end();
 }
 
-float AttributeStoreComponent::getAttribute(std::string key, float dummy)
+float AttributeStoreComponent::getAttribute(std::string key)
 {
 	auto r = _attributeStore.find(key);
 	if(r != _attributeStore.end())
 		return r->second;
 	else
-		return dummy;
+		return -1;
+}
+
+ID AttributeStoreComponent::addAttributeAffector(AttributeAffector aa)
+{
+	if(aa.isPermanent()) {
+		auto attr = _attributeStore.find(aa.getAffectedAttribute());
+		assert(attr != _attributeStore.end());
+		if(aa.getModifierType() == AttributeAffector::ModifierType::Mul)
+			attr->second *= aa.getModifierValue();
+		else if(aa.getModifierType() == AttributeAffector::ModifierType::Add)
+			attr->second += aa.getModifierValue();
+		attr->second = std::max(attr->second, 0.f);
+		notifyObservers();
+		return NULLID;
+	}
+	else
+		return _attributeAffectors.insert(std::move(aa));
+}
+
+bool AttributeStoreComponent::removeAttributeAffector(ID affectorID)
+{
+	if(_attributeAffectors.indexValid(affectorID)) {
+		_attributeAffectors.remove(affectorID);
+		notifyObservers();
+		return true;
+	}
+	else
+		return false;
+}
+
+float AttributeStoreComponent::getAttributeAffected(std::string key)
+{
+	if(!hasAttribute(key))
+		return -1;
+	else {
+		float base = getAttribute(key);
+		float add = 0;
+		float mul = 0;
+		for(auto& a : _attributeAffectors)
+			if(a.getAffectedAttribute() == key) {
+				if(a.getModifierType() == AttributeAffector::ModifierType::Add)
+					add += a.getModifierValue();
+				else if(a.getModifierType() == AttributeAffector::ModifierType::Mul)
+					mul += a.getModifierValue();
+			}
+		return std::max(base*mul + add, 0.f);
+	}
 }
 
 void AttributeStoreComponent::serDes(SerDesBase& s)
@@ -413,8 +490,8 @@ ID World::createCharacter(vec3f position)
 	e.addComponent<WizardComponent>();
 	e.addComponent<AttributeStoreComponent>();
 	AttributeStoreComponent& attStore = *e.getComponent<AttributeStoreComponent>();
-	attStore.setAttribute("health", 100);
-	attStore.setAttribute("max-health", 100);
+	attStore.addAttribute("health", 100);
+	attStore.addAttribute("max-health", 100);
 	return eID;
 }
 

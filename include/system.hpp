@@ -77,6 +77,9 @@ class SpellSystem: public System
 		void deinit();
 		ID launchSpell(float radius, float speed, ID wizard);
 		void removeSpell(ID spell);
+		ID addAttributeAffectorTo(ID eID, std::string attributeName
+				, AttributeAffector::ModifierType modifierType
+				, float modifierValue, bool permanent, float period);
 };
 
 class InputSystem: public System

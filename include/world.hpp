@@ -195,15 +195,42 @@ class WizardComponent: public ObservableComponentBase
 };
 
 ////////////////////////////////////////////////////////////
-class AttributeAffector;
+class AttributeAffector {
+	public:
+		enum ModifierType: u8 {
+			Add = 0,
+			Mul = 1,
+		};
+
+		AttributeAffector(std::string attribute, ModifierType modifierType
+				, float modifierValue, bool permanent, float period = 0);
+
+		std::string getAffectedAttribute();
+		ModifierType getModifierType();
+		float getModifierValue();
+		bool isPermanent();
+		float getPeriod();
+
+	private:
+		std::string _attribute;
+		ModifierType _modifierType;
+		float _modifierValue;
+		bool _permanent;
+	 	float _period;
+};
+
 class AttributeStoreComponent: public ObservableComponentBase
 {
 	public:
 		AttributeStoreComponent(ID parentEntID);
 
-		void setAttribute(std::string key, float value);
+		void addAttribute(std::string key, float value);
 		bool hasAttribute(std::string key);
-		float getAttribute(std::string key, float dummy);
+		float getAttribute(std::string key);
+
+		ID addAttributeAffector(AttributeAffector aa);
+		bool removeAttributeAffector(ID affectorID);
+		float getAttributeAffected(std::string key);
 
 		virtual void serDes(SerDesBase& s);
 		template <typename T>
@@ -214,6 +241,7 @@ class AttributeStoreComponent: public ObservableComponentBase
 
 	private:
 		std::map<std::string, float> _attributeStore;
+		SolidVector<AttributeAffector, ID, NULLID> _attributeAffectors;
 };
 
 ////////////////////////////////////////////////////////////
