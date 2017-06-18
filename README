@@ -23,6 +23,7 @@ TODO
 Key aspects (by priority)
 -------------------
 - fun to play - idependent on experience
+- friend-group friendly
 - effectivness does not depend on time spent in game
 - effectivness slightly depends on understanding the game
 - cooperation for higher effectivness
@@ -96,18 +97,22 @@ magic effects by role (=class)
 ? cancel spell (for enemy structure destruction and, my own permanent spells, single use spell block (shield))
 ? buff cancel
 ? cloud / fog / smoke
-	- DD (elemental?)
-		- attack (fire ball / sphere (area))
+	- DD (element)
+		- sphere
 	- defender
-		- magic shield (all effects of each spell that flies through are multiplied by shields power)
-		- stun
+		? stun (not needed - debuffer has speed/cast_speed altering spell)
+		- magic_power_modifier (all effects of each spell that flies through are multiplied by shields power)
+			- move to healer / buffer?
 	- healer
 		- heal
 	? scout
 		- no need for a dedicated role
 		- just running about a map ... would be replaced by a minimap 
-	o summoner / builder
-		- teleporter
+		- faster than others
+		- portals
+	o summoner / builder / terrain_manipulator
+		? lift/lower terrain
+		- portals
 		- camera (palantir)
 		- baricade
 		- mobile base that serves as a spawn point and can be relocated and captured(?) by the enemy -- (structure -> only builder can manipulate those?)
@@ -118,14 +123,15 @@ magic effects by role (=class)
 	*o debuffer
 		- root, silence
 		* join
-		- buff and debuff effects can be given to areas, not players (like in L2)
+		- buff and debuff effects can be given to areas
+		? ... to players
 
 stats
 -------------------
 ! can be visualized by colors - for use in magic visual effects
 - max health
 - health regen
-- attack
+- power
 - defense
 -	speed
 - casting speed
@@ -191,8 +197,8 @@ spell system
 
 Magic body
 -----------------
-- grab_from_ground lock
-- grab_from_hands lock
+? grab_from_ground lock
+? grab_from_hands lock
 0) parameters
 	- velocity (direction*speed)
 	- size (radius)
@@ -240,13 +246,15 @@ x 2.3.1) merging bodies with effects on them - probably wont be possible
 
 Magic effect
 -----------------
-? apply to: allies / enemies / both
 0) parameters
 	- type
 	- base power
+	? apply to: allies / enemies / both
+		- probably apply always to both
 0.1) constraints
 	- this class can cast the efect
-	- limit the number of bodies with this effect per player
+	? limit the number of bodies with this effect per player
+		- limiting bodies should be enough
 	- currently holding a body
 1) creation
 	- casting time varies by effect type
@@ -264,7 +272,7 @@ Spell commands
 * spell_launch_now - resets casting and launches the spell
 * spell_abort_now - aborts casting and empties the entire queue
 * spell_cancel_now - cancels the currently held spell and resets casting (so that check for appending effect on no body can be done at dequeue) (or only when its an effect?)
-- spell_effect_create(effect params)
+* spell_effect_create(effect params)
 - spell_grab
 - spell_grab_lock
 - spell_grab_unlock
