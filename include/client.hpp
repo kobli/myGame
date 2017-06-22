@@ -4,6 +4,7 @@
 #include "main.hpp"
 #include "world.hpp"
 #include "system.hpp"
+#include "keyValueStore.hpp"
 
 class Animator: public Observer<EntityEvent>
 {
@@ -43,6 +44,7 @@ class ClientApplication
 		unique_ptr<Physics> _physics;
 		Animator _animator;
 		scene::ICameraSceneNode* _camera;
+		KeyValueStore _sharedRegistry;
 
 		void sendCommand(Command& c);
 		void sendPacket(sf::Packet& p);

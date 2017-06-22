@@ -9,6 +9,7 @@ enum PacketType: u8
 {
 	PlayerCommand,
 	WorldUpdate,
+	RegistryUpdate,
 };
 
 /*

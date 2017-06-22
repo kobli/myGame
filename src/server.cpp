@@ -3,9 +3,11 @@
 #include <cassert>
 #include <serdes.hpp>
 
-Session::Session(unique_ptr<sf::TcpSocket>&& socket, u32 controlledObjID, CommandHandler h)
-	: _socket{std::move(socket)}, _commandHandler{h}, _closed{false}, _controlledObjID{controlledObjID}
-{}
+Session::Session(unique_ptr<sf::TcpSocket>&& socket, ID controlledObjID, CommandHandler h)
+	: _socket{std::move(socket)}, _commandHandler{h}, _closed{false}
+{
+	addPair("controlled_object_id", static_cast<float>(controlledObjID));
+}
 
 sf::TcpSocket& Session::getSocket()
 {
@@ -17,9 +19,9 @@ void Session::setCommandHandler(CommandHandler h)
 	_commandHandler = h;
 }
 
-u32 Session::getControlledObjID()
+ID Session::getControlledObjID()
 {
-	return _controlledObjID;
+	return static_cast<ID>(getValue("controlled_object_id"));
 }
 
 bool Session::receive()
@@ -75,7 +77,7 @@ void Session::handlePacket(sf::Packet& p)
 			Command c;
 			p >> c;
 			cout << "command type: " << unsigned(c._type) << endl;
-			_commandHandler(c, _controlledObjID);
+			_commandHandler(c, getControlledObjID());
 			break;
 		}
 		default:
@@ -88,6 +90,24 @@ bool Session::isClosed()
 	return _closed;
 }
 
+void Session::updateClientSharedRegistry()
+{
+	sf::Packet p;
+	p << PacketType::RegistryUpdate << Serializer<sf::Packet>(*static_cast<KeyValueStore*>(this));
+	send(p);
+}
+
+void Session::addPair(std::string key, float value)
+{
+	KeyValueStore::addPair(key, value);
+	updateClientSharedRegistry();
+}
+
+void Session::setValue(std::string key, float value)
+{
+	KeyValueStore::setValue(key, value);
+	updateClientSharedRegistry();
+}
 
 ////////////////////////////////////////////////////////////
 

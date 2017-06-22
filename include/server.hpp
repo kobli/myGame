@@ -4,19 +4,20 @@
 #include <controller.hpp>
 #include <world.hpp>
 #include <system.hpp>
+#include "keyValueStore.hpp"
 
 #ifndef SERVER_HPP_16_11_26_09_22_02
 #define SERVER_HPP_16_11_26_09_22_02 
 
 // receives and processes data
-class Session
+class Session: KeyValueStore
 {
 	public:
 		using CommandHandler = std::function<void(Command& c, u32 charID)>;
-		Session(unique_ptr<sf::TcpSocket>&& socket, u32 controlledObjID, CommandHandler commandHandler = [](Command&, u32){});
+		Session(unique_ptr<sf::TcpSocket>&& socket, ID controlledObjID, CommandHandler commandHandler = [](Command&, u32){});
 		sf::TcpSocket& getSocket();
 		void setCommandHandler(CommandHandler h);
-		u32 getControlledObjID();
+		ID getControlledObjID();
 		bool receive();
 		void send(sf::Packet& p);
 		bool isClosed();
@@ -26,7 +27,10 @@ class Session
 		CommandHandler _commandHandler;
 		void handlePacket(sf::Packet& p);
 		bool _closed;
-		u32 _controlledObjID;
+
+		void updateClientSharedRegistry();
+		void addPair(std::string key, float value);
+		void setValue(std::string key, float value);
 };
 
 ////////////////////////////////////////////////////////////

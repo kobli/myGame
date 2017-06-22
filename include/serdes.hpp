@@ -38,6 +38,10 @@ class Serializer: public SerDesBase
 			s.doSerDes(*this);
 		}
 
+		virtual void serDes(KeyValueStore& s) {
+			s.doSerDes(*this);
+		}
+
 	private:
 		Serializable& _s;
 		T* _t;
@@ -78,6 +82,10 @@ class Deserializer: public SerDesBase
 			s.doSerDes(*this);
 		}
 		virtual void serDes(AttributeStoreComponent& s) {
+			s.doSerDes(*this);
+		}
+
+		virtual void serDes(KeyValueStore& s) {
 			s.doSerDes(*this);
 		}
 

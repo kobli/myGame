@@ -8,6 +8,9 @@ class MeshGraphicsComponent;
 class CollisionComponent;
 class AttributeStoreComponent;
 
+class KeyValueStore;
+
+
 class SerDesBase
 {
 	public: 
@@ -18,6 +21,8 @@ class SerDesBase
 		virtual void serDes(MeshGraphicsComponent&) = 0;
 		virtual void serDes(CollisionComponent&) = 0;
 		virtual void serDes(AttributeStoreComponent&) = 0;
+
+		virtual void serDes(KeyValueStore&) = 0;
 };
 
 class Serializable

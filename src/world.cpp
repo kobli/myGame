@@ -298,36 +298,37 @@ AttributeStoreComponent::AttributeStoreComponent(ID parentEntID): ObservableComp
 
 void AttributeStoreComponent::addAttribute(std::string key, float value)
 {
-	assert(_attributeStore.count(key) == 0);
-	_attributeStore[key] = value;
+	addPair(key, value);
 	notifyObservers();
 }
 
 bool AttributeStoreComponent::hasAttribute(std::string key)
 {
-	return _attributeStore.find(key) != _attributeStore.end();
+	return hasKey(key);
 }
 
 float AttributeStoreComponent::getAttribute(std::string key)
 {
-	auto r = _attributeStore.find(key);
-	if(r != _attributeStore.end())
-		return r->second;
-	else
-		return -1;
+	return getValue(key);
+}
+
+void AttributeStoreComponent::setAttribute(std::string key, float value)
+{
+	setValue(key, value);
+	notifyObservers();
 }
 
 ID AttributeStoreComponent::addAttributeAffector(AttributeAffector aa)
 {
 	if(aa.isPermanent()) {
-		auto attr = _attributeStore.find(aa.getAffectedAttribute());
-		assert(attr != _attributeStore.end());
+		assert(hasAttribute(aa.getAffectedAttribute()));
+		float attr = getAttribute(aa.getAffectedAttribute());
 		if(aa.getModifierType() == AttributeAffector::ModifierType::Mul)
-			attr->second *= aa.getModifierValue();
+			attr *= aa.getModifierValue();
 		else if(aa.getModifierType() == AttributeAffector::ModifierType::Add)
-			attr->second += aa.getModifierValue();
-		attr->second = std::max(attr->second, 0.f);
-		notifyObservers();
+			attr += aa.getModifierValue();
+		attr = std::max(attr, 0.f);
+		setAttribute(aa.getAffectedAttribute(), attr);
 		return NULLID;
 	}
 	else
@@ -366,6 +367,7 @@ float AttributeStoreComponent::getAttributeAffected(std::string key)
 
 void AttributeStoreComponent::serDes(SerDesBase& s)
 {
+	s.serDes(*static_cast<KeyValueStore*>(this));
 	s.serDes(*this);
 }
 

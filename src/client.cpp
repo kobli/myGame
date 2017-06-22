@@ -271,6 +271,12 @@ void ClientApplication::handlePacket(sf::Packet& p)
 				}
 				break;
 			}
+		case PacketType::RegistryUpdate:
+			{
+					p >> Deserializer<sf::Packet>(_sharedRegistry);
+					cout << "shared reg update: " << Serializer<ostream>(_sharedRegistry) << endl;
+				break;
+			}
 		default:
 			cerr << "Received packet of unknown type.\n";
 	}

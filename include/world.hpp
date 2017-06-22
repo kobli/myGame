@@ -7,6 +7,7 @@
 #include "controller.hpp"
 #include "serializable.hpp"
 #include "observableEntityComponent.hpp"
+#include "keyValueStore.hpp"
 
 using ec::ID;
 using ec::NULLID;
@@ -219,7 +220,7 @@ class AttributeAffector {
 	 	float _period;
 };
 
-class AttributeStoreComponent: public ObservableComponentBase
+class AttributeStoreComponent: public ObservableComponentBase, KeyValueStore
 {
 	public:
 		AttributeStoreComponent(ID parentEntID);
@@ -227,6 +228,7 @@ class AttributeStoreComponent: public ObservableComponentBase
 		void addAttribute(std::string key, float value);
 		bool hasAttribute(std::string key);
 		float getAttribute(std::string key);
+		void setAttribute(std::string key, float value);
 
 		ID addAttributeAffector(AttributeAffector aa);
 		bool removeAttributeAffector(ID affectorID);
@@ -236,11 +238,9 @@ class AttributeStoreComponent: public ObservableComponentBase
 		template <typename T>
 			void doSerDes(T& t)
 			{
-				t & _attributeStore;
 			}
 
 	private:
-		std::map<std::string, float> _attributeStore;
 		SolidVector<AttributeAffector, ID, NULLID> _attributeAffectors;
 };
 
