@@ -480,7 +480,7 @@ void ViewSystem::onMsg(const EntityEvent& m)
 					sn->setName("body");
 					//sn->setDebugDataVisible(scene::EDS_FULL);
 				}
-				_transformedEntities.push_back(m.entityID);
+				_transformedEntities.insert(m.entityID);
 				break;
 			}
 		case ComponentType::GraphicsSphere:
@@ -547,8 +547,8 @@ void ViewSystem::update(float timeDelta)
 
 void ViewSystem::updateTransforms(float timeDelta)
 {
-	//TODO remove the list
-	for(auto it = _transformedEntities.begin(); it != _transformedEntities.end(); it++) {
+	//TODO remove the list?
+	for(auto it = _transformedEntities.begin(); it != _transformedEntities.end(); ) {
 		auto eID = *it;
 		Entity* e;
 		BodyComponent* bc;
@@ -581,10 +581,12 @@ void ViewSystem::updateTransforms(float timeDelta)
 			*/
 			sn->setPosition(resPos);
 			sn->updateAbsolutePosition();
-			if(resPos != newPos)
+			if(resPos != newPos) {
+				it++;
 				continue;
+			}
 		}
-		it = _transformedEntities.erase(it);
+		_transformedEntities.erase(it++);
 	}
 }
 

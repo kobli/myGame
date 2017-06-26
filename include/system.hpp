@@ -52,7 +52,7 @@ class ViewSystem: public System
 
 	private:
 		irr::scene::ISceneManager* _smgr;
-		std::list<ID> _transformedEntities;
+		std::set<ID> _transformedEntities;
 		
 		void updateTransforms(float timeDelta);
 };
