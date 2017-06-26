@@ -51,6 +51,9 @@ sf::Packet& operator <<(sf::Packet& packet, const Command& m) {
 		case Command::Type::STR:
 			packet << m._str;
 			break;
+		case Command::Type::ROT_diff:
+			packet << m._vec2f;
+			break;
 		default:
 			break;
 	}
@@ -70,6 +73,9 @@ sf::Packet& operator>>(sf::Packet& packet, Command& m) {
 			break;
 		case Command::Type::STR:
 			packet >> m._str;
+			break;
+		case Command::Type::ROT_diff:
+			packet >> m._vec2f;
 			break;
 		default:
 			break;

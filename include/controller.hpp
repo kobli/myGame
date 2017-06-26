@@ -11,6 +11,7 @@ class Command
 			Null,							// empty
 			STRAFE_DIR_SET,		// vec2f: x+ = forward, x- = backward, y+ = left, y- = right
 			ROT_DIR_SET,			// i32: -1 = left, 0 = stop, 1 = right
+			ROT_diff,         // vec2f: rotation difference in radians
 			STR,							// command and data in one string
 		};
 
@@ -33,15 +34,18 @@ class Command
 class Controller: public IEventReceiver
 {
 	public:
+		typedef std::function<vec2i()> GetScreenSize;
 		Controller();
 
 		virtual bool OnEvent(const SEvent& event);
 		void setCommandHandler(std::function<void(Command& c)> commandHandler);
+		void setScreenSizeGetter(GetScreenSize screenSizeGetter);
 
 	private:
 		bool _keyPressed[KEY_KEY_CODES_COUNT];
 		bool _LMBdown;
 		std::function<void(Command& c)> _commandHandler;
 		vec2f _lastMovD;
+		GetScreenSize _getScreenSize;
 };
 #endif /* CONTROLLER_HPP_16_11_18_13_06_55 */

@@ -94,7 +94,8 @@ ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ 
 	createWorld();
 	createCamera();
 
-	_controller.setCommandHandler(std::bind(&ClientApplication::sendCommand, ref(*this), std::placeholders::_1));
+	_controller.setCommandHandler(std::bind(&ClientApplication::commandHandler, ref(*this), std::placeholders::_1));
+	_controller.setScreenSizeGetter([this](){ auto ss = _device->getVideoDriver()->getScreenSize(); return vec2i(ss.Width, ss.Height); });
 }
 
 bool ClientApplication::connect(string host, short port)
@@ -111,15 +112,25 @@ void ClientApplication::run()
 	sf::Clock c;
 	while(_device->run())
 	{
+		if(_camera->isInputReceiverEnabled())
+			bindCameraToControlledEntity();
+		if(!_camera->isInputReceiverEnabled()) {
+			vec3f cameraLookDir((_cameraElevation-M_PI_2)/M_PI*180,(_cameraYAngle+M_PI_2)/M_PI*180,0);
+			cameraLookDir = cameraLookDir.rotationToDirection().normalize();
+			_camera->setTarget(_camera->getAbsolutePosition()+cameraLookDir*10000);
+		}
+
 		while(receive());		
 		//TODO fix frameLen spike after win inactivity (mind the physics)
 		if(true)//if(_device->isWindowActive())
 		{
+			_device->getCursorControl()->setPosition(vec2f(0.5));
 			driver->beginScene();
 			f32 ar = (float)driver->getScreenSize().Width/(float)driver->getScreenSize().Height;
 			if(ar != _camera->getAspectRatio() && _camera)
 				_camera->setAspectRatio(ar);
 			float timeDelta = c.restart().asSeconds();
+			//std::cout << "number of scene nodes: " << _device->getSceneManager()->getRootSceneNode()->getChildren().size() << std::endl;
 				
 			if(_physics)
 				_physics->update(timeDelta);
@@ -202,6 +213,15 @@ void ClientApplication::createCamera()
 //	_camera->addAnimator(anim);
 }
 
+void ClientApplication::commandHandler(Command& c)
+{
+	if(c._type == Command::Type::ROT_diff && !_camera->isInputReceiverEnabled()) {
+		_cameraYAngle += c._vec2f.X;
+		_cameraElevation = std::min(PI-0.2f, std::max(0.3f, _cameraElevation+c._vec2f.Y));
+	}
+	sendCommand(c);
+}
+
 void ClientApplication::sendCommand(Command& c)
 {
 	sf::Packet p;
@@ -244,7 +264,6 @@ bool ClientApplication::receive()
 
 void ClientApplication::handlePacket(sf::Packet& p)
 {
-	cout << "received packet\n";
 	PacketType t;
 	p >> t;
 	switch(t)
@@ -260,7 +279,7 @@ void ClientApplication::handlePacket(sf::Packet& p)
 				{
 					p >> Deserializer<sf::Packet>(*modifiedComponent);
 					modifiedComponent->notifyObservers();
-					cout << "updated component: " << Serializer<ostream>(*modifiedComponent) << endl;
+					//cout << "updated component: " << Serializer<ostream>(*modifiedComponent) << endl;
 				}
 				if(e.created)
 					cout << "CREATED!\n";
@@ -275,6 +294,7 @@ void ClientApplication::handlePacket(sf::Packet& p)
 			{
 					p >> Deserializer<sf::Packet>(_sharedRegistry);
 					cout << "shared reg update: " << Serializer<ostream>(_sharedRegistry) << endl;
+					onSharedRegistryUpdated();
 				break;
 			}
 		default:
@@ -284,7 +304,7 @@ void ClientApplication::handlePacket(sf::Packet& p)
 
 void ClientApplication::handleEntityEvent(EntityEvent& e)
 {
-	cout << "received entity update: " << e.entityID << " " << e.componentT << endl;
+	//cout << "received entity update: " << e.entityID << " " << e.componentT << endl;
 	if(!_gameWorld)
 		return;
 	Entity* entity = _gameWorld->getEntity(e.entityID);
@@ -296,4 +316,24 @@ void ClientApplication::handleEntityEvent(EntityEvent& e)
 		cerr << "ENTITY IDs DO NOT MATCH - requested " << e.entityID << " - got " << entity->getID() << "\n";
 	//TODO no need to create wizard component
 	entity->addComponent(e.componentT);
+}
+
+void ClientApplication::onSharedRegistryUpdated()
+{
+}
+
+void ClientApplication::bindCameraToControlledEntity()
+{
+	if(_sharedRegistry.hasKey("controlled_object_id")) {
+		auto controlledCharSceneNode = _device->getSceneManager()->getSceneNodeFromId(_sharedRegistry.getValue("controlled_object_id"));
+		if(controlledCharSceneNode) {
+			_camera->setInputReceiverEnabled(false);
+			_camera->setParent(controlledCharSceneNode);
+			_camera->setPosition(vec3f(0.23,1.6,0));
+			_camera->setRotation(vec3f());
+			_camera->bindTargetAndRotation(false);
+			_cameraElevation = PI_2;
+			_cameraYAngle = 0;
+		}
+	}
 }

@@ -280,7 +280,7 @@ void Physics::bodyDoStrafe(float timeDelta)
 					b->setDamping(0.46, 0);
 					if(getObjVelocity(e.getID()).getLength() < 2)
 					{
-						cout << "climbing a hill\n";
+						//cout << "climbing a hill\n";
 						fMul *= 1.5;
 					}
 					b->setFriction(3.0);
@@ -825,7 +825,7 @@ void InputSystem::handleCommand(Command& c, ID controlledObjID)
 			{
 				auto bc = getBodyComponent(controlledObjID);
 				if(bc)
-					bc->setRotDir(c._i32);
+					;//bc->setRotDir(c._i32);
 				break;
 			}
 		case Command::Type::STR:
@@ -833,6 +833,16 @@ void InputSystem::handleCommand(Command& c, ID controlledObjID)
 				if(c._str.find("spell_") == 0)
 				{
 					_spells.cast(c._str, controlledObjID);
+				}
+				break;
+			}
+		case Command::Type::ROT_diff:
+			{
+				auto bc = getBodyComponent(controlledObjID);
+				if(bc) {
+					quaternion q = bc->getRotation();
+					q = q*quaternion(0, c._vec2f.X, 0);
+					bc->setRotation(q);
 				}
 				break;
 			}

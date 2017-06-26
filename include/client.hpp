@@ -45,12 +45,18 @@ class ClientApplication
 		Animator _animator;
 		scene::ICameraSceneNode* _camera;
 		KeyValueStore _sharedRegistry;
+		float _cameraElevation;
+		float _cameraYAngle;
 
+
+		void commandHandler(Command& c);
 		void sendCommand(Command& c);
 		void sendPacket(sf::Packet& p);
 		bool receive();
 		void handlePacket(sf::Packet& p);
 		void handleEntityEvent(EntityEvent& e);
+		void onSharedRegistryUpdated();
+		void bindCameraToControlledEntity();
 };
 
 #endif /* CLIENT_HPP_16_11_26_10_46_45 */

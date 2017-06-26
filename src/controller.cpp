@@ -31,6 +31,20 @@ bool Controller::OnEvent(const SEvent& event)
 			case EMIE_LMOUSE_LEFT_UP:
 				_LMBdown = false;
 				break;
+			case EMIE_MOUSE_MOVED:
+				{
+					vec2i screenCenter = _getScreenSize()/2;
+					vec2i mousePos = vec2i{event.MouseInput.X, event.MouseInput.Y};
+					if(mousePos == screenCenter) // TODO better idea?
+						return true;
+					Command c(Command::Type::ROT_diff);
+					float sensitivity = 0.001;
+					vec2i mouseMovDiff = mousePos-screenCenter;
+					c._vec2f = vec2f(mouseMovDiff.X, mouseMovDiff.Y)*sensitivity;
+					_commandHandler(c);
+					return true;
+					break;
+				}
 			default:
 				break;
 		}
@@ -63,8 +77,8 @@ bool Controller::OnEvent(const SEvent& event)
 		{
 			case KEY_KEY_W: 
 			case KEY_KEY_S: 
-			case KEY_KEY_Q: 
-			case KEY_KEY_E: 
+			case KEY_KEY_A: 
+			case KEY_KEY_D: 
 				{
 					Command c(Command::Type::STRAFE_DIR_SET);
 					vec2f& movD = c._vec2f = vec2f{0,0};
@@ -73,9 +87,9 @@ bool Controller::OnEvent(const SEvent& event)
 						movD.X = 1;
 					if(_keyPressed[KEY_KEY_S])
 						movD.X = -1;
-					if(_keyPressed[KEY_KEY_Q])
+					if(_keyPressed[KEY_KEY_A])
 						movD.Y = 1;
-					if(_keyPressed[KEY_KEY_E])
+					if(_keyPressed[KEY_KEY_D])
 						movD.Y = -1;
 					if(movD != _lastMovD)
 					{
@@ -84,15 +98,15 @@ bool Controller::OnEvent(const SEvent& event)
 					}
 					return true;
 				}
-			case KEY_KEY_A: 
-			case KEY_KEY_D: 
+			case KEY_KEY_Q: 
+			case KEY_KEY_E: 
 				{
 					Command c(Command::Type::ROT_DIR_SET);
 					i32& rotD = c._i32= 0;
 
-					if(_keyPressed[KEY_KEY_A])
+					if(_keyPressed[KEY_KEY_Q])
 						rotD = -1;
-					if(_keyPressed[KEY_KEY_D])
+					if(_keyPressed[KEY_KEY_E])
 						rotD = 1;
 					_commandHandler(c);
 					return true;
@@ -119,4 +133,9 @@ bool Controller::OnEvent(const SEvent& event)
 void Controller::setCommandHandler(std::function<void(Command& c)> commandHandler)
 {
 	_commandHandler = commandHandler;
+}
+
+void Controller::setScreenSizeGetter(GetScreenSize screenSizeGetter)
+{
+	_getScreenSize = screenSizeGetter;
 }

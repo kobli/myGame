@@ -123,7 +123,7 @@ void Updater::onMsg(const EntityEvent& e)
 	// do not send position and rotation updates
 	if(e.componentT == ComponentType::Body && e.componentT && !e.destroyed
 			&& static_cast<BodyComponent*>(modifiedComponent)->posOrRotChanged())
-		return;
+		;//return;
 	//TODO send destroy updates
 	sf::Packet p;
 	p << PacketType::WorldUpdate << e;
@@ -131,10 +131,12 @@ void Updater::onMsg(const EntityEvent& e)
 		p << Serializer<sf::Packet>(*modifiedComponent);
 	_send(p, [](Entity*){ return true; });
 
+	/*
 	cout << "sent an update:\n\tentityID: " << e.entityID 
 		<< "\n\tcomponent modified type: " << e.componentT << endl;
 	if(modifiedComponent != nullptr && !e.destroyed)
 		cout << "\tcomponent: " << Serializer<ostream>(*modifiedComponent) << endl;
+		*/
 }
 
 ////////////////////////////////////////////////////////////
