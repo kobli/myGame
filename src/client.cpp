@@ -124,7 +124,8 @@ void ClientApplication::run()
 		//TODO fix frameLen spike after win inactivity (mind the physics)
 		if(true)//if(_device->isWindowActive())
 		{
-			_device->getCursorControl()->setPosition(vec2f(0.5));
+			if(_device->isWindowActive())
+				_device->getCursorControl()->setPosition(vec2f(0.5));
 			driver->beginScene();
 			f32 ar = (float)driver->getScreenSize().Width/(float)driver->getScreenSize().Height;
 			if(ar != _camera->getAspectRatio() && _camera)
