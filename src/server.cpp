@@ -76,7 +76,7 @@ void Session::handlePacket(sf::Packet& p)
 		{
 			Command c;
 			p >> c;
-			cout << "command type: " << unsigned(c._type) << endl;
+			//cout << "command type: " << unsigned(c._type) << endl;
 			_commandHandler(c, getControlledObjID());
 			break;
 		}
@@ -114,29 +114,42 @@ void Session::setValue(std::string key, float value)
 Updater::Updater(Sender s, EntityResolver getEntity): _send{s}, _getEntity{getEntity}
 {}
 
+void Updater::tick(float delta)
+{
+	_timeSinceLastUpdateSent += delta;
+	if(_timeSinceLastUpdateSent >= 0.1) {
+		_timeSinceLastUpdateSent = 0;
+		while(!_updateEventQueue.empty()) {
+			sendEvent(*_updateEventQueue.begin());
+			_updateEventQueue.erase(_updateEventQueue.begin());
+		}
+	}
+}
+
 void Updater::onMsg(const EntityEvent& e)
+{
+	if(e.created || e.destroyed)
+		sendEvent(e);
+	else
+		_updateEventQueue.insert(e);
+}
+
+void Updater::sendEvent(const EntityEvent& e)
 {
 	ObservableComponentBase* modifiedComponent = nullptr;
 	auto* entity = _getEntity(e.entityID);
 	if(entity)
 		modifiedComponent = entity->getComponent(e.componentT);
-	// do not send position and rotation updates
-	if(e.componentT == ComponentType::Body && e.componentT && !e.destroyed
-			&& static_cast<BodyComponent*>(modifiedComponent)->posOrRotChanged())
-		;//return;
-	//TODO send destroy updates
 	sf::Packet p;
 	p << PacketType::WorldUpdate << e;
 	if(modifiedComponent && !e.destroyed)
 		p << Serializer<sf::Packet>(*modifiedComponent);
 	_send(p, [](Entity*){ return true; });
 
-	/*
 	cout << "sent an update:\n\tentityID: " << e.entityID 
 		<< "\n\tcomponent modified type: " << e.componentT << endl;
 	if(modifiedComponent != nullptr && !e.destroyed)
 		cout << "\tcomponent: " << Serializer<ostream>(*modifiedComponent) << endl;
-		*/
 }
 
 ////////////////////////////////////////////////////////////
@@ -178,6 +191,7 @@ void ServerApplication::run()
 		float timeDelta = c.restart().asSeconds();
 		_physics.update(timeDelta);
 		_spells.update(timeDelta);
+		_updater.tick(timeDelta);
 
 		sf::sleep(sf::milliseconds(50));
 		_irrDevice->getVideoDriver()->endScene();

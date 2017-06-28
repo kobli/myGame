@@ -16,7 +16,7 @@ void ObservableComponentBase::notifyObservers()
 
 BodyComponent::BodyComponent(ID parentEntID, vec3f position, quaternion rotation, vec3f velocity)
 	: ObservableComponentBase{parentEntID, ComponentType::Body}, _position{position}, _rotation{rotation}, _velocity{velocity}
-	, _strafeDir{vec2f(0,0)}, _strafeSpeed{120}, _rotDir{0}, _posRotChanged{false}
+	, _strafeDir{vec2f(0,0)}, _strafeSpeed{120}, _rotDir{0}
 {}
 	
 vec3f BodyComponent::getPosition() const
@@ -44,9 +44,7 @@ void BodyComponent::setPosition(vec3f p)
 	if(_position == p)
 		return;
 	_position = p;
-	_posRotChanged = true;
 	notifyObservers();
-	_posRotChanged = false;
 }
 
 void BodyComponent::setRotation(quaternion r)
@@ -54,9 +52,7 @@ void BodyComponent::setRotation(quaternion r)
 	if(_rotation == r)
 		return;
 	_rotation = r;
-	_posRotChanged = true;
 	notifyObservers();
-	_posRotChanged = false;
 }
 
 void BodyComponent::setVelocity(vec3f v)
@@ -81,11 +77,6 @@ void BodyComponent::setRotDir(i8 rotDir)
 		return;
 	_rotDir = rotDir;
 	notifyObservers();
-}
-
-bool BodyComponent::posOrRotChanged()
-{
-	return _posRotChanged;
 }
 
 vec2f BodyComponent::getStrafeDir() const

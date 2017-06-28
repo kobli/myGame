@@ -1,4 +1,5 @@
 #include <memory>
+#include <unordered_set>
 #include <main.hpp>
 #include <SFML/Network.hpp>
 #include <controller.hpp>
@@ -47,12 +48,16 @@ class Updater: public Observer<EntityEvent>
 		using Sender = function<void(sf::Packet& p, ClientFilterPredicate fp)>;
 		using EntityResolver = function<Entity*(ID entID)>;
 		Updater(Sender s, EntityResolver getEntity);
+		void tick(float delta);
 
 	private:
 		Sender _send;
 		EntityResolver _getEntity;
+		std::unordered_set<EntityEvent> _updateEventQueue;
+		float _timeSinceLastUpdateSent;
 
 		void onMsg(const EntityEvent& m) final;
+		void sendEvent(const EntityEvent&);
 };
 
 ////////////////////////////////////////////////////////////

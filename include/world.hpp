@@ -28,9 +28,21 @@ enum ComponentType: u8
 	Collision,
 	Wizard,
 	AttributeStore,
+	LAST
 };
 
 typedef ec::EntityEvent<ComponentType> EntityEvent;
+namespace std
+{
+	template <>
+		struct hash<EntityEvent>
+		{
+			size_t operator()(EntityEvent const & e) const noexcept
+			{
+				return e.created + e.destroyed*2 + e.componentT*4 + ComponentType::LAST*4*e.entityID;
+			}
+		};
+}
 
 class ObservableComponentBase : public Observable<EntityEvent>, public Serializable {
 	public:
@@ -85,7 +97,6 @@ class BodyComponent: public ObservableComponentBase
 		vec2f _strafeDir; 
 		float _strafeSpeed;
 		i8 _rotDir; // around Y axis: left = -1, stop = 0, right = 1
-		bool _posRotChanged; // is set during notifyObservers call when the call is caused by change of position or rotation
 };
 
 ////////////////////////////////////////////////////////////
