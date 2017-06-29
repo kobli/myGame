@@ -54,8 +54,6 @@ class ClientApplication
 		void sendPacket(sf::Packet& p);
 		bool receive();
 		void handlePacket(sf::Packet& p);
-		void handleEntityEvent(EntityEvent& e);
-		void onSharedRegistryUpdated();
 		void bindCameraToControlledEntity();
 };
 

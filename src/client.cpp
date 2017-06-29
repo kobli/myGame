@@ -276,23 +276,33 @@ void ClientApplication::handlePacket(sf::Packet& p)
 	{
 		case PacketType::WorldUpdate:
 			{
-				EntityEvent e(NULLID);	
-				p >> e;
-				handleEntityEvent(e);
-				auto* entity = _gameWorld->getEntity(e.entityID);
-				ObservableComponentBase* modifiedComponent = nullptr;
-				if(entity && (modifiedComponent = entity->getComponent(e.componentT)))
-				{
-					p >> Deserializer<sf::Packet>(*modifiedComponent);
-					modifiedComponent->notifyObservers();
-					//cout << "updated component: " << Serializer<ostream>(*modifiedComponent) << endl;
+				if(!_gameWorld)
+					return;
+				EntityEvent event(NULLID);	
+				p >> event;
+
+				Entity* entity = nullptr;
+				if(event.created && event.componentT == ComponentType::NONE) {
+					assert(_gameWorld->getEntity(event.entityID) == nullptr);
+					entity = &_gameWorld->createAndGetEntity(event.entityID);
+					if(entity->getID() != event.entityID)
+						cerr << "ENTITY IDs DO NOT MATCH - requested " << event.entityID << " - got " << entity->getID() << "\n";
 				}
-				if(e.created)
-					cout << "CREATED!\n";
-				if(e.destroyed && e.componentT == ComponentType::NONE) // TODO respond to component deletes
-				{
-					cout << "SHOULD DELETE ENTITY\n";
-					_gameWorld->removeEntity(e.entityID);
+				else if(event.destroyed && event.componentT == ComponentType::NONE) {
+					_gameWorld->removeEntity(event.entityID);
+				}
+				else if((entity = _gameWorld->getEntity(event.entityID)) != nullptr) {
+					ObservableComponentBase* modifiedComponent = nullptr;
+					if(event.created) {
+						assert(entity->getComponent(event.componentT) == nullptr);
+						entity->addComponent(event.componentT);
+					}
+					else if(event.destroyed)
+						entity->removeComponent(event.componentT);
+					if((modifiedComponent = entity->getComponent(event.componentT)) != nullptr) {
+						p >> Deserializer<sf::Packet>(*modifiedComponent);
+						modifiedComponent->notifyObservers();
+					}
 				}
 				break;
 			}
@@ -300,32 +310,11 @@ void ClientApplication::handlePacket(sf::Packet& p)
 			{
 					p >> Deserializer<sf::Packet>(_sharedRegistry);
 					cout << "shared reg update: " << Serializer<ostream>(_sharedRegistry) << endl;
-					onSharedRegistryUpdated();
 				break;
 			}
 		default:
 			cerr << "Received packet of unknown type.\n";
 	}
-}
-
-void ClientApplication::handleEntityEvent(EntityEvent& e)
-{
-	//cout << "received entity update: " << e.entityID << " " << e.componentT << endl;
-	if(!_gameWorld)
-		return;
-	Entity* entity = _gameWorld->getEntity(e.entityID);
-	if(!entity) {
-		entity = &_gameWorld->createAndGetEntity(e.entityID);
-		std::cout << "HAD TO CREATE NEW ENTITY\n";
-	}
-	if(entity->getID() != e.entityID)
-		cerr << "ENTITY IDs DO NOT MATCH - requested " << e.entityID << " - got " << entity->getID() << "\n";
-	//TODO no need to create wizard component
-	entity->addComponent(e.componentT);
-}
-
-void ClientApplication::onSharedRegistryUpdated()
-{
 }
 
 void ClientApplication::bindCameraToControlledEntity()
