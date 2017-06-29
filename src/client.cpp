@@ -283,8 +283,10 @@ void ClientApplication::handlePacket(sf::Packet& p)
 
 				Entity* entity = nullptr;
 				if(event.created && event.componentT == ComponentType::NONE) {
-					assert(_gameWorld->getEntity(event.entityID) == nullptr);
-					entity = &_gameWorld->createAndGetEntity(event.entityID);
+					// this may happen: when new client connects, server broadcasts create events for all objects
+					//assert(_gameWorld->getEntity(event.entityID) == nullptr);
+					if((entity = _gameWorld->getEntity(event.entityID)) == nullptr)
+						entity = &_gameWorld->createAndGetEntity(event.entityID);
 					if(entity->getID() != event.entityID)
 						cerr << "ENTITY IDs DO NOT MATCH - requested " << event.entityID << " - got " << entity->getID() << "\n";
 				}
@@ -293,10 +295,8 @@ void ClientApplication::handlePacket(sf::Packet& p)
 				}
 				else if((entity = _gameWorld->getEntity(event.entityID)) != nullptr) {
 					ObservableComponentBase* modifiedComponent = nullptr;
-					if(event.created) {
-						assert(entity->getComponent(event.componentT) == nullptr);
+					if(event.created)
 						entity->addComponent(event.componentT);
-					}
 					else if(event.destroyed)
 						entity->removeComponent(event.componentT);
 					if((modifiedComponent = entity->getComponent(event.componentT)) != nullptr) {
