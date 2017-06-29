@@ -118,6 +118,11 @@ void ClientApplication::run()
 			vec3f cameraLookDir((_cameraElevation-M_PI_2)/M_PI*180,(_cameraYAngle+M_PI_2)/M_PI*180,0);
 			cameraLookDir = cameraLookDir.rotationToDirection().normalize();
 			_camera->setTarget(_camera->getAbsolutePosition()+cameraLookDir*10000);
+			if(_sharedRegistry.hasKey("controlled_object_id")) {
+				auto controlledCharSceneNode = _device->getSceneManager()->getSceneNodeFromId(_sharedRegistry.getValue("controlled_object_id"));
+				if(controlledCharSceneNode)
+					_camera->setPosition(controlledCharSceneNode->getPosition() + vec3f(0,1.6,0) + 0.23f*(cameraLookDir*vec3f(1,0,1)).normalize());
+			}
 		}
 
 		while(receive());		
@@ -329,8 +334,6 @@ void ClientApplication::bindCameraToControlledEntity()
 		auto controlledCharSceneNode = _device->getSceneManager()->getSceneNodeFromId(_sharedRegistry.getValue("controlled_object_id"));
 		if(controlledCharSceneNode) {
 			_camera->setInputReceiverEnabled(false);
-			_camera->setParent(controlledCharSceneNode);
-			_camera->setPosition(vec3f(0.23,1.6,0));
 			_camera->setRotation(vec3f());
 			_camera->bindTargetAndRotation(false);
 			_cameraElevation = PI_2;
