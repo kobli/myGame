@@ -218,7 +218,6 @@ end
 
 function Spell:update(delta)
 	for i=self.collisionsInLastTick.first, self.collisionsInLastTick.last, 1 do
-		dout("shouldDieOnCOl: ",self:shouldDieOnCollisionWith(self.collisionsInLastTick[i]), self.collisionsInLastTick[i])
 		if self:shouldDieOnCollisionWith(self.collisionsInLastTick[i]) then
 			self:die()
 			return
@@ -229,7 +228,6 @@ end
 
 function Spell:handleCollision(otherID)
 	List.pushright(self.collisionsInLastTick, otherID)
-	dout("col with: ", otherID)
 end
 
 function Spell:shouldDieOnCollisionWith(entID)
@@ -386,7 +384,8 @@ function Wizard.Command:spell_cancel_now()
 	self:resetInvocation()
 end
 
-function Wizard.Command:spell_launch()
+-- argStr: <elevation angle (-90 - 90)>
+function Wizard.Command:spell_launch_direct_now(argStr)
 	if self.spellInHands == nil then
 		dout("no spell to launch")
 		return
@@ -394,7 +393,12 @@ function Wizard.Command:spell_launch()
 	dout("launching the spell")
 	local sRadius = self.spellInHands.baseBody:getRadius()
 	local sSpeed = self.spellInHands.baseBody:getSpeed()
-	local sID = wizardLaunchSpell(self.ID, sRadius, sSpeed)
+	local sElevation = tonumber(argStr)
+	if sElevation == nil or sElevation > 90 or sElevation < -90 then
+		sElevation = 0
+		dout("incorrect spellElevation "..argStr.." - defaulting to 0")
+	end
+	local sID = wizardLaunchSpell(self.ID, sRadius, sSpeed, sElevation)
 	if sID ~= 0 then
 		dout("probably launched")
 		self.spellInHands.ID = sID
@@ -404,7 +408,6 @@ function Wizard.Command:spell_launch()
 	end
 	self.spellInHands = nil
 end
-Wizard.Command.spell_launch_now = Wizard.Command.spell_launch
 
 -- argStr: <effect name>
 function Wizard.Command:spell_effect_create(argStr)

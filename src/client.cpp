@@ -225,6 +225,11 @@ void ClientApplication::commandHandler(Command& c)
 		_cameraYAngle += c._vec2f.X;
 		_cameraElevation = std::min(PI-0.2f, std::max(0.3f, _cameraElevation+c._vec2f.Y));
 	}
+	else if(c._type == Command::Type::STR) {
+		size_t kp = c._str.find("$LOOK_ELEVATION");
+		if(kp != std::string::npos)
+			c._str.replace(kp, strlen("$LOOK_ELEVATION"), std::to_string(int(-(_cameraElevation/M_PI*180)+90)));
+	}
 	sendCommand(c);
 }
 

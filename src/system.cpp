@@ -697,7 +697,7 @@ void SpellSystem::init()
 
 	auto callLaunchSpell = [](lua_State* s)->int {
 		int argc = lua_gettop(s);
-		if(argc != 3)
+		if(argc != 4)
 		{
 			std::cerr << "callLaunchSpell: wrong number of arguments\n";
 			return 0;		
@@ -705,8 +705,9 @@ void SpellSystem::init()
 		ID wizard = lua_tointeger(s, 1);
 		float sRadius = lua_tonumber(s, 2);
 		float sSpeed = lua_tonumber(s, 3);
+		float sElevation = lua_tonumber(s, 4);
 		SpellSystem* ss = (SpellSystem*)lua_touserdata(s, lua_upvalueindex(1));
-		ID spell = ss->launchSpell(sRadius, sSpeed, wizard);
+		ID spell = ss->launchSpell(sRadius, sSpeed, sElevation, wizard);
 		lua_pushinteger(s, spell);
 		return 1;
 	};
@@ -759,7 +760,7 @@ void SpellSystem::deinit()
 	lua_close(_luaState);
 }
 
-ID SpellSystem::launchSpell(float radius, float speed, ID wizard)
+ID SpellSystem::launchSpell(float radius, float speed, float elevation, ID wizard)
 {
 	auto e = _world.getEntity(wizard);
 	if(!e)
@@ -769,16 +770,11 @@ ID SpellSystem::launchSpell(float radius, float speed, ID wizard)
 		return NULLID; //TODO fail in a better way
 
 	Entity& spellE = _world.createAndGetEntity();
-	vec3f dir{1,0,0};
 	vec3f rot;
 	wBody->getRotation().toEuler(rot);
-	rot *= 180/PI;
-	dir.rotateYZBy(-rot.X);
-	dir.rotateXZBy(-rot.Y);
-	dir.rotateXYBy(-rot.Z);
-	dir.normalize();
-	vec3f pos = wBody->getPosition() + vec3f(0,1,0) + dir*(radius + 1);
-	std::cout << "spell vel: " << dir*speed << endl;
+	vec3f dir = ((rot/PI*180)+vec3f(-elevation,0,0)).rotationToDirection().normalize();
+	dir.rotateXZBy(-90);
+	vec3f pos = wBody->getPosition() + vec3f(0,1,0) + dir*(radius + 0.5);
 	spellE.addComponent<BodyComponent>(pos, quaternion(), dir*speed);
 	spellE.addComponent<CollisionComponent>(radius, 0, vec3f(0), true);
 	spellE.addComponent<SphereGraphicsComponent>(radius);

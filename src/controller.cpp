@@ -59,13 +59,13 @@ bool Controller::OnEvent(const SEvent& event)
 					spell_c = "spell_body_create 1";
 					break;
 				case KEY_F2:
-					spell_c = "spell_body_create_now 0.5 die{player,terrain}";
+					spell_c = "spell_body_create_now 0.9 die{player}";
 					break;
 				case KEY_F3:
-					spell_c = "spell_launch hello";
+					spell_c = "spell_launch_direct_now $LOOK_ELEVATION";
 					break;
 				case KEY_F4:
-					spell_c = "spell_launch_now hello";
+					spell_c = "spell_launch_direct_now 100";
 					break;
 				case KEY_F5:
 					spell_c = "spell_effect_create fire";

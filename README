@@ -268,8 +268,8 @@ Spell commands
 -----------------
 * spell_body_create(body params)
 	* if holding a body, the new body will be appended
-* spell_launch - launches the spell 
-* spell_launch_now - resets casting and launches the spell
+x spell_launch - launches the spell 
+* spell_launch_direct_now - resets casting and launches the spell in look direction
 * spell_abort_now - aborts casting and empties the entire queue
 * spell_cancel_now - cancels the currently held spell and resets casting (so that check for appending effect on no body can be done at dequeue) (or only when its an effect?)
 * spell_effect_create(effect params)
