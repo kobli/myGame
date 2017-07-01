@@ -1,4 +1,4 @@
-#include <main.hpp>
+#include "main.hpp"
 
 ostream& operator<<(ostream& os, i8 i)
 {
@@ -45,4 +45,30 @@ quaternion btQ2Q(btQuaternion q)
 btQuaternion Q2btQ(quaternion q)
 {
 	return btQuaternion(q.X, q.Y, q.Z, q.W);
+}
+
+std::string lua_valueAsStr(lua_State* L, int index)
+{
+	if(lua_isinteger(L, index))
+		return std::to_string(lua_tointeger(L, index));
+	else if(lua_isnumber(L, index))
+		return std::to_string(lua_tonumber(L, index));
+	else if(lua_isstring(L, index))
+		return lua_tostring(L, index);
+	else
+		return "";
+}
+
+Table lua_loadTable(lua_State* l)
+{
+	Table t;
+	lua_pushnil(l);
+	while(lua_next(l, -2) != 0)
+	{
+		std::string key = lua_valueAsStr(l, -2),
+			value = lua_valueAsStr(l, -1);
+		t.push_back(std::make_pair(key, value));
+		lua_pop(l, 1);
+	}
+	return t;
 }

@@ -1,35 +1,6 @@
 #include <memory>
 #include "controller.hpp"
 
-std::string lua_valueAsStr(lua_State* L, int index)
-{
-	if(lua_isinteger(L, index))
-		return std::to_string(lua_tointeger(L, index));
-	else if(lua_isnumber(L, index))
-		return std::to_string(lua_tonumber(L, index));
-	else if(lua_isstring(L, index))
-		return lua_tostring(L, index);
-	else
-		return "";
-}
-
-std::vector<std::pair<std::string,std::string>> lua_loadTable(lua_State* L)
-{
-	std::vector<std::pair<std::string,std::string>> r;
-	lua_pushnil(L);
-	while(lua_next(L, -2) != 0)
-	{
-		std::string key = lua_valueAsStr(L, -2),
-			value = lua_valueAsStr(L, -1);
-		r.push_back(std::make_pair(key, value));
-		lua_pop(L, 1);
-	}
-	return r;
-}
-
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-
 Command::Command(Type type): _type{type}
 {}
 
@@ -55,7 +26,7 @@ void Controller::loadSpellBook(std::string fileName) {
 	while(lua_next(L, -2) != 0)
 	{
 		std::string spell = lua_valueAsStr(L, -2);
-		auto t = lua_loadTable(L);
+		Table t = lua_loadTable(L);
 		std::vector<std::string> steps;
 		for(auto& s: t)
 			steps.push_back(s.second);

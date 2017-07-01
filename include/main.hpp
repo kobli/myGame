@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <iostream>
 #include <lua5.3/lua.hpp>
+#include <vector>
 
 #ifndef MAIN_HPP_16_11_18_13_20_24
 #define MAIN_HPP_16_11_18_13_20_24 
@@ -45,5 +46,10 @@ vec3f btV3f2V3f(btVector3 v);
 btVector3 V3f2btV3f(vec3f v);
 quaternion btQ2Q(btQuaternion q);
 btQuaternion Q2btQ(quaternion q);
+
+typedef std::vector<std::pair<std::string,std::string>> Table;
+
+std::string lua_valueAsStr(lua_State* L, int index);
+Table lua_loadTable(lua_State* l);
 
 #endif /* MAIN_HPP_16_11_18_13_20_24 */
