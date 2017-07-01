@@ -6,9 +6,10 @@ Command::Command(Type type): _type{type}
 
 ////////////////////////////////////////////////////////////
 
-Controller::Controller(): _commandHandler{[](Command&){}}, _lastMovD{0,0}
+Controller::Controller(): _commandHandler{[](Command&){}}, _lastSentMovD{0,0}
 {
 	loadSpellBook("spellBook.lua");
+	loadControls("controls.lua");
 	for(u32 i=0; i<KEY_KEY_CODES_COUNT; ++i)
 		_keyPressed[i] = false;
 	_LMBdown = false;
@@ -35,25 +36,110 @@ void Controller::loadSpellBook(std::string fileName) {
 	}
 }
 
+void Controller::loadControls(std::string fileName) {
+	std::cout << "loading controls from " << fileName << " ...\n";
+	std::unique_ptr<lua_State,std::function<void(lua_State*)>> l(luaL_newstate(), [](lua_State* L) { lua_close(L); });
+	lua_State* L = l.get();
+	luaL_openlibs(L);
+	if(luaL_loadfile(L, fileName.c_str()) || lua_pcall(L, 0, 0, 0))
+		std::cerr << "cannot run " << fileName << " configuration file: " << lua_tostring(L, -1);
+
+	lua_getglobal(L, "controls");
+	Table t = lua_loadTable(L);
+	for(auto& r: t) {
+		size_t end;
+		try {
+			unsigned long keyCode = std::stoul(r.first, &end);
+			_keyMap[static_cast<irr::EKEY_CODE>(keyCode)] = r.second;
+		}
+		catch(invalid_argument&) {
+			std::cerr << "error in control settings: \"" << r.first << " = " << r.second << "\"\n";
+		}
+	}
+}
+
 bool Controller::OnEvent(const SEvent& event)
 {
-	if(event.EventType == irr::EET_KEY_INPUT_EVENT)
-		_keyPressed[event.KeyInput.Key] = event.KeyInput.PressedDown;
+	std::string c;
+
+	irr::EKEY_CODE key = irr::EKEY_CODE::KEY_KEY_CODES_COUNT;
+	bool pressedDown = false;
+
+	if(event.EventType == irr::EET_MOUSE_INPUT_EVENT) {
+		if(event.MouseInput.Event == EMIE_LMOUSE_PRESSED_DOWN) {
+			key = irr::EKEY_CODE::KEY_LBUTTON;
+			pressedDown = true;
+		}
+		else if(event.MouseInput.Event == EMIE_LMOUSE_LEFT_UP) {
+			key = irr::EKEY_CODE::KEY_LBUTTON;
+			pressedDown = false;
+		}
+		else if(event.MouseInput.Event == EMIE_RMOUSE_PRESSED_DOWN) {
+			key = irr::EKEY_CODE::KEY_RBUTTON; 
+			pressedDown = true;
+		}
+		else if(event.MouseInput.Event == EMIE_RMOUSE_LEFT_UP) {
+			key = irr::EKEY_CODE::KEY_RBUTTON; 
+			pressedDown = false;
+		}
+	}
+	else if(event.EventType == irr::EET_KEY_INPUT_EVENT) {
+		pressedDown = event.KeyInput.PressedDown;
+		key = event.KeyInput.Key;
+	}
+	
+	if(key != irr::EKEY_CODE::KEY_KEY_CODES_COUNT) {
+		if(_keyPressed[key] != pressedDown)
+			if(_keyMap.count(key)) {
+				c = _keyMap[key];
+				if(pressedDown)
+					_activeActions.insert(c);
+				else
+					_activeActions.erase(c);
+			}
+		_keyPressed[key] = pressedDown;
+	}
+
+	if(c == "FORWARD" || c == "BACKWARD" || c == "LEFT" || c == "RIGHT") {
+		vec2f movD;
+		if(_activeActions.count("FORWARD"))
+			movD.X += 1;
+		if(_activeActions.count("BACKWARD"))
+			movD.X -= 1;
+		if(_activeActions.count("LEFT"))
+			movD.Y += 1;
+		if(_activeActions.count("RIGHT"))
+			movD.Y -= 1;
+
+		if(movD != _lastSentMovD)
+		{
+			Command command(Command::Type::STRAFE_DIR_SET);
+			command._vec2f = movD;
+			_lastSentMovD = movD;
+			_commandHandler(command);
+		}
+	}
+	else if(c == "LAUNCH_SPELL_DIRECT" && pressedDown) {
+		Command command(Command::Type::STR);
+		command._str = "spell_launch_direct_now $LOOK_ELEVATION";
+		_commandHandler(command);
+	}
+	else if(c.find("CAST ") == 0 && pressedDown) {
+		Command command(Command::Type::STR);
+		std::string spellName = c.substr(5);
+		auto spell = _spellBook.end();
+		if((spell = _spellBook.find(spellName)) != _spellBook.end()) {
+			for(auto& step : spell->second) {
+				command._str = step;
+				_commandHandler(command);
+			}
+		}
+	}
+
 	if (event.EventType == irr::EET_MOUSE_INPUT_EVENT)
 	{
 		switch(event.MouseInput.Event)
 		{
-			case EMIE_LMOUSE_PRESSED_DOWN:
-				{
-					Command c(Command::Type::STR);
-					c._str = "spell_body_create 1 2 3 hello";
-					//_commandHandler(c);
-					_LMBdown = true;
-					break;
-				}
-			case EMIE_LMOUSE_LEFT_UP:
-				_LMBdown = false;
-				break;
 			case EMIE_MOUSE_MOVED:
 				{
 					vec2i screenCenter = _getScreenSize()/2;
@@ -72,85 +158,7 @@ bool Controller::OnEvent(const SEvent& event)
 				break;
 		}
 	}
-	if(event.EventType == irr::EET_KEY_INPUT_EVENT)
-	{
-		std::string spell_c = "";
-		if(event.KeyInput.PressedDown)
-			switch (event.KeyInput.Key)
-			{
-				case KEY_F1:
-					spell_c = "spell_body_create 1";
-					break;
-				case KEY_F2:
-					spell_c = "spell_body_create_now 0.9 die{player}";
-					break;
-				case KEY_F3:
-					spell_c = "spell_launch_direct_now $LOOK_ELEVATION";
-					break;
-				case KEY_F4:
-					spell_c = "spell_launch_direct_now 100";
-					break;
-				case KEY_F5:
-					spell_c = "spell_effect_create fire";
-					break;
-				default:
-					break;
-			}
-		switch (event.KeyInput.Key)
-		{
-			case KEY_KEY_W: 
-			case KEY_KEY_S: 
-			case KEY_KEY_A: 
-			case KEY_KEY_D: 
-				{
-					Command c(Command::Type::STRAFE_DIR_SET);
-					vec2f& movD = c._vec2f = vec2f{0,0};
-
-					if(_keyPressed[KEY_KEY_W])
-						movD.X = 1;
-					if(_keyPressed[KEY_KEY_S])
-						movD.X = -1;
-					if(_keyPressed[KEY_KEY_A])
-						movD.Y = 1;
-					if(_keyPressed[KEY_KEY_D])
-						movD.Y = -1;
-					if(movD != _lastMovD)
-					{
-						_lastMovD = movD;
-						_commandHandler(c);
-					}
-					return true;
-				}
-			case KEY_KEY_Q: 
-			case KEY_KEY_E: 
-				{
-					Command c(Command::Type::ROT_DIR_SET);
-					i32& rotD = c._i32= 0;
-
-					if(_keyPressed[KEY_KEY_Q])
-						rotD = -1;
-					if(_keyPressed[KEY_KEY_E])
-						rotD = 1;
-					_commandHandler(c);
-					return true;
-				}
-				/*
-					 case irr::KEY_KEY_X: // toggle debug information
-					 showDebug=!showDebug;
-					 Terrain->setDebugDataVisible(showDebug?scene::EDS_BBOX_ALL:scene::EDS_OFF);
-					 return true;
-					 */
-			default:
-				break;
-		}
-		if(spell_c != "")
-		{
-			Command c(Command::Type::STR);
-			c._str = spell_c;
-			_commandHandler(c);
-		}
-	}
-	return false;
+	return true;
 }
 
 void Controller::setCommandHandler(std::function<void(Command& c)> commandHandler)

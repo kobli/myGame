@@ -3,6 +3,7 @@
 #include <functional>
 #include <vector>
 #include <map>
+#include <set>
 #include "main.hpp"
 
 class Command
@@ -42,14 +43,18 @@ class Controller: public IEventReceiver
 		void setCommandHandler(std::function<void(Command& c)> commandHandler);
 		void setScreenSizeGetter(GetScreenSize screenSizeGetter);
 		void loadSpellBook(std::string fileName);
+		void loadControls(std::string fileName);
 
 	private:
 		typedef std::map<std::string, std::vector<std::string>> SpellBook;
+		typedef std::map<irr::EKEY_CODE, std::string> KeyMap;
 		bool _keyPressed[KEY_KEY_CODES_COUNT];
 		bool _LMBdown;
 		std::function<void(Command& c)> _commandHandler;
-		vec2f _lastMovD;
+		std::set<std::string> _activeActions;
+		vec2f _lastSentMovD;
 		GetScreenSize _getScreenSize;
 		SpellBook _spellBook;
+		KeyMap _keyMap;
 };
 #endif /* CONTROLLER_HPP_16_11_18_13_06_55 */
