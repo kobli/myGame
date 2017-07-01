@@ -1,4 +1,34 @@
-#include <controller.hpp>
+#include <memory>
+#include "controller.hpp"
+
+std::string lua_valueAsStr(lua_State* L, int index)
+{
+	if(lua_isinteger(L, index))
+		return std::to_string(lua_tointeger(L, index));
+	else if(lua_isnumber(L, index))
+		return std::to_string(lua_tonumber(L, index));
+	else if(lua_isstring(L, index))
+		return lua_tostring(L, index);
+	else
+		return "";
+}
+
+std::vector<std::pair<std::string,std::string>> lua_loadTable(lua_State* L)
+{
+	std::vector<std::pair<std::string,std::string>> r;
+	lua_pushnil(L);
+	while(lua_next(L, -2) != 0)
+	{
+		std::string key = lua_valueAsStr(L, -2),
+			value = lua_valueAsStr(L, -1);
+		r.push_back(std::make_pair(key, value));
+		lua_pop(L, 1);
+	}
+	return r;
+}
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
 
 Command::Command(Type type): _type{type}
 {}
@@ -7,9 +37,31 @@ Command::Command(Type type): _type{type}
 
 Controller::Controller(): _commandHandler{[](Command&){}}, _lastMovD{0,0}
 {
+	loadSpellBook("spellBook.lua");
 	for(u32 i=0; i<KEY_KEY_CODES_COUNT; ++i)
 		_keyPressed[i] = false;
 	_LMBdown = false;
+}
+
+void Controller::loadSpellBook(std::string fileName) {
+	std::cout << "loading spellBook from " << fileName << " ...\n";
+	std::unique_ptr<lua_State,std::function<void(lua_State*)>> l(luaL_newstate(), [](lua_State* L) { lua_close(L); });
+	lua_State* L = l.get();
+	if(luaL_loadfile(L, fileName.c_str()) || lua_pcall(L, 0, 0, 0))
+		std::cerr << "cannot run " << fileName << " configuration file: " << lua_tostring(L, -1);
+
+	lua_getglobal(L, "spellBook");
+	lua_pushnil(L);
+	while(lua_next(L, -2) != 0)
+	{
+		std::string spell = lua_valueAsStr(L, -2);
+		auto t = lua_loadTable(L);
+		std::vector<std::string> steps;
+		for(auto& s: t)
+			steps.push_back(s.second);
+		_spellBook[spell] = steps;
+		lua_pop(L, 1);
+	}
 }
 
 bool Controller::OnEvent(const SEvent& event)

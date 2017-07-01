@@ -1,8 +1,9 @@
-#include <main.hpp>
-#include <functional>
-
 #ifndef CONTROLLER_HPP_16_11_18_13_06_55
 #define CONTROLLER_HPP_16_11_18_13_06_55 
+#include <functional>
+#include <vector>
+#include <map>
+#include "main.hpp"
 
 class Command
 {
@@ -40,12 +41,15 @@ class Controller: public IEventReceiver
 		virtual bool OnEvent(const SEvent& event);
 		void setCommandHandler(std::function<void(Command& c)> commandHandler);
 		void setScreenSizeGetter(GetScreenSize screenSizeGetter);
+		void loadSpellBook(std::string fileName);
 
 	private:
+		typedef std::map<std::string, std::vector<std::string>> SpellBook;
 		bool _keyPressed[KEY_KEY_CODES_COUNT];
 		bool _LMBdown;
 		std::function<void(Command& c)> _commandHandler;
 		vec2f _lastMovD;
 		GetScreenSize _getScreenSize;
+		SpellBook _spellBook;
 };
 #endif /* CONTROLLER_HPP_16_11_18_13_06_55 */
