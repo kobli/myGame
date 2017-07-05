@@ -604,16 +604,11 @@ SpellSystem::~SpellSystem()
 
 void SpellSystem::update(float timeDelta)
 {
-	if(_luaState != nullptr)
-	{
-		lua_getglobal(_luaState, "update");
-		lua_pushnumber(_luaState, timeDelta);
-		if(lua_pcall(_luaState, 1, 0, 0) != 0)
-		{
-			cerr << "something went wrong with spell update: " << lua_tostring(_luaState, -1) << endl;
-			lua_pop(_luaState, 1);
-		}
-	}
+	lUpdate(timeDelta);
+	for(auto& e : _world.getEntities())
+		if(e.hasComponent<WizardComponent>())
+			if(e.hasComponent<BodyComponent>() && e.getComponent<BodyComponent>()->getStrafeDir() != vec2f(0,0))
+				lReportWalkingWizard(e.getID());
 }
 
 void SpellSystem::onMsg(const EntityEvent& m)
@@ -686,6 +681,34 @@ void SpellSystem::collisionCallback(ID objID, ID otherObjID)
 	{
 		cerr << "something went wrong with handleCollision: " << lua_tostring(_luaState, -1) << endl;
 		lua_pop(_luaState, 1);
+	}
+}
+
+void SpellSystem::lUpdate(float timeDelta)
+{
+	if(_luaState != nullptr)
+	{
+		lua_getglobal(_luaState, "update");
+		lua_pushnumber(_luaState, timeDelta);
+		if(lua_pcall(_luaState, 1, 0, 0) != 0)
+		{
+			cerr << "something went wrong with spell update: " << lua_tostring(_luaState, -1) << endl;
+			lua_pop(_luaState, 1);
+		}
+	}
+}
+
+void SpellSystem::lReportWalkingWizard(ID wizID)
+{
+	if(_luaState != nullptr)
+	{
+		lua_getglobal(_luaState, "wizardWalking");
+		lua_pushinteger(_luaState, wizID);
+		if(lua_pcall(_luaState, 1, 0, 0) != 0)
+		{
+			cerr << "something went wrong with wizardWalking: " << lua_tostring(_luaState, -1) << endl;
+			lua_pop(_luaState, 1);
+		}
 	}
 }
 

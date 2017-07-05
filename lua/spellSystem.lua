@@ -44,8 +44,8 @@ Config.Spell.maxSpeed = 60			-- maximum traveling speed of the spell[?]
 Config.Spell.maxRadius = 20			-- maximum radius of the spell body sphere [?]
 
 Config.Effects = {}
-Config.Effects["fire"] = EffectData:new(0.2, "health", AttributeAffectorModifierType.ADD, -30, true, 0)
-Config.Effects["heal"] = EffectData:new(0.1, "health", AttributeAffectorModifierType.ADD, 20, true, 0)
+Config.Effects["fire"] = EffectData:new(2, "health", AttributeAffectorModifierType.ADD, -30, true, 0)
+Config.Effects["heal"] = EffectData:new(1, "health", AttributeAffectorModifierType.ADD, 20, true, 0)
 
 Config.Wizard.maxBodiesAlive = 5
 
@@ -398,6 +398,12 @@ end
 function handleCollision(obj1ID, obj2ID)
 	if SPELLS[obj1ID] ~= nil then
 		SPELLS[obj1ID]:handleCollision(obj2ID)
+	end
+end
+
+function wizardWalking(wizID)
+	if WIZARDS[wizID] ~= nil then
+		WIZARDS[wizID]:resetInvocation()
 	end
 end
 
