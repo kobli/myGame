@@ -10,4 +10,9 @@ controls = {
 
 	[LBUTTON] = "LAUNCH_SPELL_DIRECT",
 	[KEY_F] = "CAST Big fireball",
+	[KEY_G] = "CAST Fast fireball",
+	[KEY_H] = "CAST Static fireball",
+	[KEY_B] = "CAST Static body",
+	[KEY_V] = "CAST Fastest body",
+	[KEY_Q] = "CAST Heal",
 }

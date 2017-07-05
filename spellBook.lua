@@ -1,9 +1,10 @@
 -- this is a comment - it is ignored
 -- here you can create variables, which you can use later to define spells
 
-staticBody = "spell_body_create 1"
-bigMovingBody = "spell_body_create 0.9 die{player}"
-fastMovingBody = "spell_body_create 0.4 die{player}"
+staticBody = "spell_body_create 1 1 0 die{player}"
+bigMovingBody = "spell_body_create 2 3 1 die{player}"
+fastMovingBody = "spell_body_create 1 1 3 die{terrain,player}"
+fastestBodyNoPower = "spell_body_create 0 1 9 die{terrain,player}"
 fireEffect = "spell_effect_create fire"
 
 
@@ -12,4 +13,8 @@ fireEffect = "spell_effect_create fire"
 spellBook = {
 	["Big fireball"] = {bigMovingBody, fireEffect},
 	["Fast fireball"] = {fastMovingBody, fireEffect},
+	["Static fireball"] = {staticBody, fireEffect},
+	["Static body"] = {staticBody},
+	["Fastest body"] = {fastestBodyNoPower},
+	["Heal"] = {staticBody, "spell_effect_create heal"},
 }

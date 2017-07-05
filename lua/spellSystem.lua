@@ -10,18 +10,44 @@ AttributeAffectorModifierType = {}
 AttributeAffectorModifierType.ADD = 0
 AttributeAffectorModifierType.MUL = 1
 
+-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+
+EffectData = {}
+
+function EffectData:new(castingTime, modifiedAttribute, affectorModifierType, modifierValue, permanent, period)
+	local meta = {__index = EffectData}
+	local value = {
+		castingTime          = castingTime,
+		modifiedAttribute    = modifiedAttribute,
+		affectorModifierType = affectorModifierType,
+		modifierValue        = modifierValue,
+		permanent            = permanent,
+		period               = period,
+	}
+	return setmetatable(value, meta)
+end
+
 -------------------- config --------------------
 
 Config = {}
 Config.Body = {}
+Config.Spell = {}
 Config.Effect = {}
+Config.Wizard = {}
 
-Config.Body.invocT = 2		-- invocation time [seconds]
-Config.Body.maxC = 50			-- maximum # of bodies 
-Config.Body.maxSpeed = 50			-- maximum traveling speed of the body [?]
-Config.Body.maxRadius = 2			-- maximum radius of the body sphere [?]
+Config.Body.invocT = 2					-- invocation time [seconds]
+Config.Body.minRadiusCoef = 0.1 -- minimum radius coefficient of the spell body sphere [?]
+Config.Body.baseSpeed = 20			-- base traveling speed of the body [?]
+Config.Body.baseRadius = 2			-- base radius of the body sphere [?]
 
-Config.Effect.InvocT = {fire=2,}
+Config.Spell.maxSpeed = 60			-- maximum traveling speed of the spell[?]
+Config.Spell.maxRadius = 20			-- maximum radius of the spell body sphere [?]
+
+Config.Effects = {}
+Config.Effects["fire"] = EffectData:new(0.2, "health", AttributeAffectorModifierType.ADD, -30, true, 0)
+Config.Effects["heal"] = EffectData:new(0.1, "health", AttributeAffectorModifierType.ADD, 20, true, 0)
+
+Config.Wizard.maxBodiesAlive = 5
 
 
 -------------------- globals --------------------
@@ -49,9 +75,9 @@ end
 
 function Wizard:returnBody()
 	if self.bodiesInUse == 0 then
-		dout("return of a not-missing body")
+		dout("return of a non-missing body")
 	else
-		self.bodiesInUse = self.bodiesInUse + 1
+		self.bodiesInUse = self.bodiesInUse - 1
 	end
 end
 
@@ -133,12 +159,14 @@ end
 
 Body = {}
 
-function Body:new(author, radSpeedRatio, dieOn)
+function Body:new(author, powerCoef, radiusCoef, speedCoef, dieOn)
 	dout("body created")
 	local meta = {__index = Body}
 	local value = {
 		author = author,
-		radSpeedRatio = radSpeedRatio,
+		powerCoef = powerCoef,
+		radiusCoef = radiusCoef,
+		speedCoef = speedCoef,
 		dieOn = dieOn,
 	}
 	return setmetatable(value, meta)
@@ -150,12 +178,16 @@ function Body:destroy()
 	dout("body destroyed")
 end
 
+function Body:getPower()
+	return self.powerCoef
+end
+
 function Body:getRadius()
-	return self.radSpeedRatio*Config.Body.maxRadius
+	return self.radiusCoef*Config.Body.baseRadius
 end
 
 function Body:getSpeed()
-	return (1-self.radSpeedRatio)*Config.Body.maxSpeed
+	return self.speedCoef*Config.Body.baseSpeed
 end
 
 function Body:dieOnCollisionWith(str)
@@ -174,8 +206,6 @@ function Effect:new(name)
 	}
 	return setmetatable(value, meta)
 end
-
--- TODO func apply 
 
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
@@ -211,6 +241,15 @@ function Spell:appendEffect(effect)
 	dout("spell now contains "..#self.effects.." effects")
 end
 
+function Spell:hasEffect(effectName)
+		for k,v in pairs(self.effects) do
+			if v.name == effectName then
+				return true
+			end
+		end
+		return false
+end
+
 function Spell:appendBody(body)
 	table.insert(self.bodies, body)
 	dout("spell now contains "..#self.bodies.." bodies")
@@ -244,10 +283,39 @@ function Spell:shouldDieOnCollisionWith(entID)
 	return self.baseBody:dieOnCollisionWith(what)
 end
 
+function Spell:getPower()
+	local s = 0
+	for k,v in pairs(self.bodies) do
+		s = s + v:getPower()
+	end
+	return s
+end
+
+function Spell:getRadius()
+	local s = 0
+	for k,v in pairs(self.bodies) do
+		s = s + v:getRadius()
+	end
+	return math.min(s, Config.Spell.maxRadius)
+end
+
+function Spell:getSpeed()
+	local s = 0
+	for k,v in pairs(self.bodies) do
+		s = s + v:getSpeed()
+	end
+	return math.min(s, Config.Spell.maxSpeed)
+end
+
 function Spell:die()
+	-- on each colliding character
 	for i=self.collisionsInLastTick.first, self.collisionsInLastTick.last, 1 do
 		dout("col with on death: ",self.collisionsInLastTick[i])
-		addAttributeAffector(self.collisionsInLastTick[i], "health", AttributeAffectorModifierType.ADD, -30, true);
+		-- apply all effects
+		for k,v in pairs(self.effects) do
+			local ed = Config.Effects[v.name]
+			addAttributeAffector(self.collisionsInLastTick[i], ed.modifiedAttribute, ed.affectorModifierType, ed.modifierValue*self:getPower(), ed.permanent, ed.period);
+		end
 	end
 	removeSpell(self.ID)
 	SPELLS[self.ID] = nil
@@ -335,31 +403,36 @@ end
 
 -------------------- commands --------------------
 
--- TODO argStr: <radius/speed ratio [0.-1.]> <die [<player> <terrain>]>
+-- argStr: <power radius speed [ratio]> <die [<player> <terrain>]>
 function Wizard.Command:spell_body_create(argStr)
 	dout("create body: "..argStr)
 	-- validate and parse arg str
 	local args = parseBodyArgStr(argStr)
-	local radSpeedRatio = tonumber(args[1])
-	dout(radSpeedRatio)
-	if radSpeedRatio ~= nil then
-		if radSpeedRatio >= 0.1 and radSpeedRatio <= 1 then 
-			dout("OK")
-		else
-			dout("wrong radSpeedRatio")
+	local powerCoef = math.abs(tonumber(args[1]))
+	local radiusCoef = math.abs(tonumber(args[2]))
+	local speedCoef = math.abs(tonumber(args[3]))
+	dout(powerCoef, radiusCoef, speedCoef)
+	if powerCoef ~= nil and radiusCoef ~= nil and speedCoef ~= nil then
+		local denom = powerCoef + radiusCoef + speedCoef
+		powerCoef = powerCoef/denom
+		radiusCoef = radiusCoef/denom
+		speedCoef = speedCoef/denom	
+		if radiusCoef < Config.Body.minRadiusCoef then 
+			dout("spell body radiusCoef is too small")
+			return
 		end
 	else
 		dout("invalid argument string")
 		return
 	end
 	-- check body limit
-	if self.bodiesInUse >= Config.Body.maxC then 
+	if self.bodiesInUse >= Config.Wizard.maxBodiesAlive then 
 		dout("not enough free bodies")
 		return
 	end
 	-- invocation delay
 	self:doInvocation(Config.Body.invocT)
-	local body = Body:new(self, radSpeedRatio, args["die"])
+	local body = Body:new(self, powerCoef, radiusCoef, speedCoef, args["die"])
 	if body == nil then
 		return
 	end
@@ -391,8 +464,8 @@ function Wizard.Command:spell_launch_direct_now(argStr)
 		return
 	end
 	dout("launching the spell")
-	local sRadius = self.spellInHands.baseBody:getRadius()
-	local sSpeed = self.spellInHands.baseBody:getSpeed()
+	local sRadius = self.spellInHands:getRadius()
+	local sSpeed = self.spellInHands:getSpeed()
 	local sElevation = tonumber(argStr)
 	if sElevation == nil or sElevation > 90 or sElevation < -90 then
 		sElevation = 0
@@ -414,7 +487,7 @@ function Wizard.Command:spell_effect_create(argStr)
 	dout("create effect: "..argStr)
 	-- validate and parse arg str
 	local effectName = argStr
-	if Config.Effect.InvocT[effectName] == nil then
+	if Config.Effects[effectName] == nil then
 		dout("such effect does not exist")
 		return
 	end
@@ -423,9 +496,14 @@ function Wizard.Command:spell_effect_create(argStr)
 		dout("No spell to append the effect to.")
 		return
 	end
+	--
+	if self.spellInHands:hasEffect(effectName) then
+		dout("The currenly held spell already contains this effect.")
+		return
+	end
 	dout("starting effect invocation...")
 	-- invocation delay
-	self:doInvocation(Config.Effect.InvocT[effectName])
+	self:doInvocation(Config.Effects[effectName].castingTime)
 	-- create and append the effect
 	local effect = Effect:new(effectName)
 	self.spellInHands:appendEffect(effect)
