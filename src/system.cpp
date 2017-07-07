@@ -493,7 +493,7 @@ void ViewSystem::onMsg(const EntityEvent& m)
 				auto bsn = _smgr->getSceneNodeFromId(m.entityID);
 				if(!bsn)
 					return;
-				auto sn = _smgr->getSceneNodeFromName("graphics", bsn);
+				auto sn = _smgr->getSceneNodeFromName("graphicsSphere", bsn);
 				if(sn)
 					sn->remove();
 				if(m.destroyed)
@@ -501,8 +501,30 @@ void ViewSystem::onMsg(const EntityEvent& m)
 				if(auto sgc = e->getComponent<SphereGraphicsComponent>()) {
 					sn = _smgr->addSphereSceneNode(sgc->getRadius(), 64, bsn, -1, sgc->getPosOffset());
 					sn->setMaterialFlag(video::EMF_LIGHTING, false);
-					sn->setName("graphics");
-					//sn->setDebugDataVisible(scene::EDS_FULL);
+					sn->setMaterialFlag(video::EMF_WIREFRAME, true);
+					sn->setName("graphicsSphere");
+				}
+				break;
+			}
+		case ComponentType::GraphicsParticleSystem:
+			{
+				auto e = _world.getEntity(m.entityID);
+				if(!e)
+					return;
+				if(!e->hasComponent(ComponentType::Body))
+					return;
+				auto bsn = _smgr->getSceneNodeFromId(m.entityID);
+				if(!bsn)
+					return;
+				auto sn = static_cast<scene::IParticleSystemSceneNode*>(_smgr->getSceneNodeFromName("graphicsParticleSystem", bsn));
+				if(sn)
+					sn->remove();
+				if(m.destroyed)
+					return;
+				if(auto psgc = e->getComponent<ParticleSystemGraphicsComponent>()) {
+					sn = _smgr->addParticleSystemSceneNode(true, bsn, -1, psgc->getPosOffset(), psgc->getRotOffset(), psgc->getScale());
+					addParticleEffect(psgc->getEffectID(), sn);
+					sn->setName("graphicsParticleSystem");
 				}
 				break;
 			}
@@ -516,7 +538,7 @@ void ViewSystem::onMsg(const EntityEvent& m)
 				auto bsn = _smgr->getSceneNodeFromId(m.entityID);
 				if(!bsn)
 					return;
-				auto sn = _smgr->getSceneNodeFromName("graphics", bsn);
+				auto sn = _smgr->getSceneNodeFromName("graphicsMesh", bsn);
 				if(sn)
 					sn->remove();
 				if(m.destroyed)
@@ -530,7 +552,7 @@ void ViewSystem::onMsg(const EntityEvent& m)
 					else
 						sn = _smgr->addMeshSceneNode(_smgr->getMesh(("./media/" + mgc->getFileName()).c_str()), bsn, -1, mgc->getPosOffset(), mgc->getRotOffset(), mgc->getScale());
 					sn->setMaterialFlag(video::EMF_LIGHTING, false);
-					sn->setName("graphics");
+					sn->setName("graphicsMesh");
 					//sn->setDebugDataVisible(scene::EDS_FULL);
 				}
 				break;
@@ -587,6 +609,70 @@ void ViewSystem::updateTransforms(float timeDelta)
 			}
 		}
 		_transformedEntities.erase(it++);
+	}
+}
+
+scene::IParticleEmitter* ViewSystem::addParticleEffect(ID effectID, scene::IParticleSystemSceneNode* sn)
+{
+	scene::IParticleEmitter* em = nullptr;
+	scene::IParticleAffector* paff = nullptr;
+	std::string effectTextureName;
+	vec3f particleDir;
+	video::SColor partColorMin = video::SColor(255,0,0,0);
+	video::SColor partColorMax = video::SColor(255,255,255,255);
+	core::dimension2df particleSize(.2,.2);
+	u32 particleC = 700;
+
+
+	switch(effectID) {
+		case 0: // empty body
+			{
+				effectTextureName = "body";
+				break;
+			}
+		case 1: // fire
+			{
+				effectTextureName = "fire";
+				particleDir = vec3f(0,0.001,0);
+				break;
+			}
+		case 2: // water
+			{
+				effectTextureName = "water";
+				break;
+			}
+		case 3: // heal
+			{
+				effectTextureName = "heal";
+				break;
+			}
+		default:
+			return nullptr;
+	}
+	paff = sn->createFadeOutParticleAffector();
+
+	std::string texturePath = "./media/"+effectTextureName+".bmp";
+	em = sn->createSphereEmitter(
+			vec3f(0),
+			0.6,
+			particleDir,
+			particleC,particleC*1.3,
+			partColorMin,
+			partColorMax,
+			800,1000,10,
+			particleSize,
+			particleSize*1.5);
+	if(paff != nullptr) {
+		sn->addAffector(paff);
+		paff->drop();
+	}
+	sn->setMaterialFlag(video::EMF_LIGHTING, false);
+	sn->setMaterialFlag(video::EMF_ZWRITE_ENABLE, false);
+	sn->setMaterialTexture(0, _smgr->getVideoDriver()->getTexture(texturePath.c_str()));
+	sn->setMaterialType(video::EMT_TRANSPARENT_ADD_COLOR);
+	if(em) {
+		sn->setEmitter(em);
+		em->drop();
 	}
 }
 
@@ -720,7 +806,7 @@ void SpellSystem::init()
 
 	auto callLaunchSpell = [](lua_State* s)->int {
 		int argc = lua_gettop(s);
-		if(argc != 4)
+		if(argc != 5)
 		{
 			std::cerr << "callLaunchSpell: wrong number of arguments\n";
 			return 0;		
@@ -729,8 +815,9 @@ void SpellSystem::init()
 		float sRadius = lua_tonumber(s, 2);
 		float sSpeed = lua_tonumber(s, 3);
 		float sElevation = lua_tonumber(s, 4);
+		ID sEffectID = lua_tointeger(s, 5);
 		SpellSystem* ss = (SpellSystem*)lua_touserdata(s, lua_upvalueindex(1));
-		ID spell = ss->launchSpell(sRadius, sSpeed, sElevation, wizard);
+		ID spell = ss->launchSpell(sRadius, sSpeed, sElevation, wizard, sEffectID);
 		lua_pushinteger(s, spell);
 		return 1;
 	};
@@ -783,7 +870,7 @@ void SpellSystem::deinit()
 	lua_close(_luaState);
 }
 
-ID SpellSystem::launchSpell(float radius, float speed, float elevation, ID wizard)
+ID SpellSystem::launchSpell(float radius, float speed, float elevation, ID wizard, ID spellEffectID)
 {
 	auto e = _world.getEntity(wizard);
 	if(!e)
@@ -801,6 +888,7 @@ ID SpellSystem::launchSpell(float radius, float speed, float elevation, ID wizar
 	spellE.addComponent<BodyComponent>(pos, quaternion(), dir*speed);
 	spellE.addComponent<CollisionComponent>(radius, 0, vec3f(0), true);
 	spellE.addComponent<SphereGraphicsComponent>(radius);
+	spellE.addComponent<ParticleSystemGraphicsComponent>(spellEffectID, vec3f(0), vec3f(0), vec3f(radius));
 
 	return spellE.getID();
 }

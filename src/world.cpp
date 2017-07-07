@@ -193,6 +193,23 @@ bool MeshGraphicsComponent::isAnimated()
 	return _animated;
 }
 
+// // // // // // // // // // // // // // // // // // // //
+
+ParticleSystemGraphicsComponent::ParticleSystemGraphicsComponent(ID parentEntID, ID effectID, vec3f posOffset, vec3f rotOffset, vec3f scale)
+	: GraphicsComponent{parentEntID, ComponentType::GraphicsParticleSystem, posOffset, rotOffset, scale}, _effectID{effectID}
+{}
+
+void ParticleSystemGraphicsComponent::serDes(SerDesBase& s)
+{
+	s.serDes(*static_cast<GraphicsComponent*>(this));
+	s.serDes(*this);
+}
+
+ID ParticleSystemGraphicsComponent::getEffectID()
+{
+	return _effectID;
+}
+
 ////////////////////////////////////////////////////////////
 
 CollisionComponent::CollisionComponent(ID parentEntID
@@ -441,6 +458,7 @@ World::World(WorldMap& wm): _map{wm}, _entManager{ObjStaticID::FIRSTFREE}
 	_entManager.registerComponentType<BodyComponent>(ComponentType::Body);
 	_entManager.registerComponentType<SphereGraphicsComponent>(ComponentType::GraphicsSphere);
 	_entManager.registerComponentType<MeshGraphicsComponent>(ComponentType::GraphicsMesh);
+	_entManager.registerComponentType<ParticleSystemGraphicsComponent>(ComponentType::GraphicsParticleSystem);
 	_entManager.registerComponentType<CollisionComponent>(ComponentType::Collision);
 	_entManager.registerComponentType<WizardComponent>(ComponentType::Wizard);
 	_entManager.registerComponentType<AttributeStoreComponent>(ComponentType::AttributeStore);

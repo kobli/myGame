@@ -31,6 +31,9 @@ class Serializer: public SerDesBase
 		virtual void serDes(MeshGraphicsComponent& s) {
 			s.doSerDes(*this);
 		}
+		virtual void serDes(ParticleSystemGraphicsComponent& s) {
+			s.doSerDes(*this);
+		}
 		virtual void serDes(CollisionComponent& s) {
 			s.doSerDes(*this);
 		}
@@ -76,6 +79,9 @@ class Deserializer: public SerDesBase
 			s.doSerDes(*this);
 		}
 		virtual void serDes(MeshGraphicsComponent& s) {
+			s.doSerDes(*this);
+		}
+		virtual void serDes(ParticleSystemGraphicsComponent& s) {
 			s.doSerDes(*this);
 		}
 		virtual void serDes(CollisionComponent& s) {

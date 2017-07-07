@@ -25,6 +25,7 @@ enum ComponentType: u8
 	Body,
 	GraphicsSphere,
 	GraphicsMesh,
+	GraphicsParticleSystem,
 	Collision,
 	Wizard,
 	AttributeStore,
@@ -160,6 +161,22 @@ class MeshGraphicsComponent: public GraphicsComponent
 	private:
 		string _fileName;
 		bool _animated;
+};
+
+class ParticleSystemGraphicsComponent: public GraphicsComponent
+{
+	public:
+		ParticleSystemGraphicsComponent(ID parentEntID, ID effectID = NULLID, vec3f posOffset = vec3f(0), vec3f rotOffset = vec3f(0), vec3f scale = vec3f(1));
+		virtual void serDes(SerDesBase& s);
+		template <typename T>
+			void doSerDes(T& t)
+			{
+				t & _effectID;
+			}
+		ID getEffectID();
+
+	private:
+		ID _effectID;
 };
 
 ////////////////////////////////////////////////////////////

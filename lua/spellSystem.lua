@@ -14,9 +14,10 @@ AttributeAffectorModifierType.MUL = 1
 
 EffectData = {}
 
-function EffectData:new(castingTime, modifiedAttribute, affectorModifierType, modifierValue, permanent, period)
+function EffectData:new(effectID, castingTime, modifiedAttribute, affectorModifierType, modifierValue, permanent, period)
 	local meta = {__index = EffectData}
 	local value = {
+		effectID 						 = effectID,
 		castingTime          = castingTime,
 		modifiedAttribute    = modifiedAttribute,
 		affectorModifierType = affectorModifierType,
@@ -35,7 +36,7 @@ Config.Spell = {}
 Config.Effect = {}
 Config.Wizard = {}
 
-Config.Body.invocT = 2					-- invocation time [seconds]
+Config.Body.invocT = .2					-- invocation time [seconds]
 Config.Body.minRadiusCoef = 0.1 -- minimum radius coefficient of the spell body sphere [?]
 Config.Body.baseSpeed = 20			-- base traveling speed of the body [?]
 Config.Body.baseRadius = 2			-- base radius of the body sphere [?]
@@ -43,11 +44,13 @@ Config.Body.baseRadius = 2			-- base radius of the body sphere [?]
 Config.Spell.maxSpeed = 60			-- maximum traveling speed of the spell[?]
 Config.Spell.maxRadius = 20			-- maximum radius of the spell body sphere [?]
 
+BODYEFFECTID = 0
 Config.Effects = {}
-Config.Effects["fire"] = EffectData:new(2, "health", AttributeAffectorModifierType.ADD, -30, true, 0)
-Config.Effects["heal"] = EffectData:new(1, "health", AttributeAffectorModifierType.ADD, 20, true, 0)
+Config.Effects["fire"] = EffectData:new(1, .2, "health", AttributeAffectorModifierType.ADD, -30, true, 0)
+Config.Effects["water"] = EffectData:new(2, .2, "health", AttributeAffectorModifierType.ADD, -30, true, 0)
+Config.Effects["heal"] = EffectData:new(3, 1, "health", AttributeAffectorModifierType.ADD, 20, true, 0)
 
-Config.Wizard.maxBodiesAlive = 5
+Config.Wizard.maxBodiesAlive = 50
 
 
 -------------------- globals --------------------
@@ -322,6 +325,14 @@ function Spell:die()
 	self:destroy()
 end
 
+function Spell:getEffectID()
+	if self.effects[1] ~= nil then
+		return Config.Effects[self.effects[1].name].effectID
+	else
+		return BODYEFFECTID
+	end
+end
+
 -------------------- helpers --------------------
 
 LF = "\n"
@@ -473,11 +484,12 @@ function Wizard.Command:spell_launch_direct_now(argStr)
 	local sRadius = self.spellInHands:getRadius()
 	local sSpeed = self.spellInHands:getSpeed()
 	local sElevation = tonumber(argStr)
+	local sEffectID = self.spellInHands:getEffectID()
 	if sElevation == nil or sElevation > 90 or sElevation < -90 then
 		sElevation = 0
 		dout("incorrect spellElevation "..argStr.." - defaulting to 0")
 	end
-	local sID = wizardLaunchSpell(self.ID, sRadius, sSpeed, sElevation)
+	local sID = wizardLaunchSpell(self.ID, sRadius, sSpeed, sElevation, sEffectID)
 	if sID ~= 0 then
 		dout("probably launched")
 		self.spellInHands.ID = sID

@@ -5,6 +5,7 @@ class BodyComponent;
 class GraphicsComponent;
 class SphereGraphicsComponent;
 class MeshGraphicsComponent;
+class ParticleSystemGraphicsComponent;
 class CollisionComponent;
 class AttributeStoreComponent;
 
@@ -19,6 +20,7 @@ class SerDesBase
 		virtual void serDes(GraphicsComponent&) = 0;
 		virtual void serDes(SphereGraphicsComponent&) = 0;
 		virtual void serDes(MeshGraphicsComponent&) = 0;
+		virtual void serDes(ParticleSystemGraphicsComponent&) = 0;
 		virtual void serDes(CollisionComponent&) = 0;
 		virtual void serDes(AttributeStoreComponent&) = 0;
 

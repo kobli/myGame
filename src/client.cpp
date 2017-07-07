@@ -59,7 +59,7 @@ void Animator::onMsg(const EntityEvent& m)
 	scene::ISceneNode* bsn = _smgr->getSceneNodeFromId(m.entityID);
 	if(!bsn)
 		return;
-	scene::ISceneNode* sn = _smgr->getSceneNodeFromName("graphics", bsn);
+	scene::ISceneNode* sn = _smgr->getSceneNodeFromName("graphicsMesh", bsn);
 	if(!sn)
 		return;
 	if(sn->getType() != scene::ESCENE_NODE_TYPE::ESNT_ANIMATED_MESH)

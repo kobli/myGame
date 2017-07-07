@@ -55,6 +55,7 @@ class ViewSystem: public System
 		std::set<ID> _transformedEntities;
 		
 		void updateTransforms(float timeDelta);
+		scene::IParticleEmitter* addParticleEffect(ID effectID, scene::IParticleSystemSceneNode* sn);
 };
 
 class SpellSystem: public System
@@ -77,7 +78,7 @@ class SpellSystem: public System
 
 		void init();
 		void deinit();
-		ID launchSpell(float radius, float speed, float elevation, ID wizard);
+		ID launchSpell(float radius, float speed, float elevation, ID wizard, ID spellEffectID);
 		void removeSpell(ID spell);
 		ID addAttributeAffectorTo(ID eID, std::string attributeName
 				, AttributeAffector::ModifierType modifierType
