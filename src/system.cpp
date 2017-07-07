@@ -703,7 +703,10 @@ void SpellSystem::onMsg(const EntityEvent& m)
 	{
 		if(m.created)
 		{
-			reload(); // TODO just for testing - every time a player connects reload 
+
+#ifdef DEBUG_BUILD
+			reload(); // for more comfortable testing - every time a player connects reset and reload the spellsystem
+#endif
 			addWizard(m.entityID);
 		}
 		else if(m.destroyed)
@@ -887,7 +890,9 @@ ID SpellSystem::launchSpell(float radius, float speed, float elevation, ID wizar
 	vec3f pos = wBody->getPosition() + vec3f(0,1,0) + dir*(radius + 0.5);
 	spellE.addComponent<BodyComponent>(pos, quaternion(), dir*speed);
 	spellE.addComponent<CollisionComponent>(radius, 0, vec3f(0), true);
+#ifdef DEBUG_BUILD
 	spellE.addComponent<SphereGraphicsComponent>(radius);
+#endif
 	spellE.addComponent<ParticleSystemGraphicsComponent>(spellEffectID, vec3f(0), vec3f(0), vec3f(radius));
 
 	return spellE.getID();
