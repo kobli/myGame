@@ -166,7 +166,8 @@ ServerApplication::ServerApplication(IrrlichtDevice* irrDev)
 	: _irrDevice{irrDev}, _map{70, irrDev->getSceneManager()->createNewSceneManager()}, _gameWorld{_map}
 	, _physics{_gameWorld}, _spells{_gameWorld}, _input{_gameWorld, _spells},
 	_updater(std::bind(&ServerApplication::send, ref(*this), placeholders::_1, placeholders::_2),
-			std::bind(&World::getEntity, ref(_gameWorld), placeholders::_1)), _LuaStateGameMode{nullptr}
+			std::bind(&World::getEntity, ref(_gameWorld), placeholders::_1)), _LuaStateGameMode{nullptr},
+	_gameModeEntityEventObserver{[this](const EntityEvent& e){ this->gameModeOnEntityEvent(e); }}
 {
 	_listener.setBlocking(false);
 	_gameWorld.addObserver(_updater);
@@ -176,9 +177,10 @@ ServerApplication::ServerApplication(IrrlichtDevice* irrDev)
 
 	_LuaStateGameMode = luaL_newstate();
 	luaL_openlibs(_LuaStateGameMode);
+	gameModeRegisterAPIMethods();
 	if(luaL_dofile(_LuaStateGameMode, "lua/gamemode_dm.lua"))
 		printf("%s\n", lua_tostring(_LuaStateGameMode, -1));
-	gameModeRegisterAPIMethods();
+	_gameWorld.addObserver(_gameModeEntityEventObserver);	
 }
 
 bool ServerApplication::listen(short port)
@@ -261,6 +263,17 @@ void ServerApplication::gameModeRegisterAPIMethods()
 	lua_pushinteger(L, NULLID);
 	lua_setglobal(L, "NULLID");
 
+	lua_newtable(L);
+	lua_pushliteral(L, "NONE"); lua_pushinteger(L, ComponentType::NONE); lua_settable(L, -3);
+	lua_pushliteral(L, "Body"); lua_pushinteger(L, ComponentType::Body); lua_settable(L, -3);
+	lua_pushliteral(L, "GraphicsSphere"); lua_pushinteger(L, ComponentType::GraphicsSphere); lua_settable(L, -3);
+	lua_pushliteral(L, "GraphicsMesh"); lua_pushinteger(L, ComponentType::GraphicsMesh); lua_settable(L, -3);
+	lua_pushliteral(L, "GraphicsParticleSystem"); lua_pushinteger(L, ComponentType::GraphicsParticleSystem); lua_settable(L, -3);
+	lua_pushliteral(L, "Collision"); lua_pushinteger(L, ComponentType::Collision); lua_settable(L, -3);
+	lua_pushliteral(L, "Wizard"); lua_pushinteger(L, ComponentType::Wizard); lua_settable(L, -3);
+	lua_pushliteral(L, "AttributeStore"); lua_pushinteger(L, ComponentType::AttributeStore); lua_settable(L, -3);
+	lua_setglobal(L, "ComponentType");
+
 	auto callCreateCharacter = [](lua_State* s)->int {
 		int argc = lua_gettop(s);
 		if(argc != 3)
@@ -334,6 +347,30 @@ void ServerApplication::gameModeRegisterAPIMethods()
 	lua_pushlightuserdata(L, this);
 	lua_pushcclosure(L, callGetClientControlledObjectID, 1);
 	lua_setglobal(L, "getClientControlledObjectID");
+
+	auto callGetEntityAttributeValue = [](lua_State* s)->int {
+		int argc = lua_gettop(s);
+		if(argc != 2)
+		{
+			std::cerr << "callGetEntityAttributeValue: wrong number of arguments\n";
+			return 0;		
+		}
+		ID entityID = lua_tonumber(s, 1);
+		std::string key = lua_tostring(s, 2);
+		ServerApplication* sApp = (ServerApplication*)lua_touserdata(s, lua_upvalueindex(1));
+		auto e = sApp->_gameWorld.getEntity(entityID);
+		AttributeStoreComponent* as = nullptr;
+		if(e != nullptr && (as = e->getComponent<AttributeStoreComponent>()) != nullptr) {
+			lua_pushnumber(s, as->getAttribute(key));
+			lua_pushnumber(s, as->getAttributeAffected(key));
+			return 2;
+		}
+		else
+			return 0;
+	};
+	lua_pushlightuserdata(L, this);
+	lua_pushcclosure(L, callGetEntityAttributeValue, 1);
+	lua_setglobal(L, "getEntityAttributeValue");
 }
 
 void ServerApplication::gameModeOnClientConnect(ID sessionID)
@@ -357,3 +394,26 @@ void ServerApplication::gameModeOnClientDisconnect(ID sessionID)
 		lua_pop(L, 1);
 	}
 }
+
+void ServerApplication::gameModeOnEntityEvent(const EntityEvent& e)
+{
+	lua_State* L = _LuaStateGameMode;
+	lua_getglobal(L, "onEntityEvent");
+	lua_pushinteger(L, e.entityID);
+	lua_pushinteger(L, e.componentT);
+	lua_pushboolean(L, e.created);
+	lua_pushboolean(L, e.destroyed);
+	if(lua_pcall(L, 4, 0, 0) != 0) {
+		cerr << "something went wrong with onEntityEvent: " << lua_tostring(L, -1) << endl;
+		lua_pop(L, 1);
+	}
+}
+
+void ServerApplication::GameModeEntityEventObserver::onMsg(const EntityEvent& e)
+{
+	_entityEventCallback(e);
+}
+
+ServerApplication::GameModeEntityEventObserver::GameModeEntityEventObserver(EntityEventCallback gameModeEntityEventCallback):
+ 	_entityEventCallback{gameModeEntityEventCallback}
+{}

@@ -4,9 +4,9 @@ ID createCharacter(xPos, yPos, zPos)
 void removeWorldEntity(objectID)
 void setClientControlledObjectID(sessionID, objectID)
 ID getClientControlledObjectID(sessionID)
+float(basic),float(affected) getEntityAttributeValue(objectID, attributeName)
 
 TODO
-attrStore.getAttribute
 map.getSpawnPoints
 --]]
 
@@ -25,5 +25,14 @@ function onClientDisconnect(sessionID)
 end
 
 function onEntityEvent(entityID, componentT, created, destroyed)
-	-- when HP changed, check if character died
+	if componentT == ComponentType["AttributeStore"] and not created and not destroyed then
+		print("HP updated!??!?")
+		local realHP, virtualHP = getEntityAttributeValue(entityID, "health")
+		if realHP == 0 then
+			setClientControlledObjectID(0, NULLID)
+			--removeWorldEntity(entityID)
+			--local charID = createCharacter(0,20,0)
+			--setClientControlledObjectID(0, charID)
+		end
+	end
 end

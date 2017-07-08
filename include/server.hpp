@@ -79,6 +79,7 @@ class ServerApplication
 		void gameModeRegisterAPIMethods();
 		void gameModeOnClientConnect(ID sessionID);
 		void gameModeOnClientDisconnect(ID sessionID);
+		void gameModeOnEntityEvent(const EntityEvent& e);
 
 		sf::TcpListener _listener;
 		SolidVector<Session,ID,NULLID> _sessions;
@@ -90,6 +91,15 @@ class ServerApplication
 		InputSystem _input;
 		Updater _updater;
 		lua_State* _LuaStateGameMode;
+
+		class GameModeEntityEventObserver: public Observer<EntityEvent> {
+			void onMsg(const EntityEvent& e) final;
+			typedef std::function<void(const EntityEvent& e)> EntityEventCallback;
+			EntityEventCallback _entityEventCallback;
+			public:
+				GameModeEntityEventObserver(EntityEventCallback gameModeEntityEventCallback);
+		};
+		GameModeEntityEventObserver _gameModeEntityEventObserver;
 };
 
 #endif /* SERVER_HPP_16_11_26_09_22_02 */
