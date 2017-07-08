@@ -63,7 +63,10 @@ class MyMotionState : public btMotionState
 			auto bc = e->getComponent<BodyComponent>();
 			if(!bc)
 				return;
-			worldTrans.setOrigin(V3f2btV3f(bc->getPosition()));
+			auto cc = e->getComponent<CollisionComponent>();
+			if(!cc)
+				return;
+			worldTrans.setOrigin(V3f2btV3f(bc->getPosition() - cc->getPosOffset()));
 			//worldTrans.setRotation(Q2btQ(bc->getRotation()));
 		}
 
