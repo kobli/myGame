@@ -19,10 +19,11 @@ class SolidVector {
 		/** Constructs an object in place from given arguments.
 		 * \return index of the constructed object
 		 */
-		//TODO
 		template <typename... Args>
-		indexT emplace(Args... args) {
-			return insert(T(args...));
+		indexT emplace(Args&&... args) {
+			_v.emplace_back(std::forward<Args>(args)...);
+			indexT pi = _v.size()-1;
+			return insertLogical(pi);
 		}
 
 		/** Inserts a copy of the object into the container.
@@ -103,6 +104,20 @@ class SolidVector {
 			_map[i] = NULLi;
 		}
 
+		typedef typename std::vector<T>::iterator iterator;
+
+		indexT iteratorToIndex(iterator it) {
+			indexT pi = it-_v.begin();
+			for(indexT li = 0; li < _map.size(); li++)
+				if(_map[li] == pi)
+					return li;
+			return NULLi;
+		}
+
+		void remove(iterator it) {
+			remove(iteratorToIndex(it));
+		}
+
 		/** Removes all elements.
 		 */
 		void clear() {
@@ -118,7 +133,6 @@ class SolidVector {
 			return _v.size();
 		}
 
-		typedef typename std::vector<T>::iterator iterator;
 		/*
 		class iterator {// : public std::forward_iterator_tag { // TODO is the inheritance necessary?
 			public:
