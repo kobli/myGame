@@ -235,8 +235,9 @@ void ServerApplication::onClientConnect(std::unique_ptr<sf::TcpSocket>&& sock)
 {
 	cout << "Client connected from " << sock->getRemoteAddress() << endl;
 	auto sID = _sessions.emplace(std::move(sock));
-	_sessions[sID].setCommandHandler([this](Command& c, u32 objID){
-			_input.handleCommand(c, objID);
+	_sessions[sID].setCommandHandler([this](Command& c, ID objID){
+			if(objID != NULLID)
+				_input.handleCommand(c, objID);
 			});
 	_gameWorld.sendHelloMsgTo(_updater); // TODO send updates only to newly connected client
 	gameModeOnClientConnect(sID);

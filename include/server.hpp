@@ -14,8 +14,8 @@
 class Session: KeyValueStore
 {
 	public:
-		using CommandHandler = std::function<void(Command& c, u32 charID)>;
-		Session(unique_ptr<sf::TcpSocket>&& socket, CommandHandler commandHandler = [](Command&, u32){});
+		using CommandHandler = std::function<void(Command& c, ID charID)>;
+		Session(unique_ptr<sf::TcpSocket>&& socket, CommandHandler commandHandler = [](Command&, ID){});
 		sf::TcpSocket& getSocket();
 		void setCommandHandler(CommandHandler h);
 		ID getControlledObjID();
