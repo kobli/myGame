@@ -950,12 +950,15 @@ void InputSystem::handleCommand(Command& c, ID controlledObjID)
 				}
 				break;
 			}
-		case Command::Type::ROT_diff:
+		case Command::Type::Y_ANGLE_SET:
 			{
+				std::cout << "angle set: " << c._float << std::endl;
 				auto bc = getBodyComponent(controlledObjID);
 				if(bc) {
 					quaternion q = bc->getRotation();
-					q = q*quaternion(0, c._vec2f.X, 0);
+					vec3f e;
+					q.toEuler(e);
+					q = /*quaternion(e.X,0,e.Z)*/quaternion(0,c._float,0); // TODO retain previous X and Z rotation
 					bc->setRotation(q);
 				}
 				break;

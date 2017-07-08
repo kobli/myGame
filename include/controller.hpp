@@ -14,6 +14,7 @@ class Command
 			STRAFE_DIR_SET,		// vec2f: x+ = forward, x- = backward, y+ = left, y- = right
 			ROT_DIR_SET,			// i32: -1 = left, 0 = stop, 1 = right
 			ROT_diff,         // vec2f: rotation difference in radians
+			Y_ANGLE_SET,      // float: Y rotation angle in radians
 			STR,							// command and data in one string
 		};
 

@@ -74,7 +74,8 @@ void Animator::onMsg(const EntityEvent& m)
 
 ////////////////////////////////////////////////////////////
 
-ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ if(d) d->drop(); })
+ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ if(d) d->drop(); }),
+	_yAngleSetCommandFilter{0.1, [](float& oldObj, float& newObj)->float&{ if(std::fabs(oldObj-newObj) > 0.1) return newObj; else return oldObj; }}
 {
 	_server.setBlocking(false);
 
@@ -138,6 +139,12 @@ void ClientApplication::run()
 			float timeDelta = c.restart().asSeconds();
 			//std::cout << "number of scene nodes: " << _device->getSceneManager()->getRootSceneNode()->getChildren().size() << std::endl;
 				
+			if(_yAngleSetCommandFilter.tick(timeDelta) && _yAngleSetCommandFilter.objUpdated()) {
+				Command c(Command::Type::Y_ANGLE_SET);
+				c._float = _yAngleSetCommandFilter.reset();
+				sendCommand(c);
+			}
+
 			if(_physics)
 				_physics->update(timeDelta);
 			if(_vs)
@@ -223,14 +230,22 @@ void ClientApplication::commandHandler(Command& c)
 {
 	if(c._type == Command::Type::ROT_diff && !_camera->isInputReceiverEnabled()) {
 		_cameraYAngle += c._vec2f.X;
+		_cameraYAngle = std::fmod(_cameraYAngle, M_PI*2);
 		_cameraElevation = std::min(PI-0.2f, std::max(0.3f, _cameraElevation+c._vec2f.Y));
+
+		_yAngleSetCommandFilter.filter(_cameraYAngle);
+		//Command nc(Command::Type::Y_ANGLE_SET);
+		//nc._float = _cameraYAngle;
+		//sendCommand(nc);
 	}
 	else if(c._type == Command::Type::STR) {
 		size_t kp = c._str.find("$LOOK_ELEVATION");
 		if(kp != std::string::npos)
 			c._str.replace(kp, strlen("$LOOK_ELEVATION"), std::to_string(int(-(_cameraElevation/M_PI*180)+90)));
+		sendCommand(c);
 	}
-	sendCommand(c);
+	else
+		sendCommand(c);
 }
 
 void ClientApplication::sendCommand(Command& c)

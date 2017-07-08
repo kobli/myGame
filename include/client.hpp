@@ -5,6 +5,7 @@
 #include "world.hpp"
 #include "system.hpp"
 #include "keyValueStore.hpp"
+#include "timedFilter.hpp"
 
 class Animator: public Observer<EntityEvent>
 {
@@ -47,6 +48,7 @@ class ClientApplication
 		KeyValueStore _sharedRegistry;
 		float _cameraElevation;
 		float _cameraYAngle;
+		TimedFilter<float> _yAngleSetCommandFilter;
 
 
 		void commandHandler(Command& c);
