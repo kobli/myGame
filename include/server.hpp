@@ -15,10 +15,11 @@ class Session: KeyValueStore
 {
 	public:
 		using CommandHandler = std::function<void(Command& c, u32 charID)>;
-		Session(unique_ptr<sf::TcpSocket>&& socket, ID controlledObjID, CommandHandler commandHandler = [](Command&, u32){});
+		Session(unique_ptr<sf::TcpSocket>&& socket, CommandHandler commandHandler = [](Command&, u32){});
 		sf::TcpSocket& getSocket();
 		void setCommandHandler(CommandHandler h);
 		ID getControlledObjID();
+		void setControlledObjID(ID objID);
 		bool receive();
 		void send(sf::Packet& p);
 		bool isClosed();
@@ -75,6 +76,9 @@ class ServerApplication
 		void onClientConnect(unique_ptr<sf::TcpSocket>&& s);
 		void onClientDisconnect(ID sessionID);
 		void send(sf::Packet& p, Updater::ClientFilterPredicate fp);
+		void gameModeRegisterAPIMethods();
+		void gameModeOnClientConnect(ID sessionID);
+		void gameModeOnClientDisconnect(ID sessionID);
 
 		sf::TcpListener _listener;
 		SolidVector<Session,ID,NULLID> _sessions;
@@ -85,6 +89,7 @@ class ServerApplication
 		SpellSystem _spells;
 		InputSystem _input;
 		Updater _updater;
+		lua_State* _LuaStateGameMode;
 };
 
 #endif /* SERVER_HPP_16_11_26_09_22_02 */

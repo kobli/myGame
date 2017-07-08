@@ -3,10 +3,10 @@
 #include <cassert>
 #include <serdes.hpp>
 
-Session::Session(unique_ptr<sf::TcpSocket>&& socket, ID controlledObjID, CommandHandler h)
+Session::Session(unique_ptr<sf::TcpSocket>&& socket, CommandHandler h)
 	: _socket{std::move(socket)}, _commandHandler{h}, _closed{false}
 {
-	addPair("controlled_object_id", static_cast<float>(controlledObjID));
+	addPair("controlled_object_id", NULLID);
 }
 
 sf::TcpSocket& Session::getSocket()
@@ -22,6 +22,11 @@ void Session::setCommandHandler(CommandHandler h)
 ID Session::getControlledObjID()
 {
 	return static_cast<ID>(getValue("controlled_object_id"));
+}
+
+void Session::setControlledObjID(ID objID)
+{
+	setValue("controlled_object_id", objID);
 }
 
 bool Session::receive()
@@ -146,10 +151,12 @@ void Updater::sendEvent(const EntityEvent& e)
 		p << Serializer<sf::Packet>(*modifiedComponent);
 	_send(p, [](Entity*){ return true; });
 
+	/*
 	cout << "sent an update:\n\tentityID: " << e.entityID 
 		<< "\n\tcomponent modified type: " << e.componentT << endl;
 	if(modifiedComponent != nullptr && !e.destroyed)
 		cout << "\tcomponent: " << Serializer<ostream>(*modifiedComponent) << endl;
+		*/
 }
 
 ////////////////////////////////////////////////////////////
@@ -159,13 +166,19 @@ ServerApplication::ServerApplication(IrrlichtDevice* irrDev)
 	: _irrDevice{irrDev}, _map{70, irrDev->getSceneManager()->createNewSceneManager()}, _gameWorld{_map}
 	, _physics{_gameWorld}, _spells{_gameWorld}, _input{_gameWorld, _spells},
 	_updater(std::bind(&ServerApplication::send, ref(*this), placeholders::_1, placeholders::_2),
-			std::bind(&World::getEntity, ref(_gameWorld), placeholders::_1))
+			std::bind(&World::getEntity, ref(_gameWorld), placeholders::_1)), _LuaStateGameMode{nullptr}
 {
 	_listener.setBlocking(false);
 	_gameWorld.addObserver(_updater);
 	_gameWorld.addObserver(_spells);
 	_gameWorld.addObserver(_physics);
 	_physics.registerCollisionCallback(std::bind(&SpellSystem::collisionCallback, std::ref(_spells), placeholders::_1, placeholders::_2));
+
+	_LuaStateGameMode = luaL_newstate();
+	luaL_openlibs(_LuaStateGameMode);
+	if(luaL_dofile(_LuaStateGameMode, "lua/gamemode_dm.lua"))
+		printf("%s\n", lua_tostring(_LuaStateGameMode, -1));
+	gameModeRegisterAPIMethods();
 }
 
 bool ServerApplication::listen(short port)
@@ -219,26 +232,128 @@ void ServerApplication::send(sf::Packet& p, Updater::ClientFilterPredicate fp)
 void ServerApplication::onClientConnect(std::unique_ptr<sf::TcpSocket>&& sock)
 {
 	cout << "Client connected from " << sock->getRemoteAddress() << endl;
-	ID cID = _gameWorld.createCharacter(vec3f(0,50,0));
-	auto& e = *_gameWorld.getEntity(cID);
-	auto sID = _sessions.emplace(std::move(sock), e.getID());
+	auto sID = _sessions.emplace(std::move(sock));
 	_sessions[sID].setCommandHandler([this](Command& c, u32 objID){
 			_input.handleCommand(c, objID);
 			});
 	_gameWorld.sendHelloMsgTo(_updater); // TODO send updates only to newly connected client
+	gameModeOnClientConnect(sID);
 }
 
 void ServerApplication::onClientDisconnect(ID sessionID)
 {
 	Session& s = _sessions[sessionID];
 	cout << "Client disconnected: " << s.getSocket().getRemoteAddress() << endl;
-	auto* cc = _gameWorld.getEntity(s.getControlledObjID());
+	gameModeOnClientDisconnect(sessionID);
 	_sessions.remove(sessionID);
-	if(cc)
-		_gameWorld.removeEntity(cc->getID());
 }
 
 ServerApplication::~ServerApplication()
 {
 	_listener.close();
+	lua_close(_LuaStateGameMode);
+}
+
+void ServerApplication::gameModeRegisterAPIMethods()
+{
+	lua_State* L = _LuaStateGameMode;
+	assert(L != nullptr);
+	lua_pushinteger(L, NULLID);
+	lua_setglobal(L, "NULLID");
+
+	auto callCreateCharacter = [](lua_State* s)->int {
+		int argc = lua_gettop(s);
+		if(argc != 3)
+		{
+			std::cerr << "callCreateCharacter: wrong number of arguments\n";
+			return 0;		
+		}
+		vec3f pos;
+		pos.X = lua_tonumber(s, 1);
+		pos.Y = lua_tonumber(s, 2);
+		pos.Z = lua_tonumber(s, 3);
+		ServerApplication* sApp = (ServerApplication*)lua_touserdata(s, lua_upvalueindex(1));
+		ID characterID = sApp->_gameWorld.createCharacter(pos);
+		lua_pushinteger(s, characterID);
+		return 1;
+	};
+	lua_pushlightuserdata(L, this);
+	lua_pushcclosure(L, callCreateCharacter, 1);
+	lua_setglobal(L, "createCharacter");
+
+	auto callRemoveWorldEntity = [](lua_State* s)->int {
+		int argc = lua_gettop(s);
+		if(argc != 1)
+		{
+			std::cerr << "callRemoveWorldEntity: wrong number of arguments\n";
+			return 0;		
+		}
+		ID entID = lua_tonumber(s, 1);
+		ServerApplication* sApp = (ServerApplication*)lua_touserdata(s, lua_upvalueindex(1));
+		sApp->_gameWorld.removeEntity(entID);
+		return 0;
+	};
+	lua_pushlightuserdata(L, this);
+	lua_pushcclosure(L, callRemoveWorldEntity, 1);
+	lua_setglobal(L, "removeWorldEntity");
+
+	auto callSetClientControlledObjectID= [](lua_State* s)->int {
+		int argc = lua_gettop(s);
+		if(argc != 2)
+		{
+			std::cerr << "callSetClientControlledObjectID: wrong number of arguments\n";
+			return 0;		
+		}
+		ID sessionID = lua_tonumber(s, 1);
+		ID objID = lua_tonumber(s, 2);
+		ServerApplication* sApp = (ServerApplication*)lua_touserdata(s, lua_upvalueindex(1));
+		if(sApp->_sessions.indexValid(sessionID))
+			sApp->_sessions[sessionID].setControlledObjID(objID);
+		return 0;
+	};
+	lua_pushlightuserdata(L, this);
+	lua_pushcclosure(L, callSetClientControlledObjectID, 1);
+	lua_setglobal(L, "setClientControlledObjectID");
+
+	auto callGetClientControlledObjectID= [](lua_State* s)->int {
+		int argc = lua_gettop(s);
+		if(argc != 1)
+		{
+			std::cerr << "callGetClientControlledObjectID: wrong number of arguments\n";
+			return 0;		
+		}
+		ID sessionID = lua_tonumber(s, 1);
+		ServerApplication* sApp = (ServerApplication*)lua_touserdata(s, lua_upvalueindex(1));
+		if(sApp->_sessions.indexValid(sessionID)) {
+			lua_pushinteger(s, sApp->_sessions[sessionID].getControlledObjID());
+			return 1;
+		}
+		else
+			return 0;
+	};
+	lua_pushlightuserdata(L, this);
+	lua_pushcclosure(L, callGetClientControlledObjectID, 1);
+	lua_setglobal(L, "getClientControlledObjectID");
+}
+
+void ServerApplication::gameModeOnClientConnect(ID sessionID)
+{
+	lua_State* L = _LuaStateGameMode;
+	lua_getglobal(L, "onClientConnect");
+	lua_pushinteger(L, sessionID);
+	if(lua_pcall(L, 1, 0, 0) != 0) {
+		cerr << "something went wrong with onClientConnect: " << lua_tostring(L, -1) << endl;
+		lua_pop(L, 1);
+	}
+}
+
+void ServerApplication::gameModeOnClientDisconnect(ID sessionID)
+{
+	lua_State* L = _LuaStateGameMode;
+	lua_getglobal(L, "onClientDisconnect");
+	lua_pushinteger(L, sessionID);
+	if(lua_pcall(L, 1, 0, 0) != 0) {
+		cerr << "something went wrong with onClientDisconnect: " << lua_tostring(L, -1) << endl;
+		lua_pop(L, 1);
+	}
 }
