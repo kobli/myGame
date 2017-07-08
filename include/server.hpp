@@ -73,11 +73,11 @@ class ServerApplication
 	private:
 		void acceptClient();
 		void onClientConnect(unique_ptr<sf::TcpSocket>&& s);
-		void onClientDisconnect(Session& s);
+		void onClientDisconnect(ID sessionID);
 		void send(sf::Packet& p, Updater::ClientFilterPredicate fp);
 
 		sf::TcpListener _listener;
-		std::list<Session> _sessions;
+		SolidVector<Session,ID,NULLID> _sessions;
 		IrrlichtDevice* _irrDevice;
 		WorldMap _map;
 		World _gameWorld;

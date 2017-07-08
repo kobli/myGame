@@ -179,12 +179,12 @@ void ServerApplication::run()
 	while(true)
 	{
 		acceptClient();
-		for(auto& s : _sessions)
+		for(auto s = _sessions.begin(); s != _sessions.end(); s++)
 		{
-			while(s.receive());
-			if(s.isClosed())
+			while(s->receive());
+			if(s->isClosed())
 			{
-				onClientDisconnect(s);
+				onClientDisconnect(_sessions.iteratorToIndex(s));
 				break;
 			}
 		}
@@ -221,21 +221,19 @@ void ServerApplication::onClientConnect(std::unique_ptr<sf::TcpSocket>&& sock)
 	cout << "Client connected from " << sock->getRemoteAddress() << endl;
 	ID cID = _gameWorld.createCharacter(vec3f(0,50,0));
 	auto& e = *_gameWorld.getEntity(cID);
-	_sessions.emplace_back(std::move(sock), e.getID());
-	_sessions.back().setCommandHandler([this](Command& c, u32 objID){
+	auto sID = _sessions.emplace(std::move(sock), e.getID());
+	_sessions[sID].setCommandHandler([this](Command& c, u32 objID){
 			_input.handleCommand(c, objID);
 			});
 	_gameWorld.sendHelloMsgTo(_updater); // TODO send updates only to newly connected client
 }
 
-void ServerApplication::onClientDisconnect(Session& s)
+void ServerApplication::onClientDisconnect(ID sessionID)
 {
+	Session& s = _sessions[sessionID];
 	cout << "Client disconnected: " << s.getSocket().getRemoteAddress() << endl;
 	auto* cc = _gameWorld.getEntity(s.getControlledObjID());
-	auto it = _sessions.begin();
-	while(&*it != &s && it != _sessions.end())
-		it++;
-	_sessions.erase(it);
+	_sessions.remove(sessionID);
 	if(cc)
 		_gameWorld.removeEntity(cc->getID());
 }
