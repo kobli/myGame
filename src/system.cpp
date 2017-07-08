@@ -577,8 +577,12 @@ void ViewSystem::updateTransforms(float timeDelta)
 		scene::ISceneNode* sn;
 		if((e = _world.getEntity(eID)) && (bc = e->getComponent<BodyComponent>()) && (sn = _smgr->getSceneNodeFromId(eID)))
 		{
+			quaternion newRot = bc->getRotation();
+			static const float rotationInterpolationSpeed = 4;
+			quaternion resRot = newRot;
+			resRot.slerp(quaternion(sn->getRotation()/180*PI), newRot, std::min(1.f,rotationInterpolationSpeed*timeDelta));
 			vec3f r;
-			bc->getRotation().toEuler(r);
+			resRot.toEuler(r);
 			sn->setRotation(r*180/PI);
 
 			vec3f oldPos = sn->getPosition();
@@ -603,7 +607,7 @@ void ViewSystem::updateTransforms(float timeDelta)
 			*/
 			sn->setPosition(resPos);
 			sn->updateAbsolutePosition();
-			if(resPos != newPos) {
+			if(resPos != newPos || resRot != newRot) {
 				it++;
 				continue;
 			}
