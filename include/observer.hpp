@@ -110,7 +110,8 @@ class Observable_ {
 		virtual void broadcastMsg(const messageT& m) {
 			for(int i = 0; i < _observers.size(); i++) {
 				auto& observer = _observers[i];
-				if(auto ospt = observer.lock())
+				auto ospt = observer.lock();
+				if(ospt && *ospt)
 					(*ospt)->onMsg(m);
 				else {
 					_observers.erase(_observers.begin()+i);
