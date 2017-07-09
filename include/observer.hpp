@@ -192,23 +192,27 @@ class Observabler: public Observable<messageT>, public Observer<messageT> {
 					(*spt)->sendByeMsgTo(observer);
 		}
 
-	protected:
+		virtual void onMessage(const messageT& m) {
+			this->broadcastMsg(m);
+		}
+
+	private:
 		void swapSelf(Observabler& other) {
 			using std::swap;
 			swap(_observed, other._observed);
 		}
 
-		virtual void onMsg(const messageT& m) {
+		virtual void onMsg(const messageT& m) final override {
 			_observed.remove_if([](auto& v) -> bool {
 				if(v.expired())
 					return true;
 				else
 				return false;
 			});
-			this->broadcastMsg(m);
+			onMessage(m);
 		}
 
-		virtual void onDirectObservableAdd(Observable_<messageT>& o) {
+		virtual void onDirectObservableAdd(Observable_<messageT>& o) final override {
 			auto& ro = dynamic_cast<Observable<messageT>&>(o);
 			_observed.push_back(ro.getSelf());
 		}
