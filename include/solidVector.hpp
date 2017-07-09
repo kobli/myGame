@@ -96,12 +96,10 @@ class SolidVector {
 					break;
 				}
 			// remove last element of vector
-			// - calls the destructor - make sure the container is in valid state
-			_map[i] = lastpi;
-			_v.pop_back();
-			// mark slot as free
-			_mapSlot.remit(i);
 			_map[i] = NULLi;
+			// pop_back calls the elements destructor - make sure the container is in valid state
+			_v.pop_back();
+			_mapSlot.remit(i);
 		}
 
 		typedef typename std::vector<T>::iterator iterator;
