@@ -79,10 +79,18 @@ class ObservableEntityManager : public EntityManager<ComponentBase,ComponentType
 
 	public:
 		ObservableEntityManager(ID firstFree = ID{}): BaseEM(firstFree) {}
-		virtual ID createEntity(ID hintID = NULLID) {
+		virtual ID createEntity(ID hintID = NULLID) override {
 			ID id = BaseEM::createEntity(hintID);
 			this->getEntity(id)->addObserver(*this);
 			return id;
+		}
+		virtual void removeEntity(ID eid) override {
+			BaseEM::removeEntity(eid);
+			this->broadcastMsg(EventT(eid, ComponentType::NONE, false, true));
+		}
+		virtual void onMessage(const EventT& e) {
+			if(!(e.componentT == ComponentType::NONE && e.destroyed))
+				this->broadcastMsg(e);
 		}
 };
 

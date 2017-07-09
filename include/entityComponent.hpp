@@ -268,7 +268,7 @@ class EntityManager : public EntityManagerBase<ComponentBase,ComponentType> {
 			return *getEntity(createEntity(hintID));
 		}
 
-		void removeEntity(ID eid) {
+		virtual void removeEntity(ID eid) {
 			if(_entities.indexValid(eid)) {
 				_entities.remove(eid);
 				std::cout << "removed E " << eid << std::endl;
