@@ -12,15 +12,16 @@ map.getSpawnPoints
 
 -------------------- Cpp interface --------------------
 
+OBJCONTROLLINGCLIENTS = {}
 
 function onClientConnect(sessionID)
 	local charID = createCharacter(0,20,0)
-	setClientControlledObjectID(sessionID, charID)
+	setClientControlledObj(sessionID, charID)
 end
 
 function onClientDisconnect(sessionID)
 	local charID = getClientControlledObjectID(sessionID)
-	setClientControlledObjectID(sessionID, NULLID)
+	setClientControlledObj(sessionID, NULLID)
 	removeWorldEntity(charID)
 end
 
@@ -28,11 +29,28 @@ function onEntityEvent(entityID, componentT, created, destroyed)
 	if componentT == ComponentType["AttributeStore"] and not created and not destroyed then
 		print("HP updated!??!?")
 		local realHP, virtualHP = getEntityAttributeValue(entityID, "health")
+		print("HP: "..realHP)
 		if realHP == 0 then
-			setClientControlledObjectID(0, NULLID)
-			--removeWorldEntity(entityID)
-			--local charID = createCharacter(0,20,0)
-			--setClientControlledObjectID(0, charID)
+			local objOwner = OBJCONTROLLINGCLIENTS[entityID]
+			if entityID ~= getClientControlledObjectID(objOwner) then
+				print("error: clients controlled char ID probably changed in the engine")
+			end
+			print("CHARACTER DIED")
+			setClientControlledObj(objOwner, NULLID)
+			removeWorldEntity(entityID)
+			print("SPAWNING NEW ONE ...")
+			local charID = createCharacter(0,20,0)
+			print("DONE")
+			setClientControlledObj(objOwner, charID)
 		end
 	end
+end
+
+-----------------------------------------------------
+
+function setClientControlledObj(sessionID, objID)
+	if objID ~= NULLID then
+		OBJCONTROLLINGCLIENTS[objID] = sessionID
+	end
+	setClientControlledObjectID(sessionID, objID)
 end
