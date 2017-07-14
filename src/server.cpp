@@ -170,9 +170,7 @@ ServerApplication::ServerApplication(IrrlichtDevice* irrDev)
 	_gameModeEntityEventObserver{[this](const EntityEvent& e){ this->gameModeOnEntityEvent(e); }}
 {
 	_listener.setBlocking(false);
-	_gameWorld.addObserver(_updater);
-	_gameWorld.addObserver(_spells);
-	_gameWorld.addObserver(_physics);
+	_gameWorld.addObserver(*this);
 	_physics.registerCollisionCallback(std::bind(&SpellSystem::collisionCallback, std::ref(_spells), placeholders::_1, placeholders::_2));
 
 	_LuaStateGameMode = luaL_newstate();
@@ -180,7 +178,6 @@ ServerApplication::ServerApplication(IrrlichtDevice* irrDev)
 	gameModeRegisterAPIMethods();
 	if(luaL_dofile(_LuaStateGameMode, "lua/gamemode_dm.lua"))
 		printf("%s\n", lua_tostring(_LuaStateGameMode, -1));
-	_gameWorld.addObserver(_gameModeEntityEventObserver);	
 }
 
 bool ServerApplication::listen(short port)
@@ -203,6 +200,16 @@ void ServerApplication::run()
 				break;
 			}
 		}
+		size_t eventC = _eventQueue.size();
+		for(size_t i = 0; i < eventC; i++) {
+			EntityEvent e = _eventQueue.front();
+			_eventQueue.pop();
+			_updater.onMsg(e);
+			_spells.onMsg(e);
+			_physics.onMsg(e);
+			_gameModeEntityEventObserver.onMsg(e);
+		}
+
 		float timeDelta = c.restart().asSeconds();
 		_physics.update(timeDelta);
 		_spells.update(timeDelta);
@@ -211,6 +218,11 @@ void ServerApplication::run()
 		sf::sleep(sf::milliseconds(50));
 		_irrDevice->getVideoDriver()->endScene();
 	}
+}
+
+void ServerApplication::onMsg(const EntityEvent& m)
+{
+	_eventQueue.push(m);
 }
 
 void ServerApplication::acceptClient()

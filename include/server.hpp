@@ -6,6 +6,7 @@
 #include <world.hpp>
 #include <system.hpp>
 #include "keyValueStore.hpp"
+#include <queue>
 
 #ifndef SERVER_HPP_16_11_26_09_22_02
 #define SERVER_HPP_16_11_26_09_22_02 
@@ -50,6 +51,7 @@ class Updater: public Observer<EntityEvent>
 		using EntityResolver = function<Entity*(ID entID)>;
 		Updater(Sender s, EntityResolver getEntity);
 		void tick(float delta);
+		void onMsg(const EntityEvent& m) final;
 
 	private:
 		Sender _send;
@@ -57,13 +59,12 @@ class Updater: public Observer<EntityEvent>
 		std::unordered_set<EntityEvent> _updateEventQueue;
 		float _timeSinceLastUpdateSent;
 
-		void onMsg(const EntityEvent& m) final;
 		void sendEvent(const EntityEvent&);
 };
 
 ////////////////////////////////////////////////////////////
 
-class ServerApplication
+class ServerApplication: private Observer<EntityEvent>
 {
 	public:
 		ServerApplication(IrrlichtDevice* irrDev);
@@ -72,6 +73,7 @@ class ServerApplication
 		~ServerApplication();
 
 	private:
+		virtual void onMsg(const EntityEvent& m) override;
 		void acceptClient();
 		void onClientConnect(unique_ptr<sf::TcpSocket>&& s);
 		void onClientDisconnect(ID sessionID);
@@ -91,13 +93,14 @@ class ServerApplication
 		InputSystem _input;
 		Updater _updater;
 		lua_State* _LuaStateGameMode;
+		std::queue<EntityEvent> _eventQueue;
 
 		class GameModeEntityEventObserver: public Observer<EntityEvent> {
-			void onMsg(const EntityEvent& e) final;
 			typedef std::function<void(const EntityEvent& e)> EntityEventCallback;
 			EntityEventCallback _entityEventCallback;
 			public:
 				GameModeEntityEventObserver(EntityEventCallback gameModeEntityEventCallback);
+				void onMsg(const EntityEvent& e) final;
 		};
 		GameModeEntityEventObserver _gameModeEntityEventObserver;
 };

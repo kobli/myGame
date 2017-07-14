@@ -25,10 +25,10 @@ template <typename messageT>
 class Observer_ {
 	friend Observable_<messageT>;
 	protected:
-		virtual void onMsg(const messageT& m) = 0;
 		virtual void onDirectObservableAdd(Observable_<messageT>& o) {
 		}
 	public:
+		virtual void onMsg(const messageT& m) = 0;
 		virtual ~Observer_()
 		{}
 
