@@ -75,7 +75,8 @@ void Animator::onMsg(const EntityEvent& m)
 ////////////////////////////////////////////////////////////
 
 ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ if(d) d->drop(); }),
-	_yAngleSetCommandFilter{0.1, [](float& oldObj, float& newObj)->float&{ if(std::fabs(oldObj-newObj) > 0.1) return newObj; else return oldObj; }}
+	_yAngleSetCommandFilter{0.1, [](float& oldObj, float& newObj)->float&{ if(std::fabs(oldObj-newObj) > 0.1) return newObj; else return oldObj; }},
+	_healthBar{nullptr}
 {
 	irr::SIrrlichtCreationParameters params;
 	params.DriverType=video::E_DRIVER_TYPE::EDT_OPENGL;
@@ -92,6 +93,11 @@ ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ 
 
 	createWorld();
 	createCamera();
+
+	gui::IGUIEnvironment* env = _device->getGUIEnvironment();
+	_healthBar = new gui::ProgressBar(env, core::rect<s32>(20, 20, 220, 60), env->getRootGUIElement());
+	_healthBar->setColors(video::SColor(255, 255,255,255), video::SColor(255, 255,0,0));
+	_healthBar->drop();
 
 	_controller.setCommandHandler(std::bind(&ClientApplication::commandHandler, ref(*this), std::placeholders::_1));
 	_controller.setScreenSizeGetter([this](){ auto ss = _device->getVideoDriver()->getScreenSize(); return vec2i(ss.Width, ss.Height); });
@@ -149,9 +155,10 @@ void ClientApplication::run()
 				_physics->update(timeDelta);
 			if(_vs)
 				_vs->update(timeDelta);
+			updateHealthBar();
 
 			_device->getSceneManager()->drawAll();
-			//_device->getGUIEnvironment()->drawAll();
+			_device->getGUIEnvironment()->drawAll();
 			driver->endScene();
 
 			// display frames per second in window title
@@ -349,4 +356,22 @@ void ClientApplication::bindCameraToControlledEntity()
 			_cameraYAngle = 0;
 		}
 	}
+}
+
+void ClientApplication::updateHealthBar()
+{
+	if(_sharedRegistry.hasKey("controlled_object_id")) {
+		ID id = _sharedRegistry.getValue("controlled_object_id");
+		Entity* e = _gameWorld->getEntity(id);
+		if(e != nullptr) {
+			AttributeStoreComponent* as = e->getComponent<AttributeStoreComponent>();
+			if(as != nullptr) {
+				if(as->hasAttribute("health") && as->hasAttribute("max-health")) {
+					_healthBar->setProgress(as->getAttribute("health")/as->getAttribute("max-health"));
+					return;
+				}
+			}
+		}
+	}
+	_healthBar->setProgress(0);
 }

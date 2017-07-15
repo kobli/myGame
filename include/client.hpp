@@ -6,6 +6,7 @@
 #include "system.hpp"
 #include "keyValueStore.hpp"
 #include "timedFilter.hpp"
+#include "progressBar.hpp"
 
 class Animator: public Observer<EntityEvent>
 {
@@ -49,6 +50,7 @@ class ClientApplication
 		float _cameraElevation;
 		float _cameraYAngle;
 		TimedFilter<float> _yAngleSetCommandFilter;
+		gui::ProgressBar* _healthBar;
 
 
 		void commandHandler(Command& c);
@@ -57,6 +59,7 @@ class ClientApplication
 		bool receive();
 		void handlePacket(sf::Packet& p);
 		void bindCameraToControlledEntity();
+		void updateHealthBar();
 };
 
 #endif /* CLIENT_HPP_16_11_26_10_46_45 */
