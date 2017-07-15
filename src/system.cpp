@@ -959,7 +959,6 @@ void InputSystem::handleCommand(Command& c, ID controlledObjID)
 			}
 		case Command::Type::Y_ANGLE_SET:
 			{
-				std::cout << "angle set: " << c._float << std::endl;
 				auto bc = getBodyComponent(controlledObjID);
 				if(bc) {
 					quaternion q = bc->getRotation();

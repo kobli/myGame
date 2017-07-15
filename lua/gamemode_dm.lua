@@ -27,21 +27,7 @@ end
 
 function onEntityEvent(entityID, componentT, created, destroyed)
 	if componentT == ComponentType["AttributeStore"] and not created and not destroyed then
-		print("HP updated!??!?")
-		local realHP, virtualHP = getEntityAttributeValue(entityID, "health")
-		print("HP: "..realHP)
-		if realHP == 0 then
-			local objOwner = OBJCONTROLLINGCLIENTS[entityID]
-			if entityID ~= getClientControlledObjectID(objOwner) then
-				print("error: clients controlled char ID probably changed in the engine")
-			end
-			print("CHARACTER DIED")
-			setClientControlledObj(objOwner, NULLID)
-			removeWorldEntity(entityID)
-			print("SPAWNING NEW ONE ...")
-			setClientControlledObj(objOwner, spawnCharacter())
-			print("DONE")
-		end
+		onMaybeHPchanged(entityID)
 	end
 end
 
@@ -59,4 +45,21 @@ function spawnCharacter()
 	setEntityAttributeValue(charID, "health", 10)
 	setEntityAttributeValue(charID, "max-health", 100)
 	return charID
+end
+
+function onMaybeHPchanged(entityID)
+		local realHP, virtualHP = getEntityAttributeValue(entityID, "health")
+		if realHP == 0 then
+			onCharacterDeath(entityID)
+		end
+end
+
+function onCharacterDeath(entityID)
+	local objOwner = OBJCONTROLLINGCLIENTS[entityID]
+	if entityID ~= getClientControlledObjectID(objOwner) then
+		print("error: clients controlled char ID probably changed in the engine")
+	end
+	setClientControlledObj(objOwner, NULLID)
+	removeWorldEntity(entityID)
+	setClientControlledObj(objOwner, spawnCharacter())
 end
