@@ -200,8 +200,7 @@ void ServerApplication::run()
 				break;
 			}
 		}
-		size_t eventC = _eventQueue.size();
-		for(size_t i = 0; i < eventC; i++) {
+		while(!_eventQueue.empty()) {
 			EntityEvent e = _eventQueue.front();
 			_eventQueue.pop();
 			_updater.onMsg(e);
