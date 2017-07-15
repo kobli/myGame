@@ -361,7 +361,7 @@ float AttributeStoreComponent::getAttributeAffected(std::string key)
 	else {
 		float base = getAttribute(key);
 		float add = 0;
-		float mul = 0;
+		float mul = 1;
 		for(auto& a : _attributeAffectors)
 			if(a.getAffectedAttribute() == key) {
 				if(a.getModifierType() == AttributeAffector::ModifierType::Add)
