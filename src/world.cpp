@@ -326,6 +326,14 @@ void AttributeStoreComponent::setAttribute(std::string key, float value)
 	notifyObservers();
 }
 
+void AttributeStoreComponent::setOrAddAttribute(std::string key, float value)
+{
+	if(!hasAttribute(key))
+		addAttribute(key, value);
+	else
+		setAttribute(key, value);
+}
+
 ID AttributeStoreComponent::addAttributeAffector(AttributeAffector aa)
 {
 	if(aa.isPermanent()) {
@@ -500,9 +508,6 @@ ID World::createCharacter(vec3f position)
 	e.addComponent<CollisionComponent>(0.4, 1, vec3f(0, -0.9, 0));
 	e.addComponent<WizardComponent>();
 	e.addComponent<AttributeStoreComponent>();
-	AttributeStoreComponent& attStore = *e.getComponent<AttributeStoreComponent>();
-	attStore.addAttribute("health", 100);
-	attStore.addAttribute("max-health", 100);
 	return eID;
 }
 

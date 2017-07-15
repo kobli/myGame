@@ -5,6 +5,7 @@ void removeWorldEntity(objectID)
 void setClientControlledObjectID(sessionID, objectID)
 ID getClientControlledObjectID(sessionID)
 float(basic),float(affected) getEntityAttributeValue(objectID, attributeName)
+void setEntityAttributeValue(objectID, attributeName, floatValue)
 
 TODO
 map.getSpawnPoints
@@ -15,8 +16,7 @@ map.getSpawnPoints
 OBJCONTROLLINGCLIENTS = {}
 
 function onClientConnect(sessionID)
-	local charID = createCharacter(0,20,0)
-	setClientControlledObj(sessionID, charID)
+	setClientControlledObj(sessionID, spawnCharacter())
 end
 
 function onClientDisconnect(sessionID)
@@ -39,9 +39,8 @@ function onEntityEvent(entityID, componentT, created, destroyed)
 			setClientControlledObj(objOwner, NULLID)
 			removeWorldEntity(entityID)
 			print("SPAWNING NEW ONE ...")
-			local charID = createCharacter(0,20,0)
+			setClientControlledObj(objOwner, spawnCharacter())
 			print("DONE")
-			setClientControlledObj(objOwner, charID)
 		end
 	end
 end
@@ -53,4 +52,11 @@ function setClientControlledObj(sessionID, objID)
 		OBJCONTROLLINGCLIENTS[objID] = sessionID
 	end
 	setClientControlledObjectID(sessionID, objID)
+end
+
+function spawnCharacter()
+	local charID = createCharacter(0,20,0)
+	setEntityAttributeValue(charID, "health", 10)
+	setEntityAttributeValue(charID, "max-health", 100)
+	return charID
 end

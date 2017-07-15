@@ -384,6 +384,27 @@ void ServerApplication::gameModeRegisterAPIMethods()
 	lua_pushlightuserdata(L, this);
 	lua_pushcclosure(L, callGetEntityAttributeValue, 1);
 	lua_setglobal(L, "getEntityAttributeValue");
+
+	auto callSetEntityAttributeValue = [](lua_State* s)->int {
+		int argc = lua_gettop(s);
+		if(argc != 3)
+		{
+			std::cerr << "callSetEntityAttributeValue: wrong number of arguments\n";
+			return 0;		
+		}
+		ID entityID = lua_tonumber(s, 1);
+		std::string key = lua_tostring(s, 2);
+		float val = lua_tonumber(s, 3);
+		ServerApplication* sApp = (ServerApplication*)lua_touserdata(s, lua_upvalueindex(1));
+		auto e = sApp->_gameWorld.getEntity(entityID);
+		AttributeStoreComponent* as = nullptr;
+		if(e != nullptr && (as = e->getComponent<AttributeStoreComponent>()) != nullptr)
+			as->setOrAddAttribute(key, val);
+		return 0;
+	};
+	lua_pushlightuserdata(L, this);
+	lua_pushcclosure(L, callSetEntityAttributeValue, 1);
+	lua_setglobal(L, "setEntityAttributeValue");
 }
 
 void ServerApplication::gameModeOnClientConnect(ID sessionID)
