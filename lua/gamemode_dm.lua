@@ -43,15 +43,18 @@ end
 function spawnCharacter()
 	local charID = createCharacter(0,20,0)
 	setEntityAttributeValue(charID, "health", 10)
-	setEntityAttributeValue(charID, "max-health", 100)
+	setEntityAttributeValue(charID, "max-health", 30)
 	return charID
 end
 
 function onMaybeHPchanged(entityID)
-		local realHP, virtualHP = getEntityAttributeValue(entityID, "health")
-		if realHP == 0 then
-			onCharacterDeath(entityID)
-		end
+	local realHP, virtualHP = getEntityAttributeValue(entityID, "health")
+	local realMaxHP, virtualMaxHP = getEntityAttributeValue(entityID, "max-health")
+	if realHP == 0 then
+		onCharacterDeath(entityID)
+	elseif realHP > realMaxHP then
+		setEntityAttributeValue(entityID, "health", realMaxHP)
+	end
 end
 
 function onCharacterDeath(entityID)
