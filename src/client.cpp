@@ -77,8 +77,6 @@ void Animator::onMsg(const EntityEvent& m)
 ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ if(d) d->drop(); }),
 	_yAngleSetCommandFilter{0.1, [](float& oldObj, float& newObj)->float&{ if(std::fabs(oldObj-newObj) > 0.1) return newObj; else return oldObj; }}
 {
-	_server.setBlocking(false);
-
 	irr::SIrrlichtCreationParameters params;
 	params.DriverType=video::E_DRIVER_TYPE::EDT_OPENGL;
 	params.WindowSize=core::dimension2d<u32>(640, 480);
@@ -101,8 +99,10 @@ ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ 
 
 bool ClientApplication::connect(string host, short port)
 {
+	std::cout << "Connecting to " << host << ":" << port << std::endl;
 	auto r = _server.connect(host, port);
-	return (r != sf::Socket::Error && r != sf::Socket::Disconnected);
+	_server.setBlocking(false);
+	return r == sf::Socket::Done;
 }
 
 void ClientApplication::run()
