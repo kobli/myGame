@@ -33,4 +33,7 @@ void irr::gui::ProgressBar::draw()
 		
 	_vdriver->draw2DRectangle(_backgroundColor,bar);
 	_vdriver->draw2DRectangle(_progressColor,progress);
+
+	for(auto& c: this->getChildren())
+		c->draw();
 }

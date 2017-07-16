@@ -2,6 +2,7 @@
 #include "client.hpp"
 #include "network.hpp"
 #include "serdes.hpp"
+
 Animator::Animator(scene::ISceneManager* smgr, function<Entity*(u32)> entityResolver, function<vec3f(u32)> entityVelocityGetter)
 	: _smgr{smgr}, _entityResolver{entityResolver}, _velGetter{entityVelocityGetter}
 {}
@@ -96,8 +97,16 @@ ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ 
 
 	auto screenSize = _device->getVideoDriver()->getScreenSize();
 	gui::IGUIEnvironment* env = _device->getGUIEnvironment();
+
+	auto* skin = env->getSkin();
+	auto* font = env->getFont("./media/fontlucida.png");
+	if(!font)
+		std::cerr << "FAILED TO LOAD THE FONT\n";
+	skin->setFont(font);
+
 	_healthBar = new gui::ProgressBar(env, core::rect<s32>(20, 20, 220, 60), env->getRootGUIElement());
 	_healthBar->setColors(video::SColor(155, 255,255,255), video::SColor(200, 255,0,0));
+	env->addStaticText(L"", core::rect<s32>(0, 0, _healthBar->getRelativePosition().getWidth(), _healthBar->getRelativePosition().getHeight()), false, false, _healthBar);
 	_healthBar->drop();
 
 	int castIndLen = 200;
@@ -105,6 +114,7 @@ ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ 
 	_castingIndicator->setRelativePosition(vec2i((screenSize.Width-castIndLen)/2, 30));
 	_castingIndicator->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT);
 	_castingIndicator->setColors(video::SColor(155, 255,255,255), video::SColor(200, 0,0,255));
+	env->addStaticText(L"", core::rect<s32>(0, 0, _castingIndicator->getRelativePosition().getWidth(), _castingIndicator->getRelativePosition().getHeight()), false, false, _castingIndicator);
 	_castingIndicator->drop();
 
 	_controller.setCommandHandler(std::bind(&ClientApplication::commandHandler, ref(*this), std::placeholders::_1));
@@ -381,6 +391,13 @@ void ClientApplication::onMsg(const EntityEvent& m)
 					if(!wc->getCurrentJob().empty()) {
 						_castingIndicator->setVisible(true);
 						_castingIndicator->setProgress(wc->getCurrentJobProgress()/wc->getCurrentJobDuration());
+						std::string job = wc->getCurrentJob();
+						std::wstring w;
+						w.assign(job.begin(), job.end());
+						auto text = static_cast<gui::IGUIStaticText*>(*_castingIndicator->getChildren().begin());
+						text->setText(w.c_str());
+						vec2i ciSize(_castingIndicator->getAbsolutePosition().getWidth(), _castingIndicator->getAbsolutePosition().getHeight());
+						text->setRelativePosition((ciSize-vec2i(text->getTextWidth(), text->getTextHeight()))/2);
 					}
 					else
 						_castingIndicator->setVisible(false);
@@ -399,6 +416,11 @@ void ClientApplication::updateHealthBar()
 			if(as != nullptr) {
 				if(as->hasAttribute("health") && as->hasAttribute("max-health")) {
 					_healthBar->setProgress(as->getAttribute("health")/as->getAttribute("max-health"));
+					std::wstring w = std::to_wstring(int(as->getAttribute("health"))) + L" / " + std::to_wstring(int(as->getAttribute("max-health")));
+					auto text = static_cast<gui::IGUIStaticText*>(*_healthBar->getChildren().begin());
+					text->setText(w.c_str());
+					vec2i hbSize(_healthBar->getAbsolutePosition().getWidth(), _healthBar->getAbsolutePosition().getHeight());
+					text->setRelativePosition((hbSize-vec2i(text->getTextWidth(), text->getTextHeight()))/2);
 					return;
 				}
 			}
