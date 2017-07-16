@@ -140,7 +140,7 @@ void ClientApplication::run()
 		if(_camera->isInputReceiverEnabled())
 			bindCameraToControlledEntity();
 		if(!_camera->isInputReceiverEnabled()) {
-			vec3f cameraLookDir((_cameraElevation-M_PI_2)/M_PI*180,(_cameraYAngle+M_PI_2)/M_PI*180,0);
+			vec3f cameraLookDir((_cameraElevation-PI_2)/PI*180,(_cameraYAngle+PI_2)/PI*180,0);
 			cameraLookDir = cameraLookDir.rotationToDirection().normalize();
 			_camera->setTarget(_camera->getAbsolutePosition()+cameraLookDir*10000);
 			if(_sharedRegistry.hasKey("controlled_object_id")) {
@@ -256,7 +256,7 @@ void ClientApplication::commandHandler(Command& c)
 {
 	if(c._type == Command::Type::ROT_diff && !_camera->isInputReceiverEnabled()) {
 		_cameraYAngle += c._vec2f.X;
-		_cameraYAngle = std::fmod(_cameraYAngle, M_PI*2);
+		_cameraYAngle = std::fmod(_cameraYAngle, PI*2);
 		_cameraElevation = std::min(PI-0.2f, std::max(0.3f, _cameraElevation+c._vec2f.Y));
 
 		_yAngleSetCommandFilter.filter(_cameraYAngle);
@@ -267,7 +267,7 @@ void ClientApplication::commandHandler(Command& c)
 	else if(c._type == Command::Type::STR) {
 		size_t kp = c._str.find("$LOOK_ELEVATION");
 		if(kp != std::string::npos)
-			c._str.replace(kp, strlen("$LOOK_ELEVATION"), std::to_string(int(-(_cameraElevation/M_PI*180)+90)));
+			c._str.replace(kp, strlen("$LOOK_ELEVATION"), std::to_string(int(-(_cameraElevation/PI*180)+90)));
 		sendCommand(c);
 	}
 	else
