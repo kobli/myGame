@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
 	auto getCmdOption = [&](const std::string& option, std::string* outArg = nullptr) {
 		return hasCmdOption(argc-1, argv+1, option, outArg);
 	};
-	std::string port = "5555";
+	std::string port = "55555";
 	getCmdOption("-p", &port);
 	if(getCmdOption("-s")) {
 		irr::SIrrlichtCreationParameters params;
