@@ -700,8 +700,8 @@ void SpellSystem::update(float timeDelta)
 	lUpdate(timeDelta);
 	for(auto& e : _world.getEntities())
 		if(e.hasComponent<WizardComponent>())
-			if(e.hasComponent<BodyComponent>() && e.getComponent<BodyComponent>()->getStrafeDir() != vec2f(0,0))
-				lReportWalkingWizard(e.getID());
+			if(e.hasComponent<BodyComponent>())
+				lReportWalkingWizard(e.getID(), e.getComponent<BodyComponent>()->getStrafeDir() != vec2f(0,0));
 }
 
 void SpellSystem::onMsg(const EntityEvent& m)
@@ -794,13 +794,14 @@ void SpellSystem::lUpdate(float timeDelta)
 	}
 }
 
-void SpellSystem::lReportWalkingWizard(ID wizID)
+void SpellSystem::lReportWalkingWizard(ID wizID, bool walking)
 {
 	if(_luaState != nullptr)
 	{
 		lua_getglobal(_luaState, "wizardWalking");
 		lua_pushinteger(_luaState, wizID);
-		if(lua_pcall(_luaState, 1, 0, 0) != 0)
+		lua_pushboolean(_luaState, walking);
+		if(lua_pcall(_luaState, 2, 0, 0) != 0)
 		{
 			cerr << "something went wrong with wizardWalking: " << lua_tostring(_luaState, -1) << endl;
 			lua_pop(_luaState, 1);

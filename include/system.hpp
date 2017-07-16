@@ -74,7 +74,7 @@ class SpellSystem: public System
 	private:
 		lua_State* _luaState;
 		void lUpdate(float timeDelta);
-		void lReportWalkingWizard(ID wizID);
+		void lReportWalkingWizard(ID wizID, bool walking);
 
 		void init();
 		void deinit();

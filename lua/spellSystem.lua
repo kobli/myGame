@@ -72,6 +72,7 @@ function Wizard:new(ID)
 		invocRemainT = 0,
 		invocIncantation = nil,
 		spellInHands = nil,
+		walking = false,
 	}
 	return setmetatable(value, meta)
 end
@@ -107,7 +108,7 @@ function Wizard:update(delta)
 		end
 	else
 		-- start invocation of the next incantation
-		if not List.empty(self.incantationQ) then 
+		if not List.empty(self.incantationQ) and not self.walking then 
 			self:execIncantation(List.popleft(self.incantationQ))
 		end
 	end
@@ -149,6 +150,9 @@ end
 
 function Wizard:abortInvocation()
 	self.invoc = nil 
+	self.invocIncantation = nil
+	self.invocT = 0
+	self.invocRemainT = 0
 end
 
 function Wizard:emptyInvocationQ()
@@ -167,7 +171,12 @@ function Wizard:cancelSpell()
 	self.spellInHands = nil
 end
 
-
+function Wizard:setWalking(walking)
+	self.walking = walking
+	if walking then 
+		self:resetInvocation()
+	end
+end
 
 
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
@@ -424,9 +433,9 @@ function handleCollision(obj1ID, obj2ID)
 	end
 end
 
-function wizardWalking(wizID)
+function wizardWalking(wizID, walking)
 	if WIZARDS[wizID] ~= nil then
-		WIZARDS[wizID]:resetInvocation()
+		WIZARDS[wizID]:setWalking(walking)
 	end
 end
 
