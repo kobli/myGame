@@ -94,10 +94,18 @@ ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ 
 	createWorld();
 	createCamera();
 
+	auto screenSize = _device->getVideoDriver()->getScreenSize();
 	gui::IGUIEnvironment* env = _device->getGUIEnvironment();
 	_healthBar = new gui::ProgressBar(env, core::rect<s32>(20, 20, 220, 60), env->getRootGUIElement());
-	_healthBar->setColors(video::SColor(255, 255,255,255), video::SColor(255, 255,0,0));
+	_healthBar->setColors(video::SColor(155, 255,255,255), video::SColor(200, 255,0,0));
 	_healthBar->drop();
+
+	int castIndLen = 200;
+	_castingIndicator = new gui::ProgressBar(env, core::rect<s32>(0, 0, castIndLen, 40), env->getRootGUIElement());
+	_castingIndicator->setRelativePosition(vec2i((screenSize.Width-castIndLen)/2, 30));
+	_castingIndicator->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT);
+	_castingIndicator->setColors(video::SColor(155, 255,255,255), video::SColor(200, 0,0,255));
+	_castingIndicator->drop();
 
 	_controller.setCommandHandler(std::bind(&ClientApplication::commandHandler, ref(*this), std::placeholders::_1));
 	_controller.setScreenSizeGetter([this](){ auto ss = _device->getVideoDriver()->getScreenSize(); return vec2i(ss.Width, ss.Height); });
@@ -155,7 +163,7 @@ void ClientApplication::run()
 				_physics->update(timeDelta);
 			if(_vs)
 				_vs->update(timeDelta);
-			updateHealthBar();
+			updateCastingIndicator(timeDelta);
 
 			_device->getSceneManager()->drawAll();
 			_device->getGUIEnvironment()->drawAll();
@@ -190,6 +198,7 @@ void ClientApplication::createWorld()
 	_gameWorld->addObserver(_animator);
 	_gameWorld->addObserver(*_physics);
 	_gameWorld->addObserver(*_vs);
+	_gameWorld->addObserver(*this);
 }
 
 void ClientApplication::createCamera()
@@ -358,6 +367,28 @@ void ClientApplication::bindCameraToControlledEntity()
 	}
 }
 
+void ClientApplication::onMsg(const EntityEvent& m)
+{
+	if(m.componentT == ComponentType::AttributeStore)
+		updateHealthBar();
+	else if(m.componentT == ComponentType::Wizard)
+		if(_sharedRegistry.hasKey("controlled_object_id")) {
+			ID id = _sharedRegistry.getValue("controlled_object_id");
+			Entity* e = _gameWorld->getEntity(id);
+			if(e != nullptr) {
+				WizardComponent* wc = e->getComponent<WizardComponent>();
+				if(wc != nullptr) {
+					if(!wc->getCurrentJob().empty()) {
+						_castingIndicator->setVisible(true);
+						_castingIndicator->setProgress(wc->getCurrentJobProgress()/wc->getCurrentJobDuration());
+					}
+					else
+						_castingIndicator->setVisible(false);
+				}
+			}
+		}
+}
+
 void ClientApplication::updateHealthBar()
 {
 	if(_sharedRegistry.hasKey("controlled_object_id")) {
@@ -374,4 +405,17 @@ void ClientApplication::updateHealthBar()
 		}
 	}
 	_healthBar->setProgress(0);
+}
+
+void ClientApplication::updateCastingIndicator(float timeDelta)
+{
+	if(_sharedRegistry.hasKey("controlled_object_id")) {
+		ID id = _sharedRegistry.getValue("controlled_object_id");
+		Entity* e = _gameWorld->getEntity(id);
+		if(e != nullptr) {
+			WizardComponent* wc = e->getComponent<WizardComponent>();
+			if(wc != nullptr)
+				_castingIndicator->setProgress(_castingIndicator->getProgress() + timeDelta/wc->getCurrentJobDuration());
+		}
+	}
 }

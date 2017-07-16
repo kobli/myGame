@@ -111,6 +111,15 @@ function Wizard:update(delta)
 			self:execIncantation(List.popleft(self.incantationQ))
 		end
 	end
+	self:updateStatus()
+end
+
+function Wizard:updateStatus()
+	local progress = 0
+	if self.invocT ~= nil and self.invocT > 0 then
+		progress = math.min(self.invocT, math.max(0, self.invocT-self.invocRemainT))
+	end
+	updateWizardStatus(self.ID, self.invocIncantation or "", self.invocT, progress)
 end
 
 function Wizard:execIncantation(inc)
@@ -121,6 +130,9 @@ function Wizard:execIncantation(inc)
 		function(self, argStr)
 			self.Command[command](self, argStr)
 			self.invoc = nil
+			self.invocIncantation = nil
+			self.invocT = 0
+			self.invocRemainT = 0
 		end
 		)
 		coroutine.resume(self.invoc, self, argStr)

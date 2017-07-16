@@ -218,9 +218,22 @@ class WizardComponent: public ObservableComponentBase
 		WizardComponent(ID parentEntID);
 		virtual void serDes(SerDesBase& s);
 		template <typename T>
-			void doSerDes(T&)
+			void doSerDes(T& t)
 			{
+				t & _currentJob;
+				t & _currentJobDuration;
+				t & _currentJobProgress;
 			}
+
+		void setCurrentJobStatus(std::string job, float duration, float progress);
+		std::string getCurrentJob();
+		float getCurrentJobDuration();
+		float getCurrentJobProgress();
+
+	private:
+		std::string _currentJob;
+		float _currentJobDuration;
+		float _currentJobProgress;
 };
 
 ////////////////////////////////////////////////////////////

@@ -40,6 +40,9 @@ class Serializer: public SerDesBase
 		virtual void serDes(AttributeStoreComponent& s) {
 			s.doSerDes(*this);
 		}
+		virtual void serDes(WizardComponent& s) {
+			s.doSerDes(*this);
+		}
 
 		virtual void serDes(KeyValueStore& s) {
 			s.doSerDes(*this);
@@ -88,6 +91,9 @@ class Deserializer: public SerDesBase
 			s.doSerDes(*this);
 		}
 		virtual void serDes(AttributeStoreComponent& s) {
+			s.doSerDes(*this);
+		}
+		virtual void serDes(WizardComponent& s) {
 			s.doSerDes(*this);
 		}
 

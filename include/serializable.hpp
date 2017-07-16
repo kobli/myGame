@@ -8,6 +8,7 @@ class MeshGraphicsComponent;
 class ParticleSystemGraphicsComponent;
 class CollisionComponent;
 class AttributeStoreComponent;
+class WizardComponent;
 
 class KeyValueStore;
 
@@ -23,6 +24,7 @@ class SerDesBase
 		virtual void serDes(ParticleSystemGraphicsComponent&) = 0;
 		virtual void serDes(CollisionComponent&) = 0;
 		virtual void serDes(AttributeStoreComponent&) = 0;
+		virtual void serDes(WizardComponent&) = 0;
 
 		virtual void serDes(KeyValueStore&) = 0;
 };

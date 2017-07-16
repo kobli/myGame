@@ -873,6 +873,30 @@ void SpellSystem::init()
 	lua_pushlightuserdata(_luaState, this);
 	lua_pushcclosure(_luaState, callAddAttributeAffector, 1);
 	lua_setglobal(_luaState, "addAttributeAffector");
+
+	auto updateWizardStatus = [](lua_State* s)->int {
+		int argc = lua_gettop(s);
+		if(argc != 4)
+		{
+			std::cerr << "updateWizardStatus: wrong number of arguments\n";
+			return 0;		
+		}
+		ID eID = lua_tointeger(s, 1);
+		std::string currentJob = lua_tostring(s, 2);
+		float currentJobDuration = lua_tonumber(s, 3);
+		float currentJobProgress = lua_tonumber(s, 4);
+		World* world = (World*)lua_touserdata(s, lua_upvalueindex(1));
+		Entity* e = world->getEntity(eID);
+		if(e != nullptr) {
+			WizardComponent* wc = e->getComponent<WizardComponent>();
+			if(wc != nullptr)
+				wc->setCurrentJobStatus(currentJob, currentJobDuration, currentJobProgress);
+		}
+		return 0;
+	};
+	lua_pushlightuserdata(_luaState, &_world);
+	lua_pushcclosure(_luaState, updateWizardStatus, 1);
+	lua_setglobal(_luaState, "updateWizardStatus");
 }
 
 void SpellSystem::deinit()

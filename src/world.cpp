@@ -266,9 +266,34 @@ WizardComponent::WizardComponent(ID parentEntID):
 {
 }
 
-void WizardComponent::serDes(SerDesBase&)
+void WizardComponent::serDes(SerDesBase& s)
 {
-	//s.serDes(*this); currently not serialized
+	s.serDes(*this);
+}
+
+void WizardComponent::setCurrentJobStatus(std::string job, float duration, float progress)
+{
+	bool changed = _currentJob != job || _currentJobDuration != duration || _currentJobProgress != progress;
+	_currentJob = job;
+	_currentJobDuration = duration;
+	_currentJobProgress = progress;
+	if(changed)
+		notifyObservers();
+}
+
+std::string WizardComponent::getCurrentJob()
+{
+	return _currentJob;
+}
+
+float WizardComponent::getCurrentJobDuration()
+{
+	return _currentJobDuration;
+}
+
+float WizardComponent::getCurrentJobProgress()
+{
+	return _currentJobProgress;
 }
 
 ////////////////////////////////////////////////////////////

@@ -27,7 +27,7 @@ class Animator: public Observer<EntityEvent>
 
 ////////////////////////////////////////////////////////////
 
-class ClientApplication
+class ClientApplication: private Observer<EntityEvent>
 {
 	public:
 		ClientApplication();
@@ -51,8 +51,10 @@ class ClientApplication
 		float _cameraYAngle;
 		TimedFilter<float> _yAngleSetCommandFilter;
 		gui::ProgressBar* _healthBar;
+		gui::ProgressBar* _castingIndicator;
 
 
+		void onMsg(const EntityEvent& m) override;
 		void commandHandler(Command& c);
 		void sendCommand(Command& c);
 		void sendPacket(sf::Packet& p);
@@ -60,6 +62,7 @@ class ClientApplication
 		void handlePacket(sf::Packet& p);
 		void bindCameraToControlledEntity();
 		void updateHealthBar();
+		void updateCastingIndicator(float timeDelta);
 };
 
 #endif /* CLIENT_HPP_16_11_26_10_46_45 */

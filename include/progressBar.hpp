@@ -9,8 +9,9 @@ namespace irr {
 			public:
 				ProgressBar(IGUIEnvironment* guienv, const irr::core::rect<s32>& rectangle, IGUIElement* parent=0, s32 id=-1);
 
-				// progess must be in range 0. - 1. (otherwise set to 0)
+				// progess must be in range 0. - 1. (otherwise clipped)
 				void setProgress(float progress);
+				float getProgress();
 
 				void setColors(irr::video::SColor background=irr::video::SColor(255,255,255,255), irr::video::SColor progress=irr::video::SColor(255,0,0,0));
 
