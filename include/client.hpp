@@ -61,7 +61,6 @@ class ClientApplication: private Observer<EntityEvent>
 		bool receive();
 		void handlePacket(sf::Packet& p);
 		void bindCameraToControlledEntity();
-		void updateHealthBar();
 		void updateCastingIndicator(float timeDelta);
 };
 

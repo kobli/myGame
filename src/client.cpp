@@ -379,40 +379,15 @@ void ClientApplication::bindCameraToControlledEntity()
 
 void ClientApplication::onMsg(const EntityEvent& m)
 {
-	if(m.componentT == ComponentType::AttributeStore)
-		updateHealthBar();
-	else if(m.componentT == ComponentType::Wizard)
-		if(_sharedRegistry.hasKey("controlled_object_id")) {
-			ID id = _sharedRegistry.getValue("controlled_object_id");
-			Entity* e = _gameWorld->getEntity(id);
-			if(e != nullptr) {
-				WizardComponent* wc = e->getComponent<WizardComponent>();
-				if(wc != nullptr) {
-					if(!wc->getCurrentJob().empty()) {
-						_castingIndicator->setVisible(true);
-						_castingIndicator->setProgress(wc->getCurrentJobProgress()/wc->getCurrentJobDuration());
-						std::string job = wc->getCurrentJob();
-						std::wstring w;
-						w.assign(job.begin(), job.end());
-						auto text = static_cast<gui::IGUIStaticText*>(*_castingIndicator->getChildren().begin());
-						text->setText(w.c_str());
-						vec2i ciSize(_castingIndicator->getAbsolutePosition().getWidth(), _castingIndicator->getAbsolutePosition().getHeight());
-						text->setRelativePosition((ciSize-vec2i(text->getTextWidth(), text->getTextHeight()))/2);
-					}
-					else
-						_castingIndicator->setVisible(false);
-				}
-			}
-		}
-}
-
-void ClientApplication::updateHealthBar()
-{
+	Entity* controlledE = nullptr;
 	if(_sharedRegistry.hasKey("controlled_object_id")) {
 		ID id = _sharedRegistry.getValue("controlled_object_id");
-		Entity* e = _gameWorld->getEntity(id);
-		if(e != nullptr) {
-			AttributeStoreComponent* as = e->getComponent<AttributeStoreComponent>();
+		controlledE = _gameWorld->getEntity(id);
+	}
+	if(m.componentT == ComponentType::AttributeStore) {
+		_healthBar->setProgress(0);
+		if(controlledE != nullptr) {
+			AttributeStoreComponent* as = controlledE->getComponent<AttributeStoreComponent>();
 			if(as != nullptr) {
 				if(as->hasAttribute("health") && as->hasAttribute("max-health")) {
 					_healthBar->setProgress(as->getAttribute("health")/as->getAttribute("max-health"));
@@ -426,7 +401,25 @@ void ClientApplication::updateHealthBar()
 			}
 		}
 	}
-	_healthBar->setProgress(0);
+	else if(m.componentT == ComponentType::Wizard)
+		if(controlledE != nullptr) {
+			WizardComponent* wc = controlledE->getComponent<WizardComponent>();
+			if(wc != nullptr) {
+				if(!wc->getCurrentJob().empty()) {
+					_castingIndicator->setVisible(true);
+					_castingIndicator->setProgress(wc->getCurrentJobProgress()/wc->getCurrentJobDuration());
+					std::string job = wc->getCurrentJob();
+					std::wstring w;
+					w.assign(job.begin(), job.end());
+					auto text = static_cast<gui::IGUIStaticText*>(*_castingIndicator->getChildren().begin());
+					text->setText(w.c_str());
+					vec2i ciSize(_castingIndicator->getAbsolutePosition().getWidth(), _castingIndicator->getAbsolutePosition().getHeight());
+					text->setRelativePosition((ciSize-vec2i(text->getTextWidth(), text->getTextHeight()))/2);
+				}
+				else
+					_castingIndicator->setVisible(false);
+			}
+		}
 }
 
 void ClientApplication::updateCastingIndicator(float timeDelta)
