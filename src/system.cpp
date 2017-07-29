@@ -357,7 +357,14 @@ void Physics::onMsg(const EntityEvent& m)
 	{
 		case ComponentType::Collision:
 			{
-				auto e = _world.getEntity(m.entityID);
+				auto eID = m.entityID;
+				btCollisionObject* o = getCollisionObjectByID(eID);
+				if(o)
+					_physicsWorld->removeCollisionObject(o);
+				if(m.destroyed)
+					break;
+
+				auto e = _world.getEntity(eID);
 				if(!e)
 					break;
 				auto col = e->getComponent<CollisionComponent>();
@@ -366,14 +373,6 @@ void Physics::onMsg(const EntityEvent& m)
 				btScalar mass = 80;
 				btScalar iner = 1;
 				btVector3 fallInertia(iner, iner, iner);
-				auto eID = m.entityID;
-
-				btCollisionObject* o = getCollisionObjectByID(eID);
-				if(o)
-					_physicsWorld->removeCollisionObject(o);
-
-				if(m.destroyed)
-					break;
 
 				_objData.emplace(eID, ObjData{});
 				btCollisionShape* pShape = new btCapsuleShape(col->getRadius(), col->getHeight());
