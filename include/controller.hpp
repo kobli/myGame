@@ -38,11 +38,13 @@ class Controller: public IEventReceiver
 {
 	public:
 		typedef std::function<vec2i()> GetScreenSize;
+		typedef std::function<void()> Exit;
 		Controller();
 
 		virtual bool OnEvent(const SEvent& event);
 		void setCommandHandler(std::function<void(Command& c)> commandHandler);
 		void setScreenSizeGetter(GetScreenSize screenSizeGetter);
+		void setExit(Exit exit);
 		void loadSpellBook(std::string fileName);
 		void loadControls(std::string fileName);
 
@@ -55,6 +57,7 @@ class Controller: public IEventReceiver
 		std::set<std::string> _activeActions;
 		vec2f _lastSentMovD;
 		GetScreenSize _getScreenSize;
+		Exit _exit;
 		SpellBook _spellBook;
 		KeyMap _keyMap;
 };

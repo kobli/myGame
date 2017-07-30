@@ -158,6 +158,20 @@ bool Controller::OnEvent(const SEvent& event)
 				break;
 		}
 	}
+	if (event.EventType == irr::EET_KEY_INPUT_EVENT)
+	{
+		switch(event.KeyInput.Key)
+		{
+			case irr::KEY_F4:
+				{
+					if(_keyPressed[EKEY_CODE::KEY_LMENU])
+						_exit();
+					break;
+				}
+			default:
+				break;
+		}
+	}
 	return true;
 }
 
@@ -169,4 +183,9 @@ void Controller::setCommandHandler(std::function<void(Command& c)> commandHandle
 void Controller::setScreenSizeGetter(GetScreenSize screenSizeGetter)
 {
 	_getScreenSize = screenSizeGetter;
+}
+
+void Controller::setExit(Exit exit)
+{
+	_exit = exit;
 }

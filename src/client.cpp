@@ -91,6 +91,7 @@ ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ 
 	_device->getVideoDriver()->setTextureCreationFlag(video::ETCF_ALWAYS_32_BIT, true);
 
 	_device->getCursorControl()->setVisible(false);
+	_device->setResizable(true);
 
 	createWorld();
 	createCamera();
@@ -119,6 +120,7 @@ ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ 
 
 	_controller.setCommandHandler(std::bind(&ClientApplication::commandHandler, ref(*this), std::placeholders::_1));
 	_controller.setScreenSizeGetter([this](){ auto ss = _device->getVideoDriver()->getScreenSize(); return vec2i(ss.Width, ss.Height); });
+	_controller.setExit([this](){ _device->closeDevice(); });
 }
 
 bool ClientApplication::connect(string host, short port)
