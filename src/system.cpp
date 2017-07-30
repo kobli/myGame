@@ -874,6 +874,31 @@ void SpellSystem::init()
 	lua_pushcclosure(_luaState, callAddAttributeAffector, 1);
 	lua_setglobal(_luaState, "addAttributeAffector");
 
+	auto callSetEntityVelocity = [](lua_State* s)->int {
+		int argc = lua_gettop(s);
+		if(argc != 4)
+		{
+			std::cerr << "callSetEntityVelocity: wrong number of arguments\n";
+			return 0;		
+		}
+		ID eID = lua_tointeger(s, 1);
+		vec3f velocity;
+		velocity.X = lua_tonumber(s, 2);
+		velocity.Y = lua_tonumber(s, 3);
+		velocity.Z = lua_tonumber(s, 4);
+		World* world = (World*)lua_touserdata(s, lua_upvalueindex(1));
+		Entity* e = world->getEntity(eID);
+		if(e != nullptr) {
+			BodyComponent* bc = e->getComponent<BodyComponent>();
+			if(bc != nullptr)
+				bc->setVelocity(velocity);
+		}
+		return 0;
+	};
+	lua_pushlightuserdata(_luaState, &_world);
+	lua_pushcclosure(_luaState, callSetEntityVelocity, 1);
+	lua_setglobal(_luaState, "setEntityVelocity");
+
 	auto updateWizardStatus = [](lua_State* s)->int {
 		int argc = lua_gettop(s);
 		if(argc != 4)

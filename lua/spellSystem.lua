@@ -281,7 +281,11 @@ end
 
 function Spell:update(delta)
 	for i=self.collisionsInLastTick.first, self.collisionsInLastTick.last, 1 do
-		if self:shouldDieOnCollisionWith(self.collisionsInLastTick[i]) then
+		local collidedWithEntType = entityIdToTypeName(self.collisionsInLastTick[i])
+		if collidedWithEntType == "terrain" then
+			setEntityVelocity(self.ID, 0, 0, 0)
+		end
+		if self:shouldDieOnCollisionWith(collidedWithEntType) then
 			self:die()
 			return
 		end
@@ -293,18 +297,8 @@ function Spell:handleCollision(otherID)
 	List.pushright(self.collisionsInLastTick, otherID)
 end
 
-function Spell:shouldDieOnCollisionWith(entID)
-	what = ""
-	if entID == MAPOBJID then
-		what = "terrain"
-	elseif entID == self.ID then
-		dout("spell hit itself - WTF?")
-	elseif SPELLS[entID] ~= nil then
-		what = "spell"
-	else
-		what = "player"
-	end
-	return self.baseBody:dieOnCollisionWith(what)
+function Spell:shouldDieOnCollisionWith(entityTypeName)
+	return self.baseBody:dieOnCollisionWith(entityTypeName)
 end
 
 function Spell:getPower()
@@ -383,6 +377,18 @@ function parseBodyArgStr(argStr)
 		end
 	end
 	return r
+end
+
+function entityIdToTypeName(entID)
+	what = ""
+	if entID == MAPOBJID then
+		what = "terrain"
+	elseif SPELLS[entID] ~= nil then
+		what = "spell"
+	else
+		what = "player"
+	end
+	return what
 end
 
 -------------------- Cpp interface --------------------
