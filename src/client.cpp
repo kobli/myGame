@@ -118,6 +118,12 @@ ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ 
 	env->addStaticText(L"", core::rect<s32>(0, 0, _castingIndicator->getRelativePosition().getWidth(), _castingIndicator->getRelativePosition().getHeight()), false, false, _castingIndicator);
 	_castingIndicator->drop();
 
+	int spellInHandsInfoPanelWidth = 100;
+	_spellInHandsInfo = _device->getGUIEnvironment()->addStaticText(L"SIH info", core::rect<s32>(0, 0, spellInHandsInfoPanelWidth, 80), false, false, env->getRootGUIElement(), -1, true);
+	_spellInHandsInfo->setBackgroundColor(video::SColor(200, 255,255,255));
+	_spellInHandsInfo->setRelativePosition(vec2i(screenSize.Width-spellInHandsInfoPanelWidth-30, 30));
+	_spellInHandsInfo->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT, gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT);
+
 	_controller.setCommandHandler(std::bind(&ClientApplication::commandHandler, ref(*this), std::placeholders::_1));
 	_controller.setScreenSizeGetter([this](){ auto ss = _device->getVideoDriver()->getScreenSize(); return vec2i(ss.Width, ss.Height); });
 	_controller.setExit([this](){ _device->closeDevice(); });
@@ -407,6 +413,11 @@ void ClientApplication::onMsg(const EntityEvent& m)
 		if(controlledE != nullptr) {
 			WizardComponent* wc = controlledE->getComponent<WizardComponent>();
 			if(wc != nullptr) {
+				_spellInHandsInfo->setText(std::wstring(
+						L"Power:   "+std::to_wstring(wc->getSpellInHandsPower()) + L"\n" +
+						L"Radius:  "+std::to_wstring(wc->getSpellInHandsRadius()) + L"\n" +
+						L"Speed:   "+std::to_wstring(wc->getSpellInHandsSpeed())
+						).c_str());
 				if(!wc->getCurrentJob().empty()) {
 					_castingIndicator->setVisible(true);
 					_castingIndicator->setProgress(wc->getCurrentJobProgress()/wc->getCurrentJobDuration());

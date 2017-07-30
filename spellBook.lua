@@ -1,6 +1,7 @@
 -- this is a comment - it is ignored
 -- here you can create variables, which you can use later to define spells
 
+-- order of spell_body_create coefficients: power radius speed
 staticBody = "spell_body_create 1 1 0 die{player}"
 bigMovingBody = "spell_body_create 2 3 1 die{player}"
 fastMovingBody = "spell_body_create 1 1 3 die{terrain,player}"

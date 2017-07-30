@@ -901,7 +901,7 @@ void SpellSystem::init()
 
 	auto updateWizardStatus = [](lua_State* s)->int {
 		int argc = lua_gettop(s);
-		if(argc != 4)
+		if(argc != 7)
 		{
 			std::cerr << "updateWizardStatus: wrong number of arguments\n";
 			return 0;		
@@ -910,12 +910,17 @@ void SpellSystem::init()
 		std::string currentJob = lua_tostring(s, 2);
 		float currentJobDuration = lua_tonumber(s, 3);
 		float currentJobProgress = lua_tonumber(s, 4);
+		float spellInHandsPower = lua_tonumber(s, 5);
+		float spellInHandsRadius = lua_tonumber(s, 6);
+		float spellInHandsSpeed = lua_tonumber(s, 7);
 		World* world = (World*)lua_touserdata(s, lua_upvalueindex(1));
 		Entity* e = world->getEntity(eID);
 		if(e != nullptr) {
 			WizardComponent* wc = e->getComponent<WizardComponent>();
-			if(wc != nullptr)
+			if(wc != nullptr) {
 				wc->setCurrentJobStatus(currentJob, currentJobDuration, currentJobProgress);
+				wc->setSpellInHandsData(spellInHandsPower, spellInHandsRadius, spellInHandsSpeed);
+			}
 		}
 		return 0;
 	};

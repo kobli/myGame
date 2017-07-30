@@ -120,7 +120,14 @@ function Wizard:updateStatus()
 	if self.invocT ~= nil and self.invocT > 0 then
 		progress = math.min(self.invocT, math.max(0, self.invocT-self.invocRemainT))
 	end
-	updateWizardStatus(self.ID, self.invocIncantation or "", self.invocT, progress)
+	local p,r,s
+	if self.spellInHands ~= nil then
+		p = self.spellInHands:getPower()
+		r = self.spellInHands:getRadius()
+		s = self.spellInHands:getSpeed()
+	end
+	updateWizardStatus(self.ID, self.invocIncantation or "", self.invocT, progress, 
+	p, r, s)
 end
 
 function Wizard:execIncantation(inc)

@@ -281,6 +281,16 @@ void WizardComponent::setCurrentJobStatus(std::string job, float duration, float
 		notifyObservers();
 }
 
+void WizardComponent::setSpellInHandsData(float power, float radius, float speed)
+{
+	bool changed = _spellInHandsPower != power || _spellInHandsRadius != radius || _spellInHandsSpeed != speed;
+	_spellInHandsPower = power;
+	_spellInHandsRadius = radius;
+	_spellInHandsSpeed = speed;
+	if(changed)
+		notifyObservers();
+}
+
 std::string WizardComponent::getCurrentJob()
 {
 	return _currentJob;
@@ -294,6 +304,21 @@ float WizardComponent::getCurrentJobDuration()
 float WizardComponent::getCurrentJobProgress()
 {
 	return _currentJobProgress;
+}
+
+float WizardComponent::getSpellInHandsPower()
+{
+	return _spellInHandsPower;
+}
+
+float WizardComponent::getSpellInHandsRadius()
+{
+	return _spellInHandsRadius;
+}
+
+float WizardComponent::getSpellInHandsSpeed()
+{
+	return _spellInHandsSpeed;
 }
 
 ////////////////////////////////////////////////////////////

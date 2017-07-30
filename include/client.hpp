@@ -52,6 +52,7 @@ class ClientApplication: private Observer<EntityEvent>
 		TimedFilter<float> _yAngleSetCommandFilter;
 		gui::ProgressBar* _healthBar;
 		gui::ProgressBar* _castingIndicator;
+		gui::IGUIStaticText* _spellInHandsInfo;
 
 
 		void onMsg(const EntityEvent& m) override;
