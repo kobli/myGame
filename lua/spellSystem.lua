@@ -313,7 +313,7 @@ function Spell:getPower()
 	for k,v in pairs(self.bodies) do
 		s = s + v:getPower()
 	end
-	return s
+	return stackedBodiesMultipltier(#self.bodies)*s
 end
 
 function Spell:getRadius()
@@ -321,7 +321,7 @@ function Spell:getRadius()
 	for k,v in pairs(self.bodies) do
 		s = s + v:getRadius()
 	end
-	return math.min(s, Config.Spell.maxRadius)
+	return math.min(stackedBodiesMultipltier(#self.bodies)*s, Config.Spell.maxRadius)
 end
 
 function Spell:getSpeed()
@@ -329,7 +329,7 @@ function Spell:getSpeed()
 	for k,v in pairs(self.bodies) do
 		s = s + v:getSpeed()
 	end
-	return math.min(s, Config.Spell.maxSpeed)
+	return math.min(stackedBodiesMultipltier(#self.bodies)*s, Config.Spell.maxSpeed)
 end
 
 function Spell:die()
@@ -396,6 +396,14 @@ function entityIdToTypeName(entID)
 		what = "player"
 	end
 	return what
+end
+
+function log(n, base)
+	return math.log(n)/math.log(base)
+end
+
+function stackedBodiesMultipltier(bodyC)
+	return (log(bodyC+1, 1.5)-0.71)/bodyC
 end
 
 -------------------- Cpp interface --------------------
