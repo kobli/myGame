@@ -42,8 +42,8 @@ end
 
 function spawnCharacter()
 	local charID = createCharacter(0,20,0)
-	setEntityAttributeValue(charID, "health", 10)
-	setEntityAttributeValue(charID, "max-health", 30)
+	setEntityAttributeValue(charID, "health", 20)
+	setEntityAttributeValue(charID, "max-health", 50)
 	return charID
 end
 

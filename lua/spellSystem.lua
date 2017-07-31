@@ -36,7 +36,7 @@ Config.Spell = {}
 Config.Effect = {}
 Config.Wizard = {}
 
-Config.Body.invocT = .2					-- invocation time [seconds]
+Config.Body.invocT = 0.6				-- invocation time [seconds]
 Config.Body.minRadiusCoef = 0.1 -- minimum radius coefficient of the spell body sphere [?]
 Config.Body.baseSpeed = 20			-- base traveling speed of the body [?]
 Config.Body.baseRadius = 2			-- base radius of the body sphere [?]
@@ -46,9 +46,9 @@ Config.Spell.maxRadius = 20			-- maximum radius of the spell body sphere [?]
 
 BODYEFFECTID = 0
 Config.Effects = {}
-Config.Effects["fire"] = EffectData:new(1, .2, "health", AttributeAffectorModifierType.ADD, -30, true, 0)
-Config.Effects["water"] = EffectData:new(2, .2, "health", AttributeAffectorModifierType.ADD, -30, true, 0)
-Config.Effects["heal"] = EffectData:new(3, 1, "health", AttributeAffectorModifierType.ADD, 20, true, 0)
+Config.Effects["fire"] = EffectData:new(1, 1.3, "health", AttributeAffectorModifierType.ADD, -30, true, 0)
+Config.Effects["water"] = EffectData:new(2, 1.3, "health", AttributeAffectorModifierType.ADD, -30, true, 0)
+Config.Effects["heal"] = EffectData:new(3, 1.1, "health", AttributeAffectorModifierType.ADD, 20, true, 0)
 
 Config.Wizard.maxBodiesAlive = 50
 
