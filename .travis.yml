@@ -1,7 +1,10 @@
 sudo: required
 
 before_install:
-  - sudo apt-get install libxcursor-dev libgl1-mesa-dev g++-5
+  - sudo apt-get install libxcursor-dev libgl1-mesa-dev
+  # C++14
+  - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+  - sudo apt-get update -qq
 
 # Enable C++ support
 language: cpp
@@ -11,7 +14,10 @@ compiler:
   - gcc
 
 install:
-  - export CXX="g++-5"
+  # C++14
+  - sudo apt-get install -qq g++-6
+  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 90
+
   - DEPS_DIR="${TRAVIS_BUILD_DIR}/deps"
   - mkdir ${DEPS_DIR} && cd ${DEPS_DIR}
 
