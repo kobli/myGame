@@ -75,18 +75,45 @@ set(GENERAL_LIBS
 	)
 
 if(${PLATFORM} MATCHES "lin_64")
-	set(SYSTEM_SPECIFIC_LIBS ${LINUX_ONLY_LIBS})
+	set(TARGET_OS "Linux")
 elseif(${PLATFORM} MATCHES "lin_32")
+	set(TARGET_OS "Linux")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
-	set(SYSTEM_SPECIFIC_LIBS ${LINUX_ONLY_LIBS})
 elseif(${PLATFORM} MATCHES "win_gcc_32")
-	set(SYSTEM_SPECIFIC_LIBS ${WINDOWS_ONLY_LIBS})
+	set(TARGET_OS "Windows")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_IRR_STATIC_LIB_ -DSFML_STATIC -static")
 else()
 	message(FATAL_ERROR "PLATFORM variable not set. Possible values: ${PLATFORMS}")
 endif()
 
+if(${TARGET_OS} MATCHES "Linux")
+	set(SYSTEM_SPECIFIC_LIBS ${LINUX_ONLY_LIBS})
+elseif(${TARGET_OS} MATCHES "Windows")
+	set(SYSTEM_SPECIFIC_LIBS ${WINDOWS_ONLY_LIBS})
+	set(CLIENT_ONLY_PACKAGE_FILES "run.bat")
+endif()
+
 target_link_libraries(${PROJECT_NAME}
 	${GENERAL_LIBS}
 	${SYSTEM_SPECIFIC_LIBS}
+	)
+
+set(GENERAL_PACKAGE_FILES
+	"$<TARGET_FILE:${PROJECT_NAME}>"
+	"${PROJECT_SOURCE_DIR}/media"
+	"${PROJECT_SOURCE_DIR}/controls.lua"
+	"${PROJECT_SOURCE_DIR}/keymap.lua" 
+	"${PROJECT_SOURCE_DIR}/spellBook.lua"
+	)
+set(SERVER_ONLY_PACKAGE_FILES
+	"${PROJECT_SOURCE_DIR}/lua/spellSystem.lua" 
+	"${PROJECT_SOURCE_DIR}/lua/gamemode_dm.lua"
+	)
+
+file(WRITE "${PROJECT_BINARY_DIR}/run.bat" "myGame.exe -c -a kobl.eu -p 55555")
+add_custom_target(package-client COMMAND
+	${CMAKE_COMMAND} -E tar "cvf" "${PROJECT_NAME}-client-${${PROJECT_NAME}_VERSION_MAJOR}.${${PROJECT_NAME}_VERSION_MINOR}-${PLATFORM}.zip" --format=zip ${GENERAL_PACKAGE_FILES} ${CLIENT_ONLY_PACKAGE_FILES}
+	)
+add_custom_target(package-server COMMAND
+	${CMAKE_COMMAND} -E tar "cvf" "${PROJECT_NAME}-server-${${PROJECT_NAME}_VERSION_MAJOR}.${${PROJECT_NAME}_VERSION_MINOR}-${PLATFORM}.zip" --format=zip ${GENERAL_PACKAGE_FILES} ${SERVER_ONLY_PACKAGE_FILES}
 	)
