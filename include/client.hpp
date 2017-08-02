@@ -31,7 +31,7 @@ class ClientApplication: private Observer<EntityEvent>
 {
 	public:
 		ClientApplication();
-		bool connect(string host, short port);
+		bool connect(string host, unsigned short port);
 		void run();
 		void createWorld();
 		void createCamera();

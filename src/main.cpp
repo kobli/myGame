@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
 		ClientApplication c;
 		std::string addr = "localhost";
 		getCmdOption("-a", &addr);
-		if(!c.connect(addr, std::stoi(port))) {
+		if(!c.connect(addr, std::stoul(port))) {
 			cerr << "Failed to connect to the server.\n";
 			return 1;
 		}

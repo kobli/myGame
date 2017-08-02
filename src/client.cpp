@@ -129,7 +129,7 @@ ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ 
 	_controller.setExit([this](){ _device->closeDevice(); });
 }
 
-bool ClientApplication::connect(string host, short port)
+bool ClientApplication::connect(string host, unsigned short port)
 {
 	std::cout << "Connecting to " << host << ":" << port << std::endl;
 	auto r = _server.connect(host, port);
