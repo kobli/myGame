@@ -29,7 +29,8 @@ include_directories(
 	${PROJECT_SOURCE_DIR}/extlibs/lua-5.3.4/include
 	)
 set(PLATFORM CACHE STRING "The destination platform.")
-set_property(CACHE PLATFORM PROPERTY STRINGS lin_64 lin_32 win_gcc_32)
+set(PLATFORMS lin_64 lin_32 win_gcc_32)
+set_property(CACHE PLATFORM PROPERTY STRINGS ${PLATFORMS})
 set(CMAKE_PREFIX_PATH "${PROJECT_SOURCE_DIR}/extlibs")
 link_directories(
 	/usr/X11R6/lib64
@@ -81,6 +82,8 @@ elseif(${PLATFORM} MATCHES "lin_32")
 elseif(${PLATFORM} MATCHES "win_gcc_32")
 	set(SYSTEM_SPECIFIC_LIBS ${WINDOWS_ONLY_LIBS})
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_IRR_STATIC_LIB_ -DSFML_STATIC -static")
+else()
+	message(FATAL_ERROR "PLATFORM variable not set. Possible values: ${PLATFORMS}")
 endif()
 
 target_link_libraries(${PROJECT_NAME}
