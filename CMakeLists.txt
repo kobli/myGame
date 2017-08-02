@@ -92,6 +92,14 @@ endif()
 
 if(${TARGET_OS} MATCHES "Linux")
 	set(SYSTEM_SPECIFIC_LIBS ${LINUX_ONLY_LIBS})
+	file(GLOB SHARED_LIBS 
+		"${PROJECT_SOURCE_DIR}/extlibs/SFML-2.3.2/lib/${PLATFORM}/*.so*"
+		)
+	file(COPY ${SHARED_LIBS} DESTINATION ${PROJECT_BINARY_DIR})
+	set(GENERAL_PACKAGE_FILES
+		"libsfml-system.so*"
+		"libsfml-network.so*"
+		)
 elseif(${TARGET_OS} MATCHES "Windows")
 	set(SYSTEM_SPECIFIC_LIBS ${WINDOWS_ONLY_LIBS})
 	set(CLIENT_ONLY_PACKAGE_FILES "run.bat")
@@ -103,6 +111,7 @@ target_link_libraries(${PROJECT_NAME}
 	)
 
 set(GENERAL_PACKAGE_FILES
+	${GENERAL_PACKAGE_FILES}
 	"$<TARGET_FILE:${PROJECT_NAME}>"
 	"${PROJECT_SOURCE_DIR}/media"
 	"${PROJECT_SOURCE_DIR}/controls.lua"
