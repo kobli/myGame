@@ -121,6 +121,7 @@ set(GENERAL_PACKAGE_FILES
 set(SERVER_ONLY_PACKAGE_FILES
 	"${PROJECT_SOURCE_DIR}/lua/spellSystem.lua" 
 	"${PROJECT_SOURCE_DIR}/lua/gamemode_dm.lua"
+	"${PROJECT_SOURCE_DIR}/lua/list.lua"
 	)
 
 file(WRITE "${PROJECT_BINARY_DIR}/run.bat" "myGame.exe -c -a kobl.eu -p 55555")
