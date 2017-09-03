@@ -36,6 +36,7 @@ int main(int argc, char* argv[]) {
 		irr::SIrrlichtCreationParameters params;
 		params.DriverType = video::E_DRIVER_TYPE::EDT_NULL;
 		IrrlichtDevice* device = createDeviceEx(params);
+		SAVEIMAGE = ImageDumper(device->getVideoDriver());
 		ServerApplication s(device);
 		if(!s.listen(std::stoi(port))) {
 			cerr << "Cannot listen on port " << port << ".\n";

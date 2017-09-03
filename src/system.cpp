@@ -99,7 +99,7 @@ System::System(World& world): _world{world}
 
 ////////////////////////////////////////////////////////////
 
-Physics::Physics(World& world, scene::ISceneManager* smgr): System{world}, _tAcc{0}, _updating{false}
+Physics::Physics(World& world, scene::ISceneManager* smgr): System{world}, _tAcc{0}, _updating{false}, _heightMap{nullptr}
 {
 	//TODO cleanup
 	btBroadphaseInterface* broadphase = new btDbvtBroadphase();
@@ -114,14 +114,18 @@ Physics::Physics(World& world, scene::ISceneManager* smgr): System{world}, _tAcc
 	{
 		DebugDrawer* debugDrawer = new DebugDrawer(smgr);
 		_physicsWorld->setDebugDrawer(debugDrawer);
-		_physicsWorld->getDebugDrawer()->setDebugMode(btIDebugDraw::DBG_DrawText);
+		_physicsWorld->getDebugDrawer()->setDebugMode(btIDebugDraw::DBG_DrawWireframe);
+		//_physicsWorld->getDebugDrawer()->setDebugMode(btIDebugDraw::DBG_DrawText);
 	}
 
-	WorldMap& m = _world.getMap();
+	const WorldMap& m = _world.getMap();
 	// physics setup for the terrain
 	int upAxis = 1; // Y
-	auto heightMap = m.getHeightMap();
-	unsigned w = sqrt(m.getVertexCount());
+	unsigned w = m.getSize().X;
+	assert(m.getSize().X == m.getSize().Y);
+	assert((w & (w - 1)) == 0); // map size must be power of two
+	_heightMap.reset(new float[(w+1)*(w+1)]);
+	float* heightMap = _heightMap.get();
 
 	float min = heightMap[0];
 	float max = heightMap[0];
@@ -129,13 +133,15 @@ Physics::Physics(World& world, scene::ISceneManager* smgr): System{world}, _tAcc
 	{
 		for(unsigned x = 0; x<w; x++)
 		{
-			float h = heightMap[x + y*w];
+			float h = m.getHeightAt(x,y);
+			heightMap[x + y*(w)] = h;
 			if(h > max)
 				max = h;
 			if(h < min)
 				min = h;
 		}
 	}
+
 	btHeightfieldTerrainShape* terrS = new btHeightfieldTerrainShape(w, w,
 				heightMap,
 				0, // ignored when using float
@@ -144,8 +150,8 @@ Physics::Physics(World& world, scene::ISceneManager* smgr): System{world}, _tAcc
 				PHY_FLOAT, true);
 	
 	// scale
-	float f = m.getPatchSize()/(w-1);
-	btVector3 localScaling(f, m.getHeightScale(), f);
+	float f = 1;
+	btVector3 localScaling(f, 1, f);
 	terrS->setLocalScaling(localScaling);
 
 	// set origin to middle of heightfield

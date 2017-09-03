@@ -36,6 +36,7 @@ class Physics: public System
 		std::vector<std::function<void(ID, ID)>> _collCallbacks;
 		float _tAcc;
 		bool _updating;
+		std::unique_ptr<float[]> _heightMap;
 
 		btCollisionObject* getCollisionObjectByID(ID objID);
 		void bodyDoStrafe(float timeDelta);

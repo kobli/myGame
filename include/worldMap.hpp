@@ -4,10 +4,15 @@
 #include "terrain.hpp"
 #include "treePlanter.hpp"
 
-class Map {
+class WorldMap {
 	public:
-		Map(): _terrain(nullptr)
+		WorldMap(): _terrain(nullptr)
 		{}
+
+		WorldMap(vec2u size, unsigned seed = 1): _terrain(nullptr)
+		{
+			generate(size, seed);
+		}
 
 		void generate(vec2u size, unsigned seed = 1)
 		{
@@ -15,15 +20,27 @@ class Map {
 			_trees = TreePlanter::plant(*_terrain, seed);
 		}
 
-		const Terrain& getTerrain()
+		const Terrain& getTerrain() const
 		{
 			assert(_terrain.get() != nullptr);
 			return *_terrain;
 		}
 
-		const std::vector<Tree>& getTrees() 
+		const std::vector<Tree>& getTrees() const
 		{
 			return _trees;
+		}
+
+		float getHeightAt(unsigned x, unsigned y) const
+		{
+			assert(_terrain.get() != nullptr);
+			return _terrain->heightAt(x,y);
+		}
+
+		vec2u getSize() const 
+		{
+			assert(_terrain.get() != nullptr);
+			return _terrain->size();
 		}
 
 	private:

@@ -2,6 +2,7 @@
 #include "client.hpp"
 #include "network.hpp"
 #include "serdes.hpp"
+#include "heightmapMesh.hpp"
 
 Animator::Animator(scene::ISceneManager* smgr, function<Entity*(u32)> entityResolver, function<vec3f(u32)> entityVelocityGetter)
 	: _smgr{smgr}, _entityResolver{entityResolver}, _velGetter{entityVelocityGetter}
@@ -92,9 +93,19 @@ ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ 
 
 	_device->getCursorControl()->setVisible(false);
 	_device->setResizable(true);
+	
+	SAVEIMAGE = ImageDumper(_device->getVideoDriver());
 
 	createWorld();
 	createCamera();
+
+	HeightmapMesh mesh;
+	mesh.init(_worldMap->getTerrain(), [](f32,f32,f32,vec3f){return video::SColor(255,255,0,0);}/*TerrainTexturer::texture*/, _device->getVideoDriver());
+	scene::IMeshSceneNode* terrain = _device->getSceneManager()->addMeshSceneNode(mesh.Mesh, nullptr);
+	terrain->setPosition(terrain->getBoundingBox().getCenter()*core::vector3df(-1,0,-1));
+	terrain->setMaterialFlag(video::EMF_BACK_FACE_CULLING, false);
+	terrain->setMaterialFlag(video::EMF_LIGHTING, false);
+	terrain->setMaterialFlag(video::EMF_WIREFRAME, true);
 
 	auto screenSize = _device->getVideoDriver()->getScreenSize();
 	gui::IGUIEnvironment* env = _device->getGUIEnvironment();
@@ -145,6 +156,7 @@ void ClientApplication::run()
 	sf::Clock c;
 	while(_device->run())
 	{
+		/* TODO uncomment
 		if(_camera->isInputReceiverEnabled())
 			bindCameraToControlledEntity();
 		if(!_camera->isInputReceiverEnabled()) {
@@ -157,6 +169,7 @@ void ClientApplication::run()
 					_camera->setPosition(controlledCharSceneNode->getPosition() + vec3f(0,1.6,0) + 0.23f*(cameraLookDir*vec3f(1,0,1)).normalize());
 			}
 		}
+		*/
 
 		while(receive());		
 		//TODO fix frameLen spike after win inactivity (mind the physics)
@@ -164,7 +177,7 @@ void ClientApplication::run()
 		{
 			if(_device->isWindowActive())
 				_device->getCursorControl()->setPosition(vec2f(0.5));
-			driver->beginScene();
+			driver->beginScene(true,true,video::SColor(255,255,255,255));
 			f32 ar = (float)driver->getScreenSize().Width/(float)driver->getScreenSize().Height;
 			if(ar != _camera->getAspectRatio() && _camera)
 				_camera->setAspectRatio(ar);
@@ -206,7 +219,8 @@ void ClientApplication::run()
 
 void ClientApplication::createWorld()
 {
-	_worldMap.reset(new WorldMap(70, _device->getSceneManager()));
+	_worldMap.reset(new WorldMap());
+	_worldMap->generate(vec2u(32),1);
 	_gameWorld.reset(new World(*_worldMap));
 	_vs.reset(new ViewSystem(_device->getSceneManager(), *_gameWorld));
 	_physics.reset(new Physics(*_gameWorld, _device->getSceneManager()));
@@ -245,19 +259,8 @@ void ClientApplication::createCamera()
 		_device->getSceneManager()->addCameraSceneNodeFPS(nullptr,100.0f,camWalkSpeed,ObjStaticID::Camera,keyMap,9,false);
 	
 	_camera->setPosition(core::vector3df(0,10,50));
-	//_camera->setTarget(core::vector3df(2397*2,343*2,2700*2));
+	_camera->setTarget(core::vector3df(0));
 	_camera->setFarValue(42000.0f);
-
-	if(!_worldMap)
-		return;
-	// create collision response animator and attach it to the camera
-	
-//	scene::ISceneNodeAnimatorCollisionResponse* anim = _device->getSceneManager()->createCollisionResponseAnimator(
-//		_worldMap->getMetaTriangleSelector(), _camera, core::vector3df(40,100,40),
-//		core::vector3df(0,-50,0),
-//		core::vector3df(0,50,0),
-//		0.1);
-//	_camera->addAnimator(anim);
 }
 
 void ClientApplication::commandHandler(Command& c)

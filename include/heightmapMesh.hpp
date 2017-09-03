@@ -2,16 +2,15 @@
 #define HEIGHTMAPMESH_HPP_17_08_25_21_23_16 
 #include "main.hpp"
 
-typedef std::function<SColor(f32 x, f32 y, f32 z, vector3df normal)> ColoringFunc;
-
 class HeightmapMesh
 {
 	public:
-		SMesh* Mesh;
+		typedef std::function<video::SColor(f32 x, f32 y, f32 z, vec3f normal)> ColoringFunc;
+		scene::SMesh* Mesh;
 
 		HeightmapMesh(): Mesh(nullptr)
 		{
-			Mesh = new SMesh();
+			Mesh = new scene::SMesh();
 		}
 
 		~HeightmapMesh()
@@ -23,7 +22,7 @@ class HeightmapMesh
 		// SMeshBuffer. This function chops it into pieces and generates a
 		// buffer from each one.
 
-		void init(const Terrain& t, ColoringFunc cf, IVideoDriver *driver)
+		void init(const Terrain& t, ColoringFunc cf, video::IVideoDriver *driver)
 		{
 			const u32 mp = driver -> getMaximalPrimitiveCount();
 			unsigned h = t.size().Y;
@@ -56,15 +55,15 @@ class HeightmapMesh
 			unsigned w = t.size().X;
 			unsigned h = t.size().Y;
 
-			SMeshBuffer *buf = 0;
+			scene::SMeshBuffer *buf = 0;
 			if (bufNum<Mesh->getMeshBufferCount())
 			{
-				buf = (SMeshBuffer*)Mesh->getMeshBuffer(bufNum);
+				buf = (scene::SMeshBuffer*)Mesh->getMeshBuffer(bufNum);
 			}
 			else
 			{
 				// create new buffer
-				buf = new SMeshBuffer();
+				buf = new scene::SMeshBuffer();
 				Mesh->addMeshBuffer(buf);
 				// to simplify things we drop here but continue using buf
 				buf->drop();
@@ -80,7 +79,7 @@ class HeightmapMesh
 					const f32 xx = (f32)x/(f32)w;
 					const f32 yy = (f32)y/(f32)h;
 
-					S3DVertex& v = buf->Vertices[i++];
+					video::S3DVertex& v = buf->Vertices[i++];
 					v.Pos.set(x, z, y);
 					v.Normal.set(t.normalAt(x, y));
 					v.Color=cf(xx, yy, z, v.Normal);

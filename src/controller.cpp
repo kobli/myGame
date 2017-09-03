@@ -142,6 +142,7 @@ bool Controller::OnEvent(const SEvent& event)
 		{
 			case EMIE_MOUSE_MOVED:
 				{
+					break; //TODO remove
 					vec2i screenCenter = _getScreenSize()/2;
 					vec2i mousePos = vec2i{event.MouseInput.X, event.MouseInput.Y};
 					if(mousePos == screenCenter) // TODO better idea?
@@ -172,7 +173,7 @@ bool Controller::OnEvent(const SEvent& event)
 				break;
 		}
 	}
-	return true;
+	return false;
 }
 
 void Controller::setCommandHandler(std::function<void(Command& c)> commandHandler)

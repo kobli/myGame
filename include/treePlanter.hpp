@@ -3,6 +3,7 @@
 #include <vector>
 #include "main.hpp"
 #include "terrain.hpp"
+#include "perlinMultiOctave.hpp"
 
 struct Tree {
 	irr::core::vector3df position;

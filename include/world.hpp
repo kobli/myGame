@@ -8,6 +8,7 @@
 #include "serializable.hpp"
 #include "observableEntityComponent.hpp"
 #include "keyValueStore.hpp"
+#include "worldMap.hpp"
 
 using ec::ID;
 using ec::NULLID;
@@ -298,41 +299,24 @@ class AttributeStoreComponent: public ObservableComponentBase, KeyValueStore
 
 ////////////////////////////////////////////////////////////
 
-class WorldMap
-{
-	public:
-		WorldMap(float patchSize, scene::ISceneManager* scene);
-		float* getHeightMap();
-		unsigned getVertexCount();
-		float getPatchSize();
-		float getHeightScale();
-
-	private:
-		const float _patchSize;
-		scene::ISceneManager* _scene;
-		std::unique_ptr<float[]> _heightMap;
-		float _heightScale;
-		unsigned _vertexC;
-};
-
-////////////////////////////////////////////////////////////
-
 class World: public Observabler<EntityEvent>
 {
 	public:
-		World(WorldMap& wm);
+		World(const WorldMap& wm);
 		ID createEntity(ID hintEntID = NULLID);
 		Entity& createAndGetEntity(ID hintEntID = NULLID);
 		void removeEntity(ID entID);
 		Entity* getEntity(ID entID);
 		ID createCharacter(vec3f position);
-		WorldMap& getMap();
+		const WorldMap& getMap();
 		IterateOnly<SolidVector<Entity,ID,NULLID>> getEntities();
 
 	private:
-		WorldMap& _map;
+		const WorldMap& _map;
 		EntityManager _entManager;
 };
+
+////////////////////////////////////////////////////////////
 
 template <typename T>
 T& operator <<(T& t, const ObservableComponentBase& m)

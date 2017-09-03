@@ -20,15 +20,13 @@ class Terrain {
 	{
 		private:
 			const vec2u _size;
-			float s;
 			std::vector<float> data;
 		public:
 			// should return values in range -0.5, 0.5
 			typedef std::function<float(unsigned x, unsigned y)> Generator;
 
-			HeightMap(vec2u size) : _size{size}, s(0.f), data(0)
+			HeightMap(vec2u size) : _size{size}, data(0)
 			{
-				s = std::sqrt((float)(_size.X*_size.X + _size.Y*_size.Y));
 				data.reserve(_size.X*_size.Y);
 			}
 
