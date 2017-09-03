@@ -48,6 +48,8 @@ link_directories(
 add_executable(${PROJECT_NAME} ${CPP_SOURCES})
 
 set(LINUX_ONLY_LIBS
+	sfml-system
+	sfml-network
 	GL
 	Xxf86vm
 	Xext
@@ -57,9 +59,9 @@ set(LINUX_ONLY_LIBS
 	)
 
 set(WINDOWS_ONLY_LIBS
+	sfml-network-s
+	sfml-system-s
 	ws2_32
-	gcc
-	stdc++
 	winmm
 	gdi32
 	opengl32
@@ -70,8 +72,6 @@ set(WINDOWS_ONLY_LIBS
 
 set(GENERAL_LIBS
 	Irrlicht
-	sfml-system
-	sfml-network
 	lua
 	BulletDynamics
 	BulletCollision
@@ -85,7 +85,7 @@ elseif(${PLATFORM} MATCHES "lin_32")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
 elseif(${PLATFORM} MATCHES "win_gcc_32")
 	set(TARGET_OS "Windows")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_IRR_STATIC_LIB_ -DSFML_STATIC -static")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_IRR_STATIC_LIB_ -DSFML_STATIC -static -static-libgcc -static-libstdc++")
 else()
 	message(FATAL_ERROR "PLATFORM variable not set. Possible values: ${PLATFORMS}")
 endif()
