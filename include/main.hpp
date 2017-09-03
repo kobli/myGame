@@ -4,6 +4,7 @@
 #include <iostream>
 #include <lua5.3/lua.hpp>
 #include <vector>
+#include <functional>
 
 #ifndef MAIN_HPP_16_11_18_13_20_24
 #define MAIN_HPP_16_11_18_13_20_24 
@@ -19,6 +20,7 @@ using vec2 = core::vector2d<T>;
 template <typename T>
 using vec3 = core::vector3d<T>;
 using vec2f = core::vector2df;
+using vec2u = core::vector2d<u32>;
 using vec3f = core::vector3df;
 using vec2i = core::vector2di;
 using vec3i = core::vector3di;
@@ -51,5 +53,30 @@ typedef std::vector<std::pair<std::string,std::string>> Table;
 
 std::string lua_valueAsStr(lua_State* L, int index);
 Table lua_loadTable(lua_State* l);
+
+class ImageDumper {
+	public:
+		typedef std::function<unsigned(unsigned x, unsigned y)> PixValGetter;
+		inline ImageDumper(irr::video::IVideoDriver* driver): _driver{driver}
+		{}
+
+		inline bool operator()(std::string fileName, PixValGetter pixVal, irr::core::vector2d<unsigned> imSize) const
+		{
+			using namespace irr;
+			auto im = _driver->createImage(video::ECF_R8G8B8, core::dimension2du(imSize));
+			for(unsigned y = 0; y < imSize.Y; ++y)
+				for(unsigned x = 0; x < imSize.X; ++x) {
+					unsigned h = pixVal(imSize.X-x,y);
+					im->setPixel(x,y, irr::video::SColor(255, h, h, h));
+				}
+			return _driver->writeImageToFile(im, fileName.c_str());
+		}
+
+	private:
+		irr::video::IVideoDriver* _driver;
+};
+
+
+extern ImageDumper SAVEIMAGE;
 
 #endif /* MAIN_HPP_16_11_18_13_20_24 */

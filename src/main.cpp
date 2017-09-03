@@ -6,6 +6,8 @@
 #include "client.hpp"
 #include "config.hpp"
 
+ImageDumper SAVEIMAGE(nullptr);
+
 bool hasCmdOption(const int argc, char* argv[], const std::string& option, std::string* outArg = nullptr)
 {
 	for(int i = 0; i < argc; i++) {
