@@ -6,7 +6,7 @@ Command::Command(Type type): _type{type}
 
 ////////////////////////////////////////////////////////////
 
-Controller::Controller(): _commandHandler{[](Command&){}}, _lastSentMovD{0,0}
+Controller::Controller(): _commandHandler{[](Command&){}}, _lastSentMovD{0,0}, _freeCamera{false}
 {
 	loadSpellBook("spellBook.lua");
 	loadControls("controls.lua");
@@ -142,7 +142,8 @@ bool Controller::OnEvent(const SEvent& event)
 		{
 			case EMIE_MOUSE_MOVED:
 				{
-					break; //TODO remove
+					if(_freeCamera)
+						break;
 					vec2i screenCenter = _getScreenSize()/2;
 					vec2i mousePos = vec2i{event.MouseInput.X, event.MouseInput.Y};
 					if(mousePos == screenCenter) // TODO better idea?
@@ -189,4 +190,9 @@ void Controller::setScreenSizeGetter(GetScreenSize screenSizeGetter)
 void Controller::setExit(Exit exit)
 {
 	_exit = exit;
+}
+
+bool Controller::isCameraFree()
+{
+	return _freeCamera;
 }

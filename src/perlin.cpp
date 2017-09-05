@@ -13,9 +13,9 @@ float Perlin::val(float x, float y) {
 	assert(x <= _gridSizeX-1);
 	assert(y <= _gridSizeY-1);
 	int x0 = std::floor(x);
-	int x1 = x0 + 1;
+	int x1 = std::min(int(_gridSizeX)-1, x0 + 1);
 	int y0 = std::floor(y);
-	int y1 = y0 + 1;
+	int y1 = std::min(int(_gridSizeY)-1, y0 + 1);
 
 	float sx = x - (float)x0;
 	float sy = y - (float)y0;

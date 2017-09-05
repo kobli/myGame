@@ -12,12 +12,12 @@ vec2u Terrain::size() const
 	return _size;
 }
 
-float Terrain::heightAt(unsigned x, unsigned y) const
+float Terrain::heightAt(float x, float y) const
 {
 	return _heightMap.get(x, y)*50;
 }
 
-vec3f Terrain::normalAt(unsigned x, unsigned y) const
+vec3f Terrain::normalAt(float x, float y) const
 {
 	return _heightMap.getNormal(x,y);
 }
@@ -57,5 +57,5 @@ void Terrain::init()
 		return g.val(x, y)*2;
 	};
 	_heightMap.generate(g);
-	dumpHeightmapToImage("heightmap.bmp");
+	//dumpHeightmapToImage("heightmap.bmp");
 }

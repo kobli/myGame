@@ -1,6 +1,7 @@
 #ifndef TERRAINTEXTURER_HPP_17_08_25_21_30_11
 #define TERRAINTEXTURER_HPP_17_08_25_21_30_11 
 #include "main.hpp"
+#include "interval.hpp"
 
 enum TerrainTexture{
 	sand,
@@ -11,8 +12,12 @@ enum TerrainTexture{
 
 class TerrainTexturer {
 	public:
-		static irr::video::SColor texture(f32 x, f32 y, f32 z, irr::core::vector3df /*normal*/)
+		static video::SColor texture(f32 x, f32 y, f32 z, vec3f /*normal*/)
 		{
+			assert(x >= 0);
+			assert(y >= 0);
+			assert(x <= 1);
+			assert(y <= 1);
 			typedef std::pair<TerrainTexture, Interval<float>> TextureLevel;
 			static std::vector<TextureLevel> textureLevels{
 				{TerrainTexture::sand, 	{0   , 0.25}},
@@ -37,15 +42,15 @@ class TerrainTexturer {
 			blend *= (1.5+p.val(x*ps, y*ps))/3;
 			
 			//return SColor(255, textureLevels[0].first, textureLevels[1].first, (1-blend)*255);
-			return SColor(255, textureLevels[0].first, textureLevels[1].first, (1-std::max(0.f, std::min(1.f,2*p.val(x*ps, y*ps))))*255);
+			return video::SColor(255, textureLevels[0].first, textureLevels[1].first, (1-std::max(0.f, std::min(1.f,2*p.val(x*ps, y*ps))))*255);
 		}
 
 	private:
 		// returns 1 for horizontal normal, 0 for vertical normal
-		static inline float slope(vector3df normal) 
+		static inline float slope(vec3f normal) 
 		{
 			normal.normalize();
-			return 1-vector3df(0,1,0).dotProduct(normal);
+			return 1-vec3f(0,1,0).dotProduct(normal);
 		}
 };
 #endif /* TERRAINTEXTURER_HPP_17_08_25_21_30_11 */

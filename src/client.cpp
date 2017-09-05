@@ -3,6 +3,30 @@
 #include "network.hpp"
 #include "serdes.hpp"
 #include "heightmapMesh.hpp"
+#include "terrainTexturer.hpp"
+
+class MyShaderCallBack : public video::IShaderConstantSetCallBack
+{
+	public:
+		MyShaderCallBack(irr::IrrlichtDevice* device): _device{device}
+		{}
+
+		virtual void OnSetConstants(video::IMaterialRendererServices* services, s32)
+		{
+			video::IVideoDriver* driver = services->getVideoDriver();
+
+			core::matrix4 worldViewProj;
+			worldViewProj *= driver->getTransform(video::ETS_PROJECTION);
+			worldViewProj *= driver->getTransform(video::ETS_VIEW);
+			worldViewProj *= driver->getTransform(video::ETS_WORLD);
+			services->setVertexShaderConstant("mWorldViewProj", worldViewProj.pointer(), 16);
+
+			s32 TextureLayerID[] = {0, 1, 2, 3}; 
+			services->setPixelShaderConstant("textures[0]", TextureLayerID, 4);
+		}
+	private:
+		irr::IrrlichtDevice* _device;
+};
 
 Animator::Animator(scene::ISceneManager* smgr, function<Entity*(u32)> entityResolver, function<vec3f(u32)> entityVelocityGetter)
 	: _smgr{smgr}, _entityResolver{entityResolver}, _velGetter{entityVelocityGetter}
@@ -99,13 +123,61 @@ ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ 
 	createWorld();
 	createCamera();
 
+	io::path psFileName = "./media/opengl.frag";
+	io::path vsFileName = "./media/opengl.vert";
+
+	auto driver = _device->getVideoDriver();
+	if (!driver->queryFeature(video::EVDF_PIXEL_SHADER_1_1) &&
+			!driver->queryFeature(video::EVDF_ARB_FRAGMENT_PROGRAM_1))
+	{
+		_device->getLogger()->log("WARNING: Pixel shaders disabled "\
+				"because of missing driver/hardware support.");
+		psFileName = "";
+	}
+
+	if (!driver->queryFeature(video::EVDF_VERTEX_SHADER_1_1) &&
+			!driver->queryFeature(video::EVDF_ARB_VERTEX_PROGRAM_1))
+	{
+		_device->getLogger()->log("WARNING: Vertex shaders disabled "\
+				"because of missing driver/hardware support.");
+		vsFileName = "";
+	}
+
+	// create material
+	video::IGPUProgrammingServices* gpu = driver->getGPUProgrammingServices();
+	s32 multiTextureMaterialType = 0;
+
+	if (gpu)
+	{
+		MyShaderCallBack* mc = new MyShaderCallBack(_device.get());
+
+		multiTextureMaterialType = gpu->addHighLevelShaderMaterialFromFiles(
+				vsFileName, "vertexMain", video::EVST_VS_1_1,
+				psFileName, "pixelMain", video::EPST_PS_1_1,
+				mc, video::EMT_TRANSPARENT_VERTEX_ALPHA, 0 , video::EGSL_DEFAULT);
+		mc->drop();
+	}
+
+
 	HeightmapMesh mesh;
-	mesh.init(_worldMap->getTerrain(), [](f32,f32,f32,vec3f){return video::SColor(255,255,0,0);}/*TerrainTexturer::texture*/, _device->getVideoDriver());
+	mesh.init(_worldMap->getTerrain(), /*[](f32,f32,f32,vec3f){return video::SColor(255,255,0,0);}*/TerrainTexturer::texture, _device->getVideoDriver());
 	scene::IMeshSceneNode* terrain = _device->getSceneManager()->addMeshSceneNode(mesh.Mesh, nullptr);
 	terrain->setPosition(terrain->getBoundingBox().getCenter()*core::vector3df(-1,0,-1));
+
+
 	terrain->setMaterialFlag(video::EMF_BACK_FACE_CULLING, false);
 	terrain->setMaterialFlag(video::EMF_LIGHTING, false);
-	terrain->setMaterialFlag(video::EMF_WIREFRAME, true);
+	//terrain->setMaterialFlag(video::EMF_WIREFRAME, true);
+	terrain->setMaterialFlag(video::EMF_BLEND_OPERATION, true);
+	terrain->setMaterialType((video::E_MATERIAL_TYPE)multiTextureMaterialType);
+	terrain->setMaterialTexture(TerrainTexture::grass, driver->getTexture("./media/grass.jpg"));
+	terrain->setMaterialTexture(TerrainTexture::rock, driver->getTexture("./media/rock.jpg"));
+	terrain->setMaterialTexture(TerrainTexture::snow, driver->getTexture("./media/snow.jpg"));
+	terrain->setMaterialTexture(TerrainTexture::sand, driver->getTexture("./media/sand.jpg"));
+	terrain->getMaterial(0).TextureLayer->getTextureMatrix().setTextureScale(10,10);
+	terrain->getMaterial(0).TextureLayer->TextureWrapU = video::E_TEXTURE_CLAMP::ETC_REPEAT;
+	terrain->getMaterial(0).TextureLayer->TextureWrapV = video::E_TEXTURE_CLAMP::ETC_REPEAT;
+
 
 	auto screenSize = _device->getVideoDriver()->getScreenSize();
 	gui::IGUIEnvironment* env = _device->getGUIEnvironment();
@@ -156,8 +228,7 @@ void ClientApplication::run()
 	sf::Clock c;
 	while(_device->run())
 	{
-		/* TODO uncomment
-		if(_camera->isInputReceiverEnabled())
+		if(_camera->isInputReceiverEnabled() && !_controller.isCameraFree())
 			bindCameraToControlledEntity();
 		if(!_camera->isInputReceiverEnabled()) {
 			vec3f cameraLookDir((_cameraElevation-PI_2)/PI*180,(_cameraYAngle+PI_2)/PI*180,0);
@@ -169,7 +240,6 @@ void ClientApplication::run()
 					_camera->setPosition(controlledCharSceneNode->getPosition() + vec3f(0,1.6,0) + 0.23f*(cameraLookDir*vec3f(1,0,1)).normalize());
 			}
 		}
-		*/
 
 		while(receive());		
 		//TODO fix frameLen spike after win inactivity (mind the physics)
@@ -177,7 +247,7 @@ void ClientApplication::run()
 		{
 			if(_device->isWindowActive())
 				_device->getCursorControl()->setPosition(vec2f(0.5));
-			driver->beginScene(true,true,video::SColor(255,255,255,255));
+			driver->beginScene(/*true,true,video::SColor(255,255,255,255)*/);
 			f32 ar = (float)driver->getScreenSize().Width/(float)driver->getScreenSize().Height;
 			if(ar != _camera->getAspectRatio() && _camera)
 				_camera->setAspectRatio(ar);
@@ -220,7 +290,7 @@ void ClientApplication::run()
 void ClientApplication::createWorld()
 {
 	_worldMap.reset(new WorldMap());
-	_worldMap->generate(vec2u(32),1);
+	_worldMap->generate(vec2u(128),1);
 	_gameWorld.reset(new World(*_worldMap));
 	_vs.reset(new ViewSystem(_device->getSceneManager(), *_gameWorld));
 	_physics.reset(new Physics(*_gameWorld, _device->getSceneManager()));

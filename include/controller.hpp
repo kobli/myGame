@@ -47,6 +47,7 @@ class Controller: public IEventReceiver
 		void setExit(Exit exit);
 		void loadSpellBook(std::string fileName);
 		void loadControls(std::string fileName);
+		bool isCameraFree();
 
 	private:
 		typedef std::map<std::string, std::vector<std::string>> SpellBook;
@@ -60,5 +61,6 @@ class Controller: public IEventReceiver
 		Exit _exit;
 		SpellBook _spellBook;
 		KeyMap _keyMap;
+		bool _freeCamera;
 };
 #endif /* CONTROLLER_HPP_16_11_18_13_06_55 */

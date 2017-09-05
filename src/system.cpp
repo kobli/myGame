@@ -114,8 +114,8 @@ Physics::Physics(World& world, scene::ISceneManager* smgr): System{world}, _tAcc
 	{
 		DebugDrawer* debugDrawer = new DebugDrawer(smgr);
 		_physicsWorld->setDebugDrawer(debugDrawer);
-		_physicsWorld->getDebugDrawer()->setDebugMode(btIDebugDraw::DBG_DrawWireframe);
-		//_physicsWorld->getDebugDrawer()->setDebugMode(btIDebugDraw::DBG_DrawText);
+		//_physicsWorld->getDebugDrawer()->setDebugMode(btIDebugDraw::DBG_DrawWireframe);
+		_physicsWorld->getDebugDrawer()->setDebugMode(btIDebugDraw::DBG_DrawText);
 	}
 
 	const WorldMap& m = _world.getMap();

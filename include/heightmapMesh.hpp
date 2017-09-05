@@ -8,7 +8,7 @@ class HeightmapMesh
 		typedef std::function<video::SColor(f32 x, f32 y, f32 z, vec3f normal)> ColoringFunc;
 		scene::SMesh* Mesh;
 
-		HeightmapMesh(): Mesh(nullptr)
+		HeightmapMesh(): Mesh(nullptr), _vertexDensity{2}
 		{
 			Mesh = new scene::SMesh();
 		}
@@ -27,14 +27,14 @@ class HeightmapMesh
 			const u32 mp = driver -> getMaximalPrimitiveCount();
 			unsigned h = t.size().Y;
 
-			const u32 sw = mp / (6*h); // the width of each piece
+			const u32 sw = mp / (6*h*_vertexDensity); // the width of each piece
 
 			u32 i=0;
-			for(u32 y0 = 0; y0 < h; y0 += sw)
+			for(u32 y0 = 0; y0 < h*_vertexDensity; y0 += sw)
 			{
 				u16 y1 = y0 + sw;
-				if(y1 >= h)
-					y1 = h- 1;
+				if(y1 >= h*_vertexDensity)
+					y1 = h*_vertexDensity - 1;
 				addstrip(t, cf, y0, y1, i);
 				++i;
 			}
@@ -52,8 +52,8 @@ class HeightmapMesh
 
 		void addstrip(const Terrain& t, ColoringFunc cf, u16 y0, u16 y1, u32 bufNum)
 		{
-			unsigned w = t.size().X;
-			unsigned h = t.size().Y;
+			unsigned w = (t.size().X-1)*_vertexDensity+1;
+			unsigned h = (t.size().Y-1)*_vertexDensity+1;
 
 			scene::SMeshBuffer *buf = 0;
 			if (bufNum<Mesh->getMeshBufferCount())
@@ -75,13 +75,13 @@ class HeightmapMesh
 			{
 				for (u16 x = 0; x < w; ++x)
 				{
-					const f32 z = t.heightAt(x, y);
+					const f32 z = t.heightAt(x/float(_vertexDensity), y/float(_vertexDensity));
 					const f32 xx = (f32)x/(f32)w;
 					const f32 yy = (f32)y/(f32)h;
 
 					video::S3DVertex& v = buf->Vertices[i++];
-					v.Pos.set(x, z, y);
-					v.Normal.set(t.normalAt(x, y));
+					v.Pos.set(x/float(_vertexDensity), z, y/float(_vertexDensity));
+					v.Normal.set(t.normalAt(x/float(_vertexDensity), y/float(_vertexDensity)));
 					v.Color=cf(xx, yy, z, v.Normal);
 					v.TCoords.set(xx, yy);
 				}
@@ -106,5 +106,7 @@ class HeightmapMesh
 
 			buf->recalculateBoundingBox();
 		}
+	private:
+		unsigned _vertexDensity;
 };
 #endif /* HEIGHTMAPMESH_HPP_17_08_25_21_23_16 */
