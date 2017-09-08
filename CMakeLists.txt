@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 2.8)
 project(myGame)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -w -Wall -Wextra -pedantic")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -w -Wall -Wextra -pedantic -g")
 
 # set runtime library path to be relatively next to the executable
 set(CMAKE_BUILD_WITH_INSTALL_RPATH true) 
