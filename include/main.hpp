@@ -66,7 +66,7 @@ class ImageDumper {
 			auto im = _driver->createImage(video::ECF_R8G8B8, core::dimension2du(imSize));
 			for(unsigned y = 0; y < imSize.Y; ++y)
 				for(unsigned x = 0; x < imSize.X; ++x) {
-					unsigned h = pixVal(imSize.X-x,y);
+					unsigned h = pixVal(imSize.X-x-1,y);
 					im->setPixel(x,y, irr::video::SColor(255, h, h, h));
 				}
 			return _driver->writeImageToFile(im, fileName.c_str());
