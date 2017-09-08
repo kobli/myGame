@@ -45,7 +45,6 @@ bool Terrain::dumpHeightmapToImage(std::string fileName)
 			if(v > max)
 				max = v;
 		}
-	std::cout << max << " " << min << std::endl;
 
 	return SAVEIMAGE(fileName, [this,min,max](unsigned x, unsigned y){ return (heightAt(x,y)-min)/(max-min)*255; }, _heightMap.size());
 }
@@ -53,9 +52,12 @@ bool Terrain::dumpHeightmapToImage(std::string fileName)
 void Terrain::init()
 {
 	auto g = [this](unsigned x, unsigned y) -> float{
-		static PerlinMultiOctave g(_size.X, _size.Y, PerlinMultiOctave::Octaves(0.4, 0.01, 3, 0.2),_seed);
+		PerlinMultiOctave::Octaves octaves(0.5, 0.005, 4, 0.3);
+		octaves.addOctave({0.03,0.09});
+		octaves.addOctave({0.01,0.4});
+		static PerlinMultiOctave g(_size.X, _size.Y, octaves,_seed);
 		return g.val(x, y)*2;
 	};
 	_heightMap.generate(g);
-	//dumpHeightmapToImage("heightmap.bmp");
+	dumpHeightmapToImage("heightmap.bmp");
 }

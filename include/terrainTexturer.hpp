@@ -22,10 +22,11 @@ class TerrainTexturer {
 			y = min(1.f, max(0.f, y));
 			typedef std::pair<TerrainTexture, Interval<float>> TextureLevel;
 			static std::vector<TextureLevel> textureLevels{
-				{TerrainTexture::sand, 	{0   , 0.25}},
-					{TerrainTexture::grass, {0.25, 0.5}},
-					{TerrainTexture::rock, 	{0.5 , 0.75}},
-					{TerrainTexture::snow,  {0.75, 1}},
+					{TerrainTexture::sand,{-100, 0}},
+					{TerrainTexture::rock, 	{0, 0.3}},
+					{TerrainTexture::grass, {0, 10}},
+					{TerrainTexture::rock, 	{9, 15}},
+					{TerrainTexture::snow,  {10, 50}},
 			};
 			std::sort(textureLevels.begin(), textureLevels.end(), [&](const TextureLevel& a, const TextureLevel& b)->bool {
 					return a.second.distanceFrom(z) < b.second.distanceFrom(z);

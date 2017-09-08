@@ -266,7 +266,7 @@ void Physics::bodyDoStrafe(float timeDelta)
 			//float fMul = 4000;
 			//float fMul = 1300;
 			//float fMul = 4300;
-			float fMul = 1100;
+			float fMul = 1300;
 			{
 				vec2f strDir = bc->getStrafeDir();
 				vec3f dir{strDir.X, 0, strDir.Y};

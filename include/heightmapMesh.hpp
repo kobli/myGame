@@ -8,7 +8,7 @@ class HeightmapMesh
 		typedef std::function<video::SColor(f32 x, f32 y, f32 z, vec3f normal)> ColoringFunc;
 		scene::SMesh* Mesh;
 
-		HeightmapMesh(): Mesh(nullptr), _vertexDensity{2}
+		HeightmapMesh(): Mesh(nullptr), _vertexDensity{4}
 		{
 			Mesh = new scene::SMesh();
 		}

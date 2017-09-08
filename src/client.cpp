@@ -174,7 +174,7 @@ ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ 
 	terrain->setMaterialTexture(TerrainTexture::rock, driver->getTexture("./media/rock.jpg"));
 	terrain->setMaterialTexture(TerrainTexture::snow, driver->getTexture("./media/snow.jpg"));
 	terrain->setMaterialTexture(TerrainTexture::sand, driver->getTexture("./media/sand.jpg"));
-	terrain->getMaterial(0).TextureLayer->getTextureMatrix().setTextureScale(10,10);
+	terrain->getMaterial(0).TextureLayer->getTextureMatrix().setTextureScale(30,30);
 	terrain->getMaterial(0).TextureLayer->TextureWrapU = video::E_TEXTURE_CLAMP::ETC_REPEAT;
 	terrain->getMaterial(0).TextureLayer->TextureWrapV = video::E_TEXTURE_CLAMP::ETC_REPEAT;
 
@@ -290,7 +290,7 @@ void ClientApplication::run()
 void ClientApplication::createWorld()
 {
 	_worldMap.reset(new WorldMap());
-	_worldMap->generate(vec2u(128),1);
+	_worldMap->generate(vec2u(64),1);
 	_gameWorld.reset(new World(*_worldMap));
 	_vs.reset(new ViewSystem(_device->getSceneManager(), *_gameWorld));
 	_physics.reset(new Physics(*_gameWorld, _device->getSceneManager()));
