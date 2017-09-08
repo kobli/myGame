@@ -14,10 +14,12 @@ class TerrainTexturer {
 	public:
 		static video::SColor texture(f32 x, f32 y, f32 z, vec3f /*normal*/)
 		{
-			assert(x >= 0);
-			assert(y >= 0);
-			assert(x <= 1);
-			assert(y <= 1);
+			assert(int(x) >= 0);
+			assert(int(y) >= 0);
+			assert(int(x) <= 1);
+			assert(int(y) <= 1);
+			x = min(1.f, max(0.f, x));
+			y = min(1.f, max(0.f, y));
 			typedef std::pair<TerrainTexture, Interval<float>> TextureLevel;
 			static std::vector<TextureLevel> textureLevels{
 				{TerrainTexture::sand, 	{0   , 0.25}},
