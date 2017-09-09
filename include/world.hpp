@@ -185,7 +185,7 @@ class ParticleSystemGraphicsComponent: public GraphicsComponent
 class CollisionComponent: public ObservableComponentBase
 {
 	public:
-		CollisionComponent(ID parentEntID, float radius = 1, float height = 0, vec3f posOffset = vec3f(0,0,0), float mass = 10000, bool kinematic = false);
+		CollisionComponent(ID parentEntID, float radius = 1, float height = 0, vec3f posOffset = vec3f(0,0,0), float mass = 0, bool kinematic = false, float gravity = -10);
 		float getRadius() const;
 		void setRadius(float);
 		float getHeight() const;
@@ -194,6 +194,7 @@ class CollisionComponent: public ObservableComponentBase
 		void setPosOffset(vec3f);
 		bool isKinematic();
 		float getMass();
+		float getGravity();
 
 		virtual void serDes(SerDesBase& s);
 		template <typename T>
@@ -204,6 +205,7 @@ class CollisionComponent: public ObservableComponentBase
 				t & _posOff;
 				t & _kinematic;
 				t & _mass;
+				t & _gravity;
 			}
 
 	private:
@@ -212,6 +214,7 @@ class CollisionComponent: public ObservableComponentBase
 		vec3f _posOff;
 		float _mass;
 		bool _kinematic;
+		float _gravity;
 };
 
 ////////////////////////////////////////////////////////////

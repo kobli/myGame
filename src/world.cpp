@@ -212,11 +212,11 @@ ID ParticleSystemGraphicsComponent::getEffectID()
 
 ////////////////////////////////////////////////////////////
 
-CollisionComponent::CollisionComponent(ID parentEntID
-		, float radius, float height, vec3f posOffset, float mass, bool kinematic)
+CollisionComponent::CollisionComponent(ID parentEntID, float radius,
+	 	float height, vec3f posOffset, float mass, bool kinematic, float gravity)
 	: ObservableComponentBase(parentEntID, ComponentType::Collision)
 		, _radius{radius}, _height{height}, _posOff{posOffset}
-		, _mass{mass}, _kinematic{kinematic}
+		, _mass{mass}, _kinematic{kinematic}, _gravity{gravity}
 {}
 
 float CollisionComponent::getRadius() const
@@ -262,6 +262,11 @@ bool CollisionComponent::isKinematic()
 float CollisionComponent::getMass()
 {
 	return _mass;
+}
+
+float CollisionComponent::getGravity()
+{
+	return _gravity;
 }
 
 ////////////////////////////////////////////////////////////

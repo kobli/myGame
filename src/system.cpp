@@ -396,10 +396,10 @@ void Physics::onMsg(const EntityEvent& m)
 				if(col->isKinematic())
 				{
 					body->setCollisionFlags(body->getCollisionFlags() |	btCollisionObject::CF_NO_CONTACT_RESPONSE | btCollisionObject::CF_KINEMATIC_OBJECT);
-					body->setGravity(btVector3(0,0,0));
 				}
 				//body->setActivationState(DISABLE_DEACTIVATION);
 				body->setAngularFactor(btVector3(0,0,0));
+				body->setGravity(btVector3(0,col->getGravity(),0));
 				//body->setRollingFriction(0);
 				break;
 			}
@@ -959,7 +959,7 @@ ID SpellSystem::launchSpell(float radius, float speed, float elevation, ID wizar
 	dir.rotateXZBy(-90);
 	vec3f pos = wBody->getPosition() + vec3f(0,1.5,0) + dir*(radius + 0.6);
 	spellE.addComponent<BodyComponent>(pos, quaternion(), dir*speed);
-	spellE.addComponent<CollisionComponent>(radius, 0, vec3f(0), 1, true);
+	spellE.addComponent<CollisionComponent>(radius, 0, vec3f(0), 1, true, 0);
 #ifdef DEBUG_BUILD
 	spellE.addComponent<SphereGraphicsComponent>(radius);
 #endif
