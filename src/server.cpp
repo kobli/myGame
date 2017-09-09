@@ -169,6 +169,12 @@ ServerApplication::ServerApplication(IrrlichtDevice* irrDev)
 			std::bind(&World::getEntity, ref(_gameWorld), placeholders::_1)), _LuaStateGameMode{nullptr},
 	_gameModeEntityEventObserver{[this](const EntityEvent& e){ this->gameModeOnEntityEvent(e); }}
 {
+	for(const Tree& t: _map.getTrees()) {
+		Entity& te = _gameWorld.createAndGetEntity();
+		te.addComponent<BodyComponent>(t.position/* + terrainOffset*/);
+		te.addComponent<MeshGraphicsComponent>("Tree1.obj", false);
+	}
+
 	_listener.setBlocking(false);
 	_gameWorld.addObserver(*this);
 	_physics.registerCollisionCallback(std::bind(&SpellSystem::collisionCallback, std::ref(_spells), placeholders::_1, placeholders::_2));
