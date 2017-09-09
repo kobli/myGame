@@ -379,7 +379,7 @@ void Physics::onMsg(const EntityEvent& m)
 				auto col = e->getComponent<CollisionComponent>();
 				if(!col)
 					break;
-				btScalar mass = 80;
+				btScalar mass = col->getMass();
 				btScalar iner = 1;
 				btVector3 fallInertia(iner, iner, iner);
 
@@ -959,7 +959,7 @@ ID SpellSystem::launchSpell(float radius, float speed, float elevation, ID wizar
 	dir.rotateXZBy(-90);
 	vec3f pos = wBody->getPosition() + vec3f(0,1.5,0) + dir*(radius + 0.6);
 	spellE.addComponent<BodyComponent>(pos, quaternion(), dir*speed);
-	spellE.addComponent<CollisionComponent>(radius, 0, vec3f(0), true);
+	spellE.addComponent<CollisionComponent>(radius, 0, vec3f(0), 1, true);
 #ifdef DEBUG_BUILD
 	spellE.addComponent<SphereGraphicsComponent>(radius);
 #endif

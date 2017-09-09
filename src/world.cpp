@@ -213,10 +213,10 @@ ID ParticleSystemGraphicsComponent::getEffectID()
 ////////////////////////////////////////////////////////////
 
 CollisionComponent::CollisionComponent(ID parentEntID
-		, float radius, float height, vec3f posOffset, bool kinematic)
+		, float radius, float height, vec3f posOffset, float mass, bool kinematic)
 	: ObservableComponentBase(parentEntID, ComponentType::Collision)
 		, _radius{radius}, _height{height}, _posOff{posOffset}
-		, _kinematic{kinematic}
+		, _mass{mass}, _kinematic{kinematic}
 {}
 
 float CollisionComponent::getRadius() const
@@ -257,6 +257,11 @@ void CollisionComponent::serDes(SerDesBase& s)
 bool CollisionComponent::isKinematic()
 {
 	return _kinematic;
+}
+
+float CollisionComponent::getMass()
+{
+	return _mass;
 }
 
 ////////////////////////////////////////////////////////////
@@ -483,7 +488,7 @@ ID World::createCharacter(vec3f position)
 
 	e.addComponent<BodyComponent>(position);
 	e.addComponent<MeshGraphicsComponent>("ninja.b3d", true, vec3f(0), vec3f(0,90,0), vec3f(0.2));
-	e.addComponent<CollisionComponent>(0.4, 1, vec3f(0, -0.9, 0));
+	e.addComponent<CollisionComponent>(0.4, 1, vec3f(0, -0.9, 0), 80);
 	e.addComponent<WizardComponent>();
 	e.addComponent<AttributeStoreComponent>();
 	return eID;

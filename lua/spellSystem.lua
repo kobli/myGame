@@ -289,7 +289,7 @@ end
 function Spell:update(delta)
 	for i=self.collisionsInLastTick.first, self.collisionsInLastTick.last, 1 do
 		local collidedWithEntType = entityIdToTypeName(self.collisionsInLastTick[i])
-		if collidedWithEntType == "terrain" then
+		if collidedWithEntType == "map" then
 			setEntityVelocity(self.ID, 0, 0, 0)
 		end
 		if self:shouldDieOnCollisionWith(collidedWithEntType) then
@@ -388,12 +388,12 @@ end
 
 function entityIdToTypeName(entID)
 	what = ""
-	if entID == MAPOBJID then
-		what = "terrain"
-	elseif SPELLS[entID] ~= nil then
+	if SPELLS[entID] ~= nil then
 		what = "spell"
-	else
+	elseif WIZARDS[entID] ~= nil then
 		what = "player"
+	else
+		what = "map"
 	end
 	return what
 end
@@ -462,7 +462,7 @@ end
 
 -------------------- commands --------------------
 
--- argStr: <power radius speed [ratio]> <die [<player> <terrain>]>
+-- argStr: <power radius speed [ratio]> <die [<player> <map>]>
 function Wizard.Command:spell_body_create(argStr)
 	dout("create body: "..argStr)
 	-- validate and parse arg str
