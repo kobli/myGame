@@ -157,7 +157,10 @@ Physics::Physics(World& world, scene::ISceneManager* smgr): System{world}, _tAcc
 	// set origin to middle of heightfield
 	btTransform tr;
 	tr.setIdentity();
-	tr.setOrigin(btVector3(0,(min+max)*localScaling.y()/2.,0));
+
+	btVector3 aabbMin, aabbMax;
+	terrS->getAabb(tr, aabbMin, aabbMax);
+	tr.setOrigin(btVector3((aabbMax.getX()-aabbMin.getX())/2., (min+max)*localScaling.y()/2., (aabbMax.getZ()-aabbMin.getZ())/2.));
 
 	// create ground object
 	btDefaultMotionState* terrMS = new btDefaultMotionState(tr);

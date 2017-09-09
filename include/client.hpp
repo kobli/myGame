@@ -63,6 +63,7 @@ class ClientApplication: private Observer<EntityEvent>
 		void handlePacket(sf::Packet& p);
 		void bindCameraToControlledEntity();
 		void updateCastingIndicator(float timeDelta);
+		void loadTerrain();
 };
 
 #endif /* CLIENT_HPP_16_11_26_10_46_45 */
