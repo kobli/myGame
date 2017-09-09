@@ -173,7 +173,7 @@ ServerApplication::ServerApplication(IrrlichtDevice* irrDev)
 		Entity& te = _gameWorld.createAndGetEntity();
 		te.addComponent<BodyComponent>(t.position/* + terrainOffset*/);
 		te.addComponent<MeshGraphicsComponent>("Tree1.obj", false);
-		te.addComponent<CollisionComponent>(0.5, 10, vec3f(0,-5.5,0));
+		te.addComponent<CollisionComponent>(0.5, 10, vec3f(0,-5.5,0), 0);
 	}
 
 	_listener.setBlocking(false);
