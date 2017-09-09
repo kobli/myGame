@@ -511,7 +511,7 @@ void ClientApplication::loadTerrain()
 	mesh.init(_worldMap->getTerrain(), TerrainTexturer::texture, _device->getVideoDriver());
 	scene::IMeshSceneNode* terrain = _device->getSceneManager()->addMeshSceneNode(mesh.Mesh, nullptr);
 
-	terrain->setMaterialFlag(video::EMF_BACK_FACE_CULLING, false);
+	terrain->setMaterialFlag(video::EMF_BACK_FACE_CULLING, true);
 	terrain->setMaterialFlag(video::EMF_LIGHTING, false);
 	//terrain->setMaterialFlag(video::EMF_WIREFRAME, true);
 	terrain->setMaterialFlag(video::EMF_BLEND_OPERATION, true);
