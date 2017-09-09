@@ -5,6 +5,10 @@ ostream& operator<<(ostream& os, i8 i)
 	return os << int(i);
 }
 
+ostream& operator<<(ostream& os, vec2u v) {
+	return os << v.X << " " << v.Y;
+}
+
 ostream& operator<<(ostream& os, vec2f v) {
 	return os << v.X << " " << v.Y;
 }

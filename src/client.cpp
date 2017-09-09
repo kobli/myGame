@@ -120,9 +120,7 @@ ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ 
 	
 	SAVEIMAGE = ImageDumper(_device->getVideoDriver());
 
-	createWorld();
 	createCamera();
-	loadTerrain();
 
 	auto screenSize = _device->getVideoDriver()->getScreenSize();
 	gui::IGUIEnvironment* env = _device->getGUIEnvironment();
@@ -234,8 +232,6 @@ void ClientApplication::run()
 
 void ClientApplication::createWorld()
 {
-	_worldMap.reset(new WorldMap());
-	_worldMap->generate(vec2u(64),1);
 	_gameWorld.reset(new World(*_worldMap));
 	_vs.reset(new ViewSystem(_device->getSceneManager(), *_gameWorld));
 	_physics.reset(new Physics(*_gameWorld, _device->getSceneManager()));
@@ -246,6 +242,7 @@ void ClientApplication::createWorld()
 	_gameWorld->addObserver(*_physics);
 	_gameWorld->addObserver(*_vs);
 	_gameWorld->addObserver(*this);
+	loadTerrain();
 }
 
 void ClientApplication::createCamera()
@@ -384,6 +381,13 @@ void ClientApplication::handlePacket(sf::Packet& p)
 					cout << "shared reg update: " << Serializer<ostream>(_sharedRegistry) << endl;
 				break;
 			}
+		case PacketType::GameInit:
+			{
+				_worldMap.reset(new WorldMap());
+				p >> Deserializer<sf::Packet>(*_worldMap);
+				createWorld();
+				break;
+			}
 		default:
 			cerr << "Received packet of unknown type.\n";
 	}
@@ -455,7 +459,7 @@ void ClientApplication::onMsg(const EntityEvent& m)
 
 void ClientApplication::updateCastingIndicator(float timeDelta)
 {
-	if(_sharedRegistry.hasKey("controlled_object_id")) {
+	if(_gameWorld && _sharedRegistry.hasKey("controlled_object_id")) {
 		ID id = _sharedRegistry.getValue("controlled_object_id");
 		Entity* e = _gameWorld->getEntity(id);
 		if(e != nullptr) {

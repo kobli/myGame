@@ -15,7 +15,7 @@ class Serializer: public SerDesBase
 			return *this;
 		}
 		template <typename DT>
-			void operator&(DT& d)
+			void operator&(const DT& d)
 			{
 				*_t << d;// << " | ";
 			}
@@ -46,6 +46,9 @@ class Serializer: public SerDesBase
 
 		virtual void serDes(KeyValueStore& s) {
 			s.doSerDes(*this);
+		}
+		virtual void serDes(WorldMap& s) {
+			s.doSer(*this);
 		}
 
 	private:
@@ -100,6 +103,9 @@ class Deserializer: public SerDesBase
 		virtual void serDes(KeyValueStore& s) {
 			s.doSerDes(*this);
 		}
+		virtual void serDes(WorldMap& s) {
+			s.doDes(*this);
+		}
 
 	private:
 		Serializable& _s;
@@ -131,7 +137,7 @@ T& operator >>(T& t, Deserializer<T>&& m)
 }
 
 template <> template <typename DT>
-void Serializer<std::ostream>::operator&(DT& d)
+void Serializer<std::ostream>::operator&(const DT& d)
 {
 	*_t << d << " | ";
 }

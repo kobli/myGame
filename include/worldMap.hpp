@@ -3,8 +3,9 @@
 #include <memory>
 #include "terrain.hpp"
 #include "treePlanter.hpp"
+#include "serializable.hpp"
 
-class WorldMap {
+class WorldMap: public Serializable {
 	public:
 		WorldMap(): _terrain(nullptr)
 		{}
@@ -43,8 +44,31 @@ class WorldMap {
 			return _terrain->size();
 		}
 
+		virtual void serDes(SerDesBase& s)
+		{
+			s.serDes(*this);
+		}
+
+		template <typename T>
+			void doSer(T& t)
+			{
+				t & getSize();
+				t & _terrain->getSeed();
+			}
+
+		template <typename T>
+			void doDes(T& t)
+			{
+				vec2u size;
+				unsigned seed;
+				t & size;
+				t & seed;
+				generate(size, seed);
+			}
+
 	private:
 		std::unique_ptr<Terrain> _terrain;
 		std::vector<Tree> _trees;
 };
+
 #endif /* MAP_HPP_17_08_25_18_39_37 */

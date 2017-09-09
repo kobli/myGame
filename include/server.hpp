@@ -82,6 +82,7 @@ class ServerApplication: private Observer<EntityEvent>
 		void gameModeOnClientConnect(ID sessionID);
 		void gameModeOnClientDisconnect(ID sessionID);
 		void gameModeOnEntityEvent(const EntityEvent& e);
+		void sendMapTo(Session& client);
 
 		sf::TcpListener _listener;
 		SolidVector<Session,ID,NULLID> _sessions;

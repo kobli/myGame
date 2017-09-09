@@ -37,6 +37,7 @@ using u32 = uint32_t;
 using u64 = uint64_t;
  
 ostream& operator<<(ostream& os, i8 i);
+ostream& operator<<(ostream& os, vec2u v);
 ostream& operator<<(ostream& os, vec2f v);
 ostream& operator<<(ostream& os, vec3f v);
 ostream& operator<<(ostream& os, vec2i v);

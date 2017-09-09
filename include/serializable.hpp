@@ -11,6 +11,7 @@ class AttributeStoreComponent;
 class WizardComponent;
 
 class KeyValueStore;
+class WorldMap;
 
 
 class SerDesBase
@@ -27,6 +28,7 @@ class SerDesBase
 		virtual void serDes(WizardComponent&) = 0;
 
 		virtual void serDes(KeyValueStore&) = 0;
+		virtual void serDes(WorldMap&) = 0;
 };
 
 class Serializable

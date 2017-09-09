@@ -163,7 +163,7 @@ void Updater::sendEvent(const EntityEvent& e)
 
 
 ServerApplication::ServerApplication(IrrlichtDevice* irrDev)
-	: _irrDevice{irrDev}, _map{vec2u(64),1}, _gameWorld{_map}
+	: _irrDevice{irrDev}, _map{vec2u(64),9}, _gameWorld{_map}
 	, _physics{_gameWorld}, _spells{_gameWorld}, _input{_gameWorld, _spells},
 	_updater(std::bind(&ServerApplication::send, ref(*this), placeholders::_1, placeholders::_2),
 			std::bind(&World::getEntity, ref(_gameWorld), placeholders::_1)), _LuaStateGameMode{nullptr},
@@ -257,6 +257,7 @@ void ServerApplication::onClientConnect(std::unique_ptr<sf::TcpSocket>&& sock)
 			if(objID != NULLID)
 				_input.handleCommand(c, objID);
 			});
+	sendMapTo(_sessions[sID]);
 	_gameWorld.sendHelloMsgTo(_updater); // TODO send updates only to newly connected client
 	gameModeOnClientConnect(sID);
 }
@@ -457,3 +458,10 @@ void ServerApplication::GameModeEntityEventObserver::onMsg(const EntityEvent& e)
 ServerApplication::GameModeEntityEventObserver::GameModeEntityEventObserver(EntityEventCallback gameModeEntityEventCallback):
  	_entityEventCallback{gameModeEntityEventCallback}
 {}
+
+void ServerApplication::sendMapTo(Session& client)
+{
+	sf::Packet p;
+	p << PacketType::GameInit << Serializer<sf::Packet>(_map);
+	client.send(p);
+}
