@@ -53,7 +53,7 @@ function onMaybeHPchanged(entityID)
 	local realHP, virtualHP = getEntityAttributeValue(entityID, "health")
 	local realMaxHP, virtualMaxHP = getEntityAttributeValue(entityID, "max-health")
 	if realHP ~= nil and realMaxHP ~= nil then
-		if realHP == 0 then
+		if realHP < 1 then
 			onCharacterDeath(entityID)
 		elseif realHP > realMaxHP then
 			setEntityAttributeValue(entityID, "health", realMaxHP)
