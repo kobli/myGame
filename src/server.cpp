@@ -178,7 +178,6 @@ ServerApplication::ServerApplication(IrrlichtDevice* irrDev)
 	for(const Spawnpoint& s: _map.getSpawnpoints()) {
 		Entity& te = _gameWorld.createAndGetEntity();
 		te.addComponent<BodyComponent>(s.position);
-		te.addComponent<SphereGraphicsComponent>(2);
 		te.addComponent<AttributeStoreComponent>();
 		te.getComponent<AttributeStoreComponent>()->addAttribute("spawnpoint",0);
 	}
