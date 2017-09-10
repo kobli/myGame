@@ -5,6 +5,10 @@
 #include "treePlanter.hpp"
 #include "serializable.hpp"
 
+struct Spawnpoint {
+	vec3f position;
+};
+
 class WorldMap: public Serializable {
 	public:
 		WorldMap(): _terrain(nullptr)
@@ -19,6 +23,7 @@ class WorldMap: public Serializable {
 		{
 			_terrain.reset(new Terrain(size, seed));
 			_trees = TreePlanter::plant(*_terrain, seed);
+			placeSpawnpoints();
 		}
 
 		const Terrain& getTerrain() const
@@ -66,9 +71,20 @@ class WorldMap: public Serializable {
 				generate(size, seed);
 			}
 
+		const std::vector<Spawnpoint>& getSpawnpoints() const
+		{
+			return _spawns;
+		}
+
 	private:
 		std::unique_ptr<Terrain> _terrain;
 		std::vector<Tree> _trees;
+		std::vector<Spawnpoint> _spawns;
+
+		void placeSpawnpoints()
+		{
+			_spawns.push_back(Spawnpoint{vec3f(20,10,20)});
+		}
 };
 
 #endif /* MAP_HPP_17_08_25_18_39_37 */

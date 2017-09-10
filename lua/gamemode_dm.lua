@@ -6,9 +6,8 @@ void setClientControlledObjectID(sessionID, objectID)
 ID getClientControlledObjectID(sessionID)
 float(basic),float(affected) getEntityAttributeValue(objectID, attributeName)
 void setEntityAttributeValue(objectID, attributeName, floatValue)
-
-TODO
-map.getSpawnPoints
+[entityID] getEntitiesByAttributeValue(attributeName, attributeValue = "")
+xPos,yPos,zPos getEntityPosition(objectID)
 --]]
 
 -------------------- Cpp interface --------------------
@@ -41,7 +40,10 @@ function setClientControlledObj(sessionID, objID)
 end
 
 function spawnCharacter()
-	local charID = createCharacter(0,20,0)
+	local spawns = getSpawnpoints()
+	local s = spawns[1]
+	print(s[1],s[2],s[3])
+	local charID = createCharacter(s[1],s[2],s[3])
 	setEntityAttributeValue(charID, "health", 20)
 	setEntityAttributeValue(charID, "max-health", 50)
 	return charID
@@ -67,4 +69,13 @@ function onCharacterDeath(entityID)
 	setClientControlledObj(objOwner, NULLID)
 	removeWorldEntity(entityID)
 	setClientControlledObj(objOwner, spawnCharacter())
+end
+
+function getSpawnpoints()
+	local spawns = getEntitiesByAttributeValue("spawnpoint", "")
+	local r = {}
+	for i,sID in pairs(spawns) do
+		table.insert(r, {getEntityPosition(sID)})
+	end
+	return r
 end

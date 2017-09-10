@@ -171,9 +171,16 @@ ServerApplication::ServerApplication(IrrlichtDevice* irrDev)
 {
 	for(const Tree& t: _map.getTrees()) {
 		Entity& te = _gameWorld.createAndGetEntity();
-		te.addComponent<BodyComponent>(t.position/* + terrainOffset*/);
+		te.addComponent<BodyComponent>(t.position);
 		te.addComponent<MeshGraphicsComponent>("Tree1.obj", false);
 		te.addComponent<CollisionComponent>(0.5, 10, vec3f(0,-5.5,0), 0);
+	}
+	for(const Spawnpoint& s: _map.getSpawnpoints()) {
+		Entity& te = _gameWorld.createAndGetEntity();
+		te.addComponent<BodyComponent>(s.position);
+		te.addComponent<SphereGraphicsComponent>(2);
+		te.addComponent<AttributeStoreComponent>();
+		te.getComponent<AttributeStoreComponent>()->addAttribute("spawnpoint",0);
 	}
 
 	_listener.setBlocking(false);
@@ -412,6 +419,75 @@ void ServerApplication::gameModeRegisterAPIMethods()
 	lua_pushlightuserdata(L, this);
 	lua_pushcclosure(L, callSetEntityAttributeValue, 1);
 	lua_setglobal(L, "setEntityAttributeValue");
+
+	auto callGetEntitiesByAttributeValue = [](lua_State* s)->int {
+		int argc = lua_gettop(s);
+		if(argc != 2 && argc != 1)
+		{
+			std::cerr << "callGetEntitiesByAttributeValue: wrong number of arguments\n";
+			return 0;		
+		}
+		std::string attributeName = lua_tostring(s, 1);
+		std::string attributeValue;
+		if(argc == 2)
+			attributeValue = lua_tostring(s, 2);
+		ServerApplication* sApp = (ServerApplication*)lua_touserdata(s, lua_upvalueindex(1));
+		std::vector<ID> entities;
+		for(Entity& e : sApp->_gameWorld.getEntities())
+		{
+			AttributeStoreComponent* asc = e.getComponent<AttributeStoreComponent>();
+			if(asc != nullptr)
+			{
+				if(asc->hasAttribute(attributeName))
+					try {
+						if(attributeValue == "" || asc->getAttribute(attributeName) == std::stof(attributeValue))
+							entities.push_back(e.getID());
+					}
+				catch(std::invalid_argument& e) {
+					std::cerr << "getEntitiesByAttributeValue: AttributeValue must be float or empty string.";
+				}
+			}
+		}
+		lua_createtable(s, entities.size(), 0);
+		int newTable = lua_gettop(s);
+		int index = 1;
+		auto iter = entities.begin();
+		while(iter != entities.end()) {
+			lua_pushinteger(s, (*iter));
+			lua_rawseti(s, newTable, index);
+			++iter;
+			++index;
+		}
+		return 1;
+	};
+	lua_pushlightuserdata(L, this);
+	lua_pushcclosure(L, callGetEntitiesByAttributeValue, 1);
+	lua_setglobal(L, "getEntitiesByAttributeValue");
+
+	auto callGetEntityPosition = [](lua_State* s)->int {
+		int argc = lua_gettop(s);
+		if(argc != 1)
+		{
+			std::cerr << "callGetEntityPosition: wrong number of arguments\n";
+			return 0;		
+		}
+		ID entityID = lua_tonumber(s, 1);
+		ServerApplication* sApp = (ServerApplication*)lua_touserdata(s, lua_upvalueindex(1));
+		auto e = sApp->_gameWorld.getEntity(entityID);
+		BodyComponent* bc = nullptr;
+		if(e != nullptr && (bc = e->getComponent<BodyComponent>()) != nullptr) {
+			vec3f p = bc->getPosition();
+			lua_pushnumber(s, p.X);
+			lua_pushnumber(s, p.Y);
+			lua_pushnumber(s, p.Z);
+			return 3;
+		}
+		else
+			return 0;
+	};
+	lua_pushlightuserdata(L, this);
+	lua_pushcclosure(L, callGetEntityPosition, 1);
+	lua_setglobal(L, "getEntityPosition");
 }
 
 void ServerApplication::gameModeOnClientConnect(ID sessionID)
