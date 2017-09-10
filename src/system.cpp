@@ -269,7 +269,7 @@ void Physics::bodyDoStrafe(float timeDelta)
 			//float fMul = 4000;
 			//float fMul = 1300;
 			//float fMul = 4300;
-			float fMul = 1300;
+			float fMul = 800;
 			{
 				vec2f strDir = bc->getStrafeDir();
 				vec3f dir{strDir.X, 0, strDir.Y};
@@ -289,16 +289,16 @@ void Physics::bodyDoStrafe(float timeDelta)
 				//pSphereShape->calculateLocalInertia(mass2, fallInertia);
 				if(dir.getLength() > 0.1 && _objData[e.getID()].onGround)
 				{
-					b->setDamping(0.46, 0);
+					b->setDamping(0.41, 0);
 					if(getObjVelocity(e.getID()).getLength() < 2)
 					{
 						//cout << "climbing a hill\n";
 						fMul *= 1.5;
 					}
-					b->setFriction(3.0);
+					b->setFriction(1.0);
 					//b->setMassProps(mass, fallInertia);
 					//b->applyCentralForce(btVector3(dir.X, dir.Y+0.1, dir.Z)*fMul);
-					b->applyCentralImpulse(btVector3(dir.X, 0.2, dir.Z)*fMul*timeDelta);//*abs(cos(2*M_PI*(1/0.5)*t)));
+					b->applyCentralImpulse(btVector3(dir.X, 0., dir.Z)*fMul*timeDelta);//*abs(cos(2*M_PI*(1/0.5)*t)));
 					//b->applyCentralImpulse(btVector3(dir.X, 0.05, dir.Z)*fMul/*abs(cos(2*M_PI*(1/0.5)*t))*/); // !! working
 					//t = 0;
 				}

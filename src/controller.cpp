@@ -149,7 +149,7 @@ bool Controller::OnEvent(const SEvent& event)
 					if(mousePos == screenCenter) // TODO better idea?
 						return true;
 					Command c(Command::Type::ROT_diff);
-					float sensitivity = 0.001;
+					float sensitivity = 0.0003;
 					vec2i mouseMovDiff = mousePos-screenCenter;
 					c._vec2f = vec2f(mouseMovDiff.X, mouseMovDiff.Y)*sensitivity;
 					_commandHandler(c);

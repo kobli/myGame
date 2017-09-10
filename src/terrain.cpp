@@ -52,9 +52,8 @@ bool Terrain::dumpHeightmapToImage(std::string fileName)
 void Terrain::init()
 {
 	auto g = [this](unsigned x, unsigned y) -> float{
-		PerlinMultiOctave::Octaves octaves(0.5, 0.005, 4, 0.3);
+		PerlinMultiOctave::Octaves octaves(0.15, 0.02, 3, 0.3);
 		octaves.addOctave({0.03,0.09});
-		octaves.addOctave({0.01,0.4});
 		static PerlinMultiOctave g(_size.X, _size.Y, octaves,_seed);
 		return g.val(x, y)*2;
 	};
