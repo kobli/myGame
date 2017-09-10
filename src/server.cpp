@@ -163,7 +163,13 @@ void Updater::sendEvent(const EntityEvent& e)
 
 
 ServerApplication::ServerApplication(IrrlichtDevice* irrDev)
-	: _irrDevice{irrDev}, _map{vec2u(64),9}, _gameWorld{_map}
+	: _irrDevice{irrDev}, _map{vec2u(64),
+#ifdef DEBUG_BUILD
+	1
+#else
+	std::random_device()()
+#endif
+	}, _gameWorld{_map}
 	, _physics{_gameWorld}, _spells{_gameWorld}, _input{_gameWorld, _spells},
 	_updater(std::bind(&ServerApplication::send, ref(*this), placeholders::_1, placeholders::_2),
 			std::bind(&World::getEntity, ref(_gameWorld), placeholders::_1)), _LuaStateGameMode{nullptr},
