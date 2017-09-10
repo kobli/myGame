@@ -127,8 +127,8 @@ Physics::Physics(World& world, scene::ISceneManager* smgr): System{world}, _tAcc
 	_heightMap.reset(new float[(w+1)*(w+1)]);
 	float* heightMap = _heightMap.get();
 
-	float min = heightMap[0];
-	float max = heightMap[0];
+	float min = std::numeric_limits<float>::max();
+	float max = std::numeric_limits<float>::min();
 	for(unsigned y = 0; y<w; y++)
 	{
 		for(unsigned x = 0; x<w; x++)
