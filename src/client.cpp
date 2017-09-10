@@ -160,6 +160,7 @@ bool ClientApplication::connect(string host, unsigned short port)
 	std::cout << "Connecting to " << host << ":" << port << std::endl;
 	auto r = _server.connect(host, port);
 	_server.setBlocking(false);
+	sendHello();
 	return r == sf::Socket::Done;
 }
 
@@ -388,6 +389,13 @@ void ClientApplication::handlePacket(sf::Packet& p)
 				createWorld();
 				break;
 			}
+		case PacketType::ServerMessage:
+			{
+				string message;
+				p >> message;
+				cout << "ServerMessage: " << message << std::endl;
+				break;
+			}
 		default:
 			cerr << "Received packet of unknown type.\n";
 	}
@@ -523,4 +531,11 @@ void ClientApplication::loadTerrain()
 	terrain->getMaterial(0).TextureLayer->getTextureMatrix().setTextureScale(30,30);
 	terrain->getMaterial(0).TextureLayer->TextureWrapU = video::E_TEXTURE_CLAMP::ETC_REPEAT;
 	terrain->getMaterial(0).TextureLayer->TextureWrapV = video::E_TEXTURE_CLAMP::ETC_REPEAT;
+}
+
+void ClientApplication::sendHello()
+{
+	sf::Packet p;
+	p << PacketType::ClientHello << u16(myGame_VERSION_MAJOR) << u16(myGame_VERSION_MINOR);
+	sendPacket(p);
 }

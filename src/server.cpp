@@ -4,7 +4,7 @@
 #include <serdes.hpp>
 
 Session::Session(unique_ptr<sf::TcpSocket>&& socket, CommandHandler h)
-	: _socket{std::move(socket)}, _commandHandler{h}, _closed{false}
+	: _socket{std::move(socket)}, _commandHandler{h}, _closed{false}, _authorized{false}
 {
 	addPair("controlled_object_id", NULLID);
 }
@@ -79,10 +79,21 @@ void Session::handlePacket(sf::Packet& p)
 	{
 		case PacketType::PlayerCommand:
 		{
+			disconnectUnauthorized();
 			Command c;
 			p >> c;
 			//cout << "command type: " << unsigned(c._type) << endl;
 			_commandHandler(c, getControlledObjID());
+			break;
+		}
+		case PacketType::ClientHello:
+		{
+			u16 vMajor, vMinor;
+			p >> vMajor >> vMinor;
+			if(vMajor != u16(myGame_VERSION_MAJOR) || vMinor != u16(myGame_VERSION_MINOR))
+				disconnectUnauthorized("Version mismatch.");
+			else
+				_authorized = true;
 			break;
 		}
 		default:
@@ -112,6 +123,18 @@ void Session::setValue(std::string key, float value)
 {
 	KeyValueStore::setValue(key, value);
 	updateClientSharedRegistry();
+}
+
+void Session::disconnectUnauthorized(std::string reason)
+{
+	if(!_authorized)
+	{
+		std::cout << "Disconnecting unauthorized client: " << reason << std::endl;
+		sf::Packet p;
+		p << PacketType::ServerMessage << reason;
+		send(p);
+		_socket->disconnect();
+	}
 }
 
 ////////////////////////////////////////////////////////////

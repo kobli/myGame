@@ -30,10 +30,12 @@ class Session: KeyValueStore
 		CommandHandler _commandHandler;
 		void handlePacket(sf::Packet& p);
 		bool _closed;
+		bool _authorized;
 
 		void updateClientSharedRegistry();
 		void addPair(std::string key, float value);
 		void setValue(std::string key, float value);
+		void disconnectUnauthorized(std::string reason = "Unauthorized.");
 };
 
 ////////////////////////////////////////////////////////////

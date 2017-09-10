@@ -11,6 +11,8 @@ enum PacketType: u8
 	WorldUpdate,
 	RegistryUpdate,
 	GameInit,
+	ClientHello,
+	ServerMessage,
 };
 
 /*

@@ -64,6 +64,7 @@ class ClientApplication: private Observer<EntityEvent>
 		void bindCameraToControlledEntity();
 		void updateCastingIndicator(float timeDelta);
 		void loadTerrain();
+		void sendHello();
 };
 
 #endif /* CLIENT_HPP_16_11_26_10_46_45 */

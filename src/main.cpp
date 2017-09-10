@@ -4,7 +4,6 @@
 #include "world.hpp"
 #include "server.hpp"
 #include "client.hpp"
-#include "config.hpp"
 
 ImageDumper SAVEIMAGE(nullptr);
 
