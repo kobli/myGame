@@ -16,6 +16,7 @@ class Session: KeyValueStore
 {
 	public:
 		using CommandHandler = std::function<void(Command& c, ID charID)>;
+		using OnAuthorized = std::function<void(void)>;
 		Session(unique_ptr<sf::TcpSocket>&& socket, CommandHandler commandHandler = [](Command&, ID){});
 		sf::TcpSocket& getSocket();
 		void setCommandHandler(CommandHandler h);
@@ -24,6 +25,7 @@ class Session: KeyValueStore
 		bool receive();
 		void send(sf::Packet& p);
 		bool isClosed();
+		void setOnAuthorized(OnAuthorized cb);
 
 	private:
 		unique_ptr<sf::TcpSocket> _socket;
@@ -31,6 +33,7 @@ class Session: KeyValueStore
 		void handlePacket(sf::Packet& p);
 		bool _closed;
 		bool _authorized;
+		OnAuthorized _onAuthorized;
 
 		void updateClientSharedRegistry();
 		void addPair(std::string key, float value);
@@ -82,6 +85,7 @@ class ServerApplication: private Observer<EntityEvent>
 		void send(sf::Packet& p, Updater::ClientFilterPredicate fp);
 		void gameModeRegisterAPIMethods();
 		void gameModeOnClientConnect(ID sessionID);
+		void onClientAuthorized(ID sessionID);
 		void gameModeOnClientDisconnect(ID sessionID);
 		void gameModeOnEntityEvent(const EntityEvent& e);
 		void sendMapTo(Session& client);

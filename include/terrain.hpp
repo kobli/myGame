@@ -2,6 +2,7 @@
 #define TERRAIN_HPP_17_08_18_23_13_00 
 #include <vector>
 #include <functional>
+#include <cassert>
 #include "main.hpp"
 
 class Terrain {

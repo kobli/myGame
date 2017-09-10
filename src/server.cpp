@@ -65,10 +65,7 @@ void Session::send(sf::Packet& p)
 		_closed = true;
 	}
 	else if(r == sf::Socket::Status::NotReady)
-	{
 		cerr << "Attept to send data through a socket that was not ready.\n";
-		_closed = true;
-	}
 }
 
 void Session::handlePacket(sf::Packet& p)
@@ -92,8 +89,10 @@ void Session::handlePacket(sf::Packet& p)
 			p >> vMajor >> vMinor;
 			if(vMajor != u16(myGame_VERSION_MAJOR) || vMinor != u16(myGame_VERSION_MINOR))
 				disconnectUnauthorized("Version mismatch.");
-			else
+			else {
 				_authorized = true;
+				_onAuthorized();
+			}
 			break;
 		}
 		default:
@@ -104,6 +103,11 @@ void Session::handlePacket(sf::Packet& p)
 bool Session::isClosed()
 {
 	return _closed;
+}
+
+void Session::setOnAuthorized(OnAuthorized cb)
+{
+	_onAuthorized = cb;
 }
 
 void Session::updateClientSharedRegistry()
@@ -292,9 +296,14 @@ void ServerApplication::onClientConnect(std::unique_ptr<sf::TcpSocket>&& sock)
 			if(objID != NULLID)
 				_input.handleCommand(c, objID);
 			});
-	sendMapTo(_sessions[sID]);
+	_sessions[sID].setOnAuthorized([this, sID](){ onClientAuthorized(sID); });
+}
+
+void ServerApplication::onClientAuthorized(ID sessionID)
+{
+	sendMapTo(_sessions[sessionID]);
 	_gameWorld.sendHelloMsgTo(_updater); // TODO send updates only to newly connected client
-	gameModeOnClientConnect(sID);
+	gameModeOnClientConnect(sessionID);
 }
 
 void ServerApplication::onClientDisconnect(ID sessionID)
