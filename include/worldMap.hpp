@@ -83,7 +83,33 @@ class WorldMap: public Serializable {
 
 		void placeSpawnpoints()
 		{
-			_spawns.push_back(Spawnpoint{vec3f(20,10,20)});
+			unsigned edgePadding = 10;
+			unsigned step = 5;
+			float minTreeDistance = 2;
+			unsigned first = edgePadding;
+			unsigned last = int(getSize().X-1-edgePadding)/step*step;
+			for(unsigned y = first; y <= last; y += step)
+				for(unsigned x = first; x <= last; x += step)
+				{
+					if(x != first && x != last && y != first && y != last)
+						continue;
+					else {
+						if(nearestTreeDistance(vec2u(x,y)) >= minTreeDistance)
+							_spawns.push_back(Spawnpoint{vec3f(x,getHeightAt(x,y),y)});
+					}
+				}
+		}
+
+		float nearestTreeDistance(vec2u from)
+		{
+			float r = std::numeric_limits<float>::max();
+			for(const Tree& t : _trees)
+			{
+				float d = vec2f(t.position.X, t.position.Z).getDistanceFrom(vec2f(from.X, from.Y));
+				if(d < r)
+					r = d;
+			}
+			return r;
 		}
 };
 
