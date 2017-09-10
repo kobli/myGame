@@ -42,7 +42,6 @@ end
 function spawnCharacter()
 	local spawns = getSpawnpoints()
 	local s = spawns[math.random(#spawns)]
-	print(s[1],s[2],s[3])
 	local charID = createCharacter(s[1],s[2],s[3])
 	setEntityAttributeValue(charID, "health", 20)
 	setEntityAttributeValue(charID, "max-health", 50)

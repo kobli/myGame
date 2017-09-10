@@ -1033,7 +1033,7 @@ void InputSystem::handleCommand(Command& c, ID controlledObjID)
 				break;
 			}
 		default:
-			cerr << "unknown command type to handle\n";
+			cerr << "unknown command type to handle: " << c._type << "\n";
 	}
 }
 
