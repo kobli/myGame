@@ -149,7 +149,6 @@ class Entity {
 		}
 
 		void swap(Entity& other) {
-			std::cout << "swapping Ent " << _id << " " << other._id <<"\n";
 			using std::swap;
 			swap(_id, other._id);
 			swap(_manager, other._manager);
