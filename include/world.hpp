@@ -206,7 +206,6 @@ class CollisionComponent: public ObservableComponentBase
 				t & _kinematic;
 				t & _mass;
 				t & _gravity;
-				assert(!(_kinematic && _mass != 0));
 			}
 
 	private:
