@@ -217,7 +217,10 @@ CollisionComponent::CollisionComponent(ID parentEntID, float radius,
 	: ObservableComponentBase(parentEntID, ComponentType::Collision)
 		, _radius{radius}, _height{height}, _posOff{posOffset}
 		, _mass{mass}, _kinematic{kinematic}, _gravity{gravity}
-{}
+{
+	if(_kinematic)
+		_mass = 0;
+}
 
 float CollisionComponent::getRadius() const
 {
