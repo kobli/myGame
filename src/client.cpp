@@ -4,6 +4,7 @@
 #include "serdes.hpp"
 #include "heightmapMesh.hpp"
 #include "terrainTexturer.hpp"
+#include "CGUITTFont.h"
 
 class MyShaderCallBack : public video::IShaderConstantSetCallBack
 {
@@ -126,10 +127,13 @@ ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ 
 	gui::IGUIEnvironment* env = _device->getGUIEnvironment();
 
 	auto* skin = env->getSkin();
-	auto* font = env->getFont("./media/fontlucida.png");
+
+	gui::IGUIFont* font = gui::CGUITTFont::createTTFont(_device->getGUIEnvironment(), "./media/OpenSans-Bold.ttf", 16);
 	if(!font)
 		std::cerr << "FAILED TO LOAD THE FONT\n";
+
 	skin->setFont(font);
+	font->drop();
 
 	_healthBar = new gui::ProgressBar(env, core::rect<s32>(20, 20, 220, 60), env->getRootGUIElement());
 	_healthBar->setColors(video::SColor(155, 255,255,255), video::SColor(200, 255,0,0));
