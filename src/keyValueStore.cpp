@@ -7,12 +7,12 @@ void KeyValueStore::addPair(std::string key, float value)
 	_store[key] = value;
 }
 
-bool KeyValueStore::hasKey(std::string key)
+bool KeyValueStore::hasKey(std::string key) const
 {
 	return _store.find(key) != _store.end();
 }
 
-float KeyValueStore::getValue(std::string key)
+float KeyValueStore::getValue(std::string key) const
 {
 	assert(_store.count(key) == 1);
 	return _store.find(key)->second;

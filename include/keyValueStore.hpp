@@ -6,8 +6,8 @@
 class KeyValueStore : public Serializable {
 	public:
 		void addPair(std::string key, float value);
-		bool hasKey(std::string key);
-		float getValue(std::string key);
+		bool hasKey(std::string key) const;
+		float getValue(std::string key) const;
 		void setValue(std::string key, float value);
 
 		virtual void serDes(SerDesBase& s);

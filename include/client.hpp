@@ -6,7 +6,7 @@
 #include "system.hpp"
 #include "keyValueStore.hpp"
 #include "timedFilter.hpp"
-#include "progressBar.hpp"
+#include "gui.hpp"
 
 class Animator: public Observer<EntityEvent>
 {
@@ -27,13 +27,13 @@ class Animator: public Observer<EntityEvent>
 
 ////////////////////////////////////////////////////////////
 
-class ClientApplication: private Observer<EntityEvent>
+class ClientApplication
 {
 	public:
 		ClientApplication();
 		bool connect(string host, unsigned short port);
 		void run();
-		void createWorld();
+		void startGame();
 		void createCamera();
 		
 	private:
@@ -44,25 +44,20 @@ class ClientApplication: private Observer<EntityEvent>
 		unique_ptr<World> _gameWorld;
 		unique_ptr<ViewSystem> _vs;
 		unique_ptr<Physics> _physics;
+		unique_ptr<GUI> _gui;
 		Animator _animator;
 		scene::ICameraSceneNode* _camera;
 		KeyValueStore _sharedRegistry;
 		float _cameraElevation;
 		float _cameraYAngle;
 		TimedFilter<float> _yAngleSetCommandFilter;
-		gui::ProgressBar* _healthBar;
-		gui::ProgressBar* _castingIndicator;
-		gui::IGUIStaticText* _spellInHandsInfo;
 
-
-		void onMsg(const EntityEvent& m) override;
 		void commandHandler(Command& c);
 		void sendCommand(Command& c);
 		void sendPacket(sf::Packet& p);
 		bool receive();
 		void handlePacket(sf::Packet& p);
 		void bindCameraToControlledEntity();
-		void updateCastingIndicator(float timeDelta);
 		void loadTerrain();
 		void sendHello();
 };
