@@ -5,6 +5,7 @@
 #include "heightmapMesh.hpp"
 #include "terrainTexturer.hpp"
 #include "CGUITTFont.h"
+#include "crosshair.hpp"
 
 class MyShaderCallBack : public video::IShaderConstantSetCallBack
 {
@@ -127,11 +128,9 @@ ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ 
 	gui::IGUIEnvironment* env = _device->getGUIEnvironment();
 
 	auto* skin = env->getSkin();
-
 	gui::IGUIFont* font = gui::CGUITTFont::createTTFont(_device->getGUIEnvironment(), "./media/OpenSans-Bold.ttf", 16);
 	if(!font)
 		std::cerr << "FAILED TO LOAD THE FONT\n";
-
 	skin->setFont(font);
 	font->drop();
 
@@ -153,6 +152,8 @@ ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ 
 	_spellInHandsInfo->setBackgroundColor(video::SColor(200, 255,255,255));
 	_spellInHandsInfo->setRelativePosition(vec2i(screenSize.Width-spellInHandsInfoPanelWidth-30, 30));
 	_spellInHandsInfo->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT, gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT);
+
+	new irr::gui::CrossHair(env, "./media/crosshair.png", 5, env->getRootGUIElement());
 
 	_controller.setCommandHandler(std::bind(&ClientApplication::commandHandler, ref(*this), std::placeholders::_1));
 	_controller.setScreenSizeGetter([this](){ auto ss = _device->getVideoDriver()->getScreenSize(); return vec2i(ss.Width, ss.Height); });
