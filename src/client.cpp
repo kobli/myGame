@@ -101,7 +101,7 @@ void Animator::onMsg(const EntityEvent& m)
 ////////////////////////////////////////////////////////////
 
 ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ if(d) d->drop(); }),
-	_yAngleSetCommandFilter{0.1, [](float& oldObj, float& newObj)->float&{ if(std::fabs(oldObj-newObj) > 0.1) return newObj; else return oldObj; }},
+	_yAngleSetCommandFilter{0.2, [](float& oldObj, float& newObj)->float&{ if(std::fabs(oldObj-newObj) > 0.01) return newObj; else return oldObj; }},
 	_healthBar{nullptr}
 {
 	irr::SIrrlichtCreationParameters params;
