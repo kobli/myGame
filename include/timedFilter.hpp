@@ -35,7 +35,7 @@ class TimedFilter
 			return _time >= _period;
 		}
 
-		T objUpdated()
+		bool objUpdated()
 		{
 			return _updated;
 		}
