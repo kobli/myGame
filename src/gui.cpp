@@ -4,21 +4,16 @@
 
 using namespace irr::gui;
 
-class TabFlowHorizontal: public IGUIElement
+class GUIPanel: public IGUIElement
 {
 	public:
-		TabFlowHorizontal(IGUIEnvironment* environment, IGUIElement* parent = nullptr, s32 id = -1, core::rect<s32> rectangle = core::rect<s32>(0,0,0,0)): IGUIElement(EGUIET_ELEMENT, environment, parent, id, rectangle)
+		GUIPanel(IGUIEnvironment* environment, IGUIElement* parent = nullptr, s32 id = -1, core::rect<s32> rectangle = core::rect<s32>(0,0,0,0)): IGUIElement(EGUIET_ELEMENT, environment, parent, id, rectangle)
 	{}
 
-		void addElement(IGUIElement* e, int space = 0)
+		void addElement(IGUIElement* e)
 		{
-			vec2i pos(0, (getAbsolutePosition().getHeight()-e->getAbsolutePosition().getHeight())/2);
-			if(!getChildren().empty()) {
-				auto r = (*getChildren().getLast())->getRelativePosition();
-				pos += r.UpperLeftCorner+vec2i(r.getWidth()+space,0);
-			}
 			addChild(e);
-			e->setRelativePosition(pos);
+			recalculateElementPositions();
 		}
 
 		virtual void setDrawBackground(bool draw=true)
@@ -55,6 +50,34 @@ class TabFlowHorizontal: public IGUIElement
 	private:
 		bool _drawBackground;
 		video::SColor _backgroundColor;
+
+		virtual void recalculateElementPositions() = 0;
+};
+
+class GUIPanelFlowHorizontal: public GUIPanel
+{
+	public:
+		GUIPanelFlowHorizontal(IGUIEnvironment* environment, IGUIElement* parent = nullptr, s32 id = -1, core::rect<s32> rectangle = core::rect<s32>(0,0,0,0)): GUIPanel(environment, parent, id, rectangle), _padding{0}
+	{}
+		void setPadding(int padding)
+		{
+			_padding = padding;
+			recalculateElementPositions();
+		}
+
+		virtual void recalculateElementPositions()
+		{
+			int xPos = 0;
+			int panelHeight = getAbsolutePosition().getHeight();
+			for(IGUIElement* e : getChildren()) {
+				vec2i pos(xPos, (panelHeight-e->getAbsolutePosition().getHeight())/2);
+				xPos += e->getAbsolutePosition().getWidth() + _padding;
+				e->setRelativePosition(pos);
+			}
+		}
+
+	private:
+		int _padding;
 };
 
 GUI::GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedRegistry): _device{device}, _gameWorld{world}, _sharedRegistry{sharedRegistry}
@@ -92,10 +115,11 @@ GUI::GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedR
 	_spellInHandsInfo->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT, gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT);
 
 
-	auto bodyCountInfo = new TabFlowHorizontal(env, env->getRootGUIElement(), -1, core::rect<s32>(20, 100, 220, 132));
+	auto bodyCountInfo = new GUIPanelFlowHorizontal(env, env->getRootGUIElement(), -1, core::rect<s32>(20, 100, 220, 132));
 	
 	bodyCountInfo->addElement(env->addImage(_device->getVideoDriver()->getTexture("./media/spell_icon_body.png"), vec2i(0)));
-	bodyCountInfo->addElement(env->addStaticText(L"<bodyC> / <bodyTotal>", core::rect<s32>(0,0,100,20)), 70);
+	bodyCountInfo->addElement(env->addStaticText(L"<bodyC> / <bodyTotal>", core::rect<s32>(0,0,100,20)));
+	bodyCountInfo->setPadding(70);
 	bodyCountInfo->setBackgroundColor(video::SColor(155, 255, 255, 255));
 	bodyCountInfo->setDrawBackground(true);
 	_textSetters["bodyStatus"] = [bodyCountInfo](const wchar_t* text){
