@@ -18,7 +18,8 @@ GUI::GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedR
 
 	_healthBar = new gui::ProgressBar(env, core::rect<s32>(20, 20, 220, 60), env->getRootGUIElement());
 	_healthBar->setColors(video::SColor(155, 255,255,255), video::SColor(200, 255,0,0));
-	env->addStaticText(L"", core::rect<s32>(0, 0, _healthBar->getRelativePosition().getWidth(), _healthBar->getRelativePosition().getHeight()), false, false, _healthBar);
+	_healthBar->setLabel(L"HP:");
+	_healthBar->setValueDisplayMode(irr::gui::ProgressBar::ValueDisplayMode::Abs);
 	_healthBar->drop();
 
 	int castIndLen = 200;
@@ -57,11 +58,7 @@ void GUI::onMsg(const EntityEvent& m)
 			if(as != nullptr) {
 				if(as->hasAttribute("health") && as->hasAttribute("max-health")) {
 					_healthBar->setProgress(as->getAttribute("health")/as->getAttribute("max-health"));
-					std::wstring w = std::to_wstring(int(as->getAttribute("health"))) + L" / " + std::to_wstring(int(as->getAttribute("max-health")));
-					auto text = static_cast<gui::IGUIStaticText*>(*_healthBar->getChildren().begin());
-					text->setText(w.c_str());
-					vec2i hbSize(_healthBar->getAbsolutePosition().getWidth(), _healthBar->getAbsolutePosition().getHeight());
-					text->setRelativePosition((hbSize-vec2i(text->getTextWidth(), text->getTextHeight()))/2);
+					_healthBar->setMaxValue(as->getAttribute("max-health"));
 					return;
 				}
 			}
