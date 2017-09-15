@@ -2,6 +2,61 @@
 #include "CGUITTFont.h"
 #include "crosshair.hpp"
 
+using namespace irr::gui;
+
+class TabFlowHorizontal: public IGUIElement
+{
+	public:
+		TabFlowHorizontal(IGUIEnvironment* environment, IGUIElement* parent = nullptr, s32 id = -1, core::rect<s32> rectangle = core::rect<s32>(0,0,0,0)): IGUIElement(EGUIET_ELEMENT, environment, parent, id, rectangle)
+	{}
+
+		void addElement(IGUIElement* e, int space = 0)
+		{
+			vec2i pos(0, (getAbsolutePosition().getHeight()-e->getAbsolutePosition().getHeight())/2);
+			if(!getChildren().empty()) {
+				auto r = (*getChildren().getLast())->getRelativePosition();
+				pos += r.UpperLeftCorner+vec2i(r.getWidth()+space,0);
+			}
+			addChild(e);
+			e->setRelativePosition(pos);
+		}
+
+		virtual void setDrawBackground(bool draw=true)
+		{
+			_drawBackground = draw;
+		}
+
+		virtual void setBackgroundColor(video::SColor c)
+		{
+			_backgroundColor = c;
+		}
+
+		virtual bool isDrawingBackground() const
+		{
+			return _drawBackground;
+		}
+
+		virtual video::SColor getBackgroundColor() const
+		{
+			return _backgroundColor;
+		}
+
+		virtual void draw()
+		{
+			if(!this->IsVisible)
+				return;
+
+			Environment->getVideoDriver()->draw2DRectangle(_backgroundColor, getAbsolutePosition());
+
+			for(auto& c: this->getChildren())
+				c->draw();
+		}
+
+	private:
+		bool _drawBackground;
+		video::SColor _backgroundColor;
+};
+
 GUI::GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedRegistry): _device{device}, _gameWorld{world}, _sharedRegistry{sharedRegistry}
 {
 	_device->getCursorControl()->setVisible(false);
@@ -36,6 +91,17 @@ GUI::GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedR
 	_spellInHandsInfo->setRelativePosition(vec2i(screenSize.Width-spellInHandsInfoPanelWidth-30, 30));
 	_spellInHandsInfo->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT, gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT);
 
+
+	auto bodyCountInfo = new TabFlowHorizontal(env, env->getRootGUIElement(), -1, core::rect<s32>(20, 100, 220, 132));
+	
+	bodyCountInfo->addElement(env->addImage(_device->getVideoDriver()->getTexture("./media/spell_icon_body.png"), vec2i(0)));
+	bodyCountInfo->addElement(env->addStaticText(L"<bodyC> / <bodyTotal>", core::rect<s32>(0,0,100,20)), 70);
+	bodyCountInfo->setBackgroundColor(video::SColor(155, 255, 255, 255));
+	bodyCountInfo->setDrawBackground(true);
+	_textSetters["bodyStatus"] = [bodyCountInfo](const wchar_t* text){
+		(*(bodyCountInfo->getChildren().begin()+1))->setText(text);
+	};
+
 	new irr::gui::CrossHair(env, "./media/crosshair.png", 5, env->getRootGUIElement());
 }
 
@@ -68,6 +134,7 @@ void GUI::onMsg(const EntityEvent& m)
 		if(controlledE != nullptr) {
 			WizardComponent* wc = controlledE->getComponent<WizardComponent>();
 			if(wc != nullptr) {
+				_textSetters["bodyStatus"]((std::to_wstring(wc->getAvailableBodyC()) + L" / " + std::to_wstring(wc->getTotalBodyC())).c_str());
 				_spellInHandsInfo->setText(std::wstring(
 						L"Power:   "+std::to_wstring(wc->getSpellInHandsPower()) + L"\n" +
 						L"Radius:  "+std::to_wstring(wc->getSpellInHandsRadius()) + L"\n" +

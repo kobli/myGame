@@ -14,6 +14,9 @@ class GUI: public Observer<EntityEvent>
 		World& _gameWorld;
 		const KeyValueStore& _sharedRegistry;
 
+		typedef std::function<void(const wchar_t* l)> TextSetter;
+		std::map<std::string, TextSetter> _textSetters;
+
 		gui::ProgressBar* _healthBar;
 		gui::ProgressBar* _castingIndicator;
 		gui::IGUIStaticText* _spellInHandsInfo;

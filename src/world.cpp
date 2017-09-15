@@ -272,7 +272,7 @@ float CollisionComponent::getGravity()
 ////////////////////////////////////////////////////////////
 
 WizardComponent::WizardComponent(ID parentEntID):
- 	ObservableComponentBase(parentEntID, ComponentType::Wizard)
+ 	ObservableComponentBase(parentEntID, ComponentType::Wizard), _availableBodyC{0}, _totalBodyC{0}
 {
 }
 
@@ -297,6 +297,15 @@ void WizardComponent::setSpellInHandsData(float power, float radius, float speed
 	_spellInHandsPower = power;
 	_spellInHandsRadius = radius;
 	_spellInHandsSpeed = speed;
+	if(changed)
+		notifyObservers();
+}
+
+void WizardComponent::setBodyStatus(unsigned available, unsigned total)
+{
+	bool changed = _availableBodyC != available || _totalBodyC != total;
+	_availableBodyC = available;
+	_totalBodyC = total;
 	if(changed)
 		notifyObservers();
 }
@@ -329,6 +338,16 @@ float WizardComponent::getSpellInHandsRadius()
 float WizardComponent::getSpellInHandsSpeed()
 {
 	return _spellInHandsSpeed;
+}
+
+unsigned WizardComponent::getAvailableBodyC()
+{
+	return _availableBodyC;
+}
+
+unsigned WizardComponent::getTotalBodyC()
+{
+	return _totalBodyC;
 }
 
 ////////////////////////////////////////////////////////////

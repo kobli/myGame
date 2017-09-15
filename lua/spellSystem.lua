@@ -127,7 +127,8 @@ function Wizard:updateStatus()
 		s = self.spellInHands:getSpeed()
 	end
 	updateWizardStatus(self.ID, self.invocIncantation or "", self.invocT, progress, 
-	p, r, s)
+	p, r, s,
+	Config.Wizard.maxBodiesAlive-self.bodiesInUse, Config.Wizard.maxBodiesAlive)
 end
 
 function Wizard:execIncantation(inc)
