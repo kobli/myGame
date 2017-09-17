@@ -291,12 +291,13 @@ void WizardComponent::setCurrentJobStatus(std::string job, float duration, float
 		notifyObservers();
 }
 
-void WizardComponent::setSpellInHandsData(float power, float radius, float speed)
+void WizardComponent::setSpellInHandsData(float power, float radius, float speed, std::vector<unsigned> effects)
 {
-	bool changed = _spellInHandsPower != power || _spellInHandsRadius != radius || _spellInHandsSpeed != speed;
+	bool changed = _spellInHandsPower != power || _spellInHandsRadius != radius || _spellInHandsSpeed != speed || _spellInHandsEffects != effects;
 	_spellInHandsPower = power;
 	_spellInHandsRadius = radius;
 	_spellInHandsSpeed = speed;
+	_spellInHandsEffects = effects;
 	if(changed)
 		notifyObservers();
 }
@@ -325,6 +326,11 @@ float WizardComponent::getCurrentJobProgress()
 	return _currentJobProgress;
 }
 
+bool WizardComponent::hasSpellInHands()
+{
+	return getSpellInHandsPower() || getSpellInHandsSpeed() || getSpellInHandsRadius();
+}
+
 float WizardComponent::getSpellInHandsPower()
 {
 	return _spellInHandsPower;
@@ -338,6 +344,11 @@ float WizardComponent::getSpellInHandsRadius()
 float WizardComponent::getSpellInHandsSpeed()
 {
 	return _spellInHandsSpeed;
+}
+
+const std::vector<unsigned>& WizardComponent::getSpellInHandsEffects()
+{
+	return _spellInHandsEffects;
 }
 
 unsigned WizardComponent::getAvailableBodyC()

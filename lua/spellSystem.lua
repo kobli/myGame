@@ -43,6 +43,7 @@ Config.Body.baseRadius = 2			-- base radius of the body sphere [?]
 
 Config.Spell.maxSpeed = 60			-- maximum traveling speed of the spell[?]
 Config.Spell.maxRadius = 20			-- maximum radius of the spell body sphere [?]
+Config.Spell.maxPower = 5				-- maximum power of the spell [?]
 
 BODYEFFECTID = 0
 Config.Effects = {}
@@ -121,13 +122,17 @@ function Wizard:updateStatus()
 		progress = math.min(self.invocT, math.max(0, self.invocT-self.invocRemainT))
 	end
 	local p,r,s
+	local effects = {}
 	if self.spellInHands ~= nil then
-		p = self.spellInHands:getPower()
-		r = self.spellInHands:getRadius()
-		s = self.spellInHands:getSpeed()
+		p = self.spellInHands:getPower()/Config.Spell.maxPower
+		r = self.spellInHands:getRadius()/Config.Spell.maxRadius
+		s = self.spellInHands:getSpeed()/Config.Spell.maxSpeed
+		for k, v in pairs(self.spellInHands.effects) do
+			table.insert(effects, v.effectID)
+		end
 	end
 	updateWizardStatus(self.ID, self.invocIncantation or "", self.invocT, progress, 
-	p, r, s,
+	p, r, s, effects,
 	Config.Wizard.maxBodiesAlive-self.bodiesInUse, Config.Wizard.maxBodiesAlive)
 end
 
@@ -273,9 +278,9 @@ function Spell:appendEffect(effect)
 	dout("spell now contains "..#self.effects.." effects")
 end
 
-function Spell:hasEffect(effectName)
+function Spell:hasEffect(effectID)
 		for k,v in pairs(self.effects) do
-			if v.name == effectName then
+			if v.effectID == effectID then
 				return true
 			end
 		end
@@ -314,7 +319,7 @@ function Spell:getPower()
 	for k,v in pairs(self.bodies) do
 		s = s + v:getPower()
 	end
-	return stackedBodiesMultipltier(#self.bodies)*s
+	return math.min(stackedBodiesMultipltier(#self.bodies)*s, Config.Spell.maxPower)
 end
 
 function Spell:getRadius()
@@ -339,7 +344,7 @@ function Spell:die()
 		dout("col with on death: ",self.collisionsInLastTick[i])
 		-- apply all effects
 		for k,v in pairs(self.effects) do
-			local ed = Config.Effects[v.name]
+			local ed = v 
 			addAttributeAffector(self.collisionsInLastTick[i], ed.modifiedAttribute, ed.affectorModifierType, ed.modifierValue*self:getPower(), ed.permanent, ed.period);
 		end
 	end
@@ -350,7 +355,7 @@ end
 
 function Spell:getEffectID()
 	if self.effects[1] ~= nil then
-		return Config.Effects[self.effects[1].name].effectID
+		return self.effects[1].effectID
 	else
 		return BODYEFFECTID
 	end
@@ -548,7 +553,8 @@ function Wizard.Command:spell_effect_create(argStr)
 	dout("create effect: "..argStr)
 	-- validate and parse arg str
 	local effectName = argStr
-	if Config.Effects[effectName] == nil then
+	local effect = Config.Effects[effectName]
+	if effect.effectID == nil then
 		dout("such effect does not exist")
 		return
 	end
@@ -558,14 +564,13 @@ function Wizard.Command:spell_effect_create(argStr)
 		return
 	end
 	--
-	if self.spellInHands:hasEffect(effectName) then
+	if self.spellInHands:hasEffect(effect.effectID) then
 		dout("The currenly held spell already contains this effect.")
 		return
 	end
 	dout("starting effect invocation...")
 	-- invocation delay
-	self:doInvocation(Config.Effects[effectName].castingTime)
+	self:doInvocation(effect.castingTime)
 	-- create and append the effect
-	local effect = Effect:new(effectName)
 	self.spellInHands:appendEffect(effect)
 end

@@ -4,82 +4,6 @@
 
 using namespace irr::gui;
 
-class GUIPanel: public IGUIElement
-{
-	public:
-		GUIPanel(IGUIEnvironment* environment, IGUIElement* parent = nullptr, s32 id = -1, core::rect<s32> rectangle = core::rect<s32>(0,0,0,0)): IGUIElement(EGUIET_ELEMENT, environment, parent, id, rectangle)
-	{}
-
-		void addElement(IGUIElement* e)
-		{
-			addChild(e);
-			recalculateElementPositions();
-		}
-
-		virtual void setDrawBackground(bool draw=true)
-		{
-			_drawBackground = draw;
-		}
-
-		virtual void setBackgroundColor(video::SColor c)
-		{
-			_backgroundColor = c;
-		}
-
-		virtual bool isDrawingBackground() const
-		{
-			return _drawBackground;
-		}
-
-		virtual video::SColor getBackgroundColor() const
-		{
-			return _backgroundColor;
-		}
-
-		virtual void draw()
-		{
-			if(!this->IsVisible)
-				return;
-
-			Environment->getVideoDriver()->draw2DRectangle(_backgroundColor, getAbsolutePosition());
-
-			for(auto& c: this->getChildren())
-				c->draw();
-		}
-
-	private:
-		bool _drawBackground;
-		video::SColor _backgroundColor;
-
-		virtual void recalculateElementPositions() = 0;
-};
-
-class GUIPanelFlowHorizontal: public GUIPanel
-{
-	public:
-		GUIPanelFlowHorizontal(IGUIEnvironment* environment, IGUIElement* parent = nullptr, s32 id = -1, core::rect<s32> rectangle = core::rect<s32>(0,0,0,0)): GUIPanel(environment, parent, id, rectangle), _padding{0}
-	{}
-		void setPadding(int padding)
-		{
-			_padding = padding;
-			recalculateElementPositions();
-		}
-
-		virtual void recalculateElementPositions()
-		{
-			int xPos = 0;
-			int panelHeight = getAbsolutePosition().getHeight();
-			for(IGUIElement* e : getChildren()) {
-				vec2i pos(xPos, (panelHeight-e->getAbsolutePosition().getHeight())/2);
-				xPos += e->getAbsolutePosition().getWidth() + _padding;
-				e->setRelativePosition(pos);
-			}
-		}
-
-	private:
-		int _padding;
-};
-
 GUI::GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedRegistry): _device{device}, _gameWorld{world}, _sharedRegistry{sharedRegistry}
 {
 	_device->getCursorControl()->setVisible(false);
@@ -108,17 +32,38 @@ GUI::GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedR
 	env->addStaticText(L"", core::rect<s32>(0, 0, _castingIndicator->getRelativePosition().getWidth(), _castingIndicator->getRelativePosition().getHeight()), false, false, _castingIndicator);
 	_castingIndicator->drop();
 
-	int spellInHandsInfoPanelWidth = 100;
-	_spellInHandsInfo = _device->getGUIEnvironment()->addStaticText(L"SIH info", core::rect<s32>(0, 0, spellInHandsInfoPanelWidth, 80), false, false, env->getRootGUIElement(), -1, true);
-	_spellInHandsInfo->setBackgroundColor(video::SColor(200, 255,255,255));
-	_spellInHandsInfo->setRelativePosition(vec2i(screenSize.Width-spellInHandsInfoPanelWidth-30, 30));
-	_spellInHandsInfo->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT, gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT);
-
-
-	auto bodyCountInfo = new GUIPanelFlowHorizontal(env, env->getRootGUIElement(), -1, core::rect<s32>(20, 100, 220, 132));
+	int spellAttributesInfoPanelWidth = 150;
+	int spellAttributeProgBarHeight = 20;
+	auto spellAttributesInfo = new GUIPanelFlowVertical(env, env->getRootGUIElement(), -1, core::rect<s32>(0, 0, spellAttributesInfoPanelWidth, spellAttributeProgBarHeight*3));
 	
-	bodyCountInfo->addElement(env->addImage(_device->getVideoDriver()->getTexture("./media/spell_icon_body.png"), vec2i(0)));
-	bodyCountInfo->addElement(env->addStaticText(L"<bodyC> / <bodyTotal>", core::rect<s32>(0,0,100,20)));
+	_spellAttrPowInfo = new ProgressBar(env, core::rect<s32>(0, 0, spellAttributesInfoPanelWidth, spellAttributeProgBarHeight));
+	_spellAttrPowInfo->setColors(video::SColor(155, 255,255,255), video::SColor(200, 255,100,100));
+	_spellAttrPowInfo->setLabel(L"Power");
+	spellAttributesInfo->addChild(_spellAttrPowInfo);
+
+	_spellAttrSizeInfo = new ProgressBar(env, core::rect<s32>(0, 0, spellAttributesInfoPanelWidth, spellAttributeProgBarHeight));
+	_spellAttrSizeInfo->setColors(video::SColor(155, 255,255,255), video::SColor(200, 100,255,100));
+	_spellAttrSizeInfo->setLabel(L"Size");
+	spellAttributesInfo->addChild(_spellAttrSizeInfo);
+
+	_spellAttrSpeedInfo = new ProgressBar(env, core::rect<s32>(0, 0, spellAttributesInfoPanelWidth, spellAttributeProgBarHeight));
+	_spellAttrSpeedInfo->setColors(video::SColor(155, 255,255,255), video::SColor(200, 100,100,255));
+	_spellAttrSpeedInfo->setLabel(L"Speed");
+	spellAttributesInfo->addChild(_spellAttrSpeedInfo);
+
+	_spellInHandsInfo = new GUIPanelFlowHorizontal(env, env->getRootGUIElement(), -1, core::rect<s32>(0, 0, spellAttributesInfoPanelWidth+400, spellAttributesInfo->getAbsolutePosition().getHeight()));
+	_spellInHandsInfo->addChild(spellAttributesInfo);
+	_spellInHandsInfo->setRelativePosition(vec2i((screenSize.Width-spellAttributesInfoPanelWidth)/2., screenSize.Height-100));
+	_spellInHandsInfo->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT);
+
+	_spellEffectsInfo = new GUIPanelFlowHorizontal(env, env->getRootGUIElement(), -1, core::rect<s32>(0, 0, 200, spellAttributeProgBarHeight*3));
+	_spellInHandsInfo->addChild(_spellEffectsInfo);
+
+
+	auto bodyCountInfo = new GUIPanelFlowHorizontal(env, env->getRootGUIElement(), -1, core::rect<s32>(20, 100, 220, 164));
+	
+	bodyCountInfo->addChild(env->addImage(_device->getVideoDriver()->getTexture("./media/spell_icon_body.png"), vec2i(0)));
+	bodyCountInfo->addChild(env->addStaticText(L"<bodyC> / <bodyTotal>", core::rect<s32>(0,0,100,20)));
 	bodyCountInfo->setPadding(70);
 	bodyCountInfo->setBackgroundColor(video::SColor(155, 255, 255, 255));
 	bodyCountInfo->setDrawBackground(true);
@@ -159,11 +104,27 @@ void GUI::onMsg(const EntityEvent& m)
 			WizardComponent* wc = controlledE->getComponent<WizardComponent>();
 			if(wc != nullptr) {
 				_textSetters["bodyStatus"]((std::to_wstring(wc->getAvailableBodyC()) + L" / " + std::to_wstring(wc->getTotalBodyC())).c_str());
-				_spellInHandsInfo->setText(std::wstring(
-						L"Power:   "+std::to_wstring(wc->getSpellInHandsPower()) + L"\n" +
-						L"Radius:  "+std::to_wstring(wc->getSpellInHandsRadius()) + L"\n" +
-						L"Speed:   "+std::to_wstring(wc->getSpellInHandsSpeed())
-						).c_str());
+
+				if(wc->hasSpellInHands()) {
+					_spellAttrPowInfo->setProgress(wc->getSpellInHandsPower());
+					_spellAttrSizeInfo->setProgress(wc->getSpellInHandsRadius());
+					_spellAttrSpeedInfo->setProgress(wc->getSpellInHandsSpeed());
+
+					auto env = _device->getGUIEnvironment();
+					while(!_spellEffectsInfo->getChildren().empty())
+						_spellEffectsInfo->removeChild(*_spellEffectsInfo->getChildren().begin());
+					static std::map<unsigned, std::string> effectIcons{{1,"fire"}, {3, "heal"}};
+					for(unsigned effectID: wc->getSpellInHandsEffects())
+						_spellEffectsInfo->addChild(
+								env->addImage(
+									_device->getVideoDriver()->getTexture(("./media/spell_icon_"+effectIcons[effectID]+".png").c_str()),
+									vec2i(0,0)
+									));
+					_spellInHandsInfo->setVisible(true);
+				}
+				else
+					_spellInHandsInfo->setVisible(false);
+
 				if(!wc->getCurrentJob().empty()) {
 					_castingIndicator->setVisible(true);
 					_castingIndicator->setProgress(wc->getCurrentJobProgress()/wc->getCurrentJobDuration());

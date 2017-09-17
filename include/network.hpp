@@ -118,4 +118,25 @@ template <typename K, typename V>
 std::ostream& operator >>(std::ostream& /*o*/, std::pair<K,V>& /*p*/) {
 	assert(false); //TODO
 }
+
+template <typename T, typename TT>
+T& operator<<(T& t, const std::vector<TT>& v)
+{
+	t << u32(v.size());
+	for(const auto& e : v)
+		t << e;
+}
+template <typename T, typename TT>
+T& operator>>(T& t, std::vector<TT>& v)
+{
+	v.clear();
+	u32 size;
+	t >> size;
+	v.reserve(size);
+	for(u32 i = 0; i < size; i++) {
+		TT e;
+		t >> e;
+		v.push_back(e);
+	}
+}
 #endif /* NETWORK_HPP_16_11_27_11_45_29 */
