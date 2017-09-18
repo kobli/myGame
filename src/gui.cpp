@@ -25,14 +25,13 @@ GUI::GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedR
 	_healthBar->drop();
 
 	int castIndLen = 200;
-	_castingIndicator = new gui::ProgressBar(env, core::rect<s32>(0, 0, castIndLen, 40), env->getRootGUIElement());
-	_castingIndicator->setRelativePosition(vec2i((screenSize.Width-castIndLen)/2, 30));
+	_castingIndicator = new gui::ProgressBar(env, core::rect<s32>(0, 0, castIndLen, 20), env->getRootGUIElement());
+	_castingIndicator->setRelativePosition(vec2i((screenSize.Width-castIndLen)/2, screenSize.Height-160));
 	_castingIndicator->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT);
-	_castingIndicator->setColors(video::SColor(155, 255,255,255), video::SColor(200, 0,0,255));
-	env->addStaticText(L"", core::rect<s32>(0, 0, _castingIndicator->getRelativePosition().getWidth(), _castingIndicator->getRelativePosition().getHeight()), false, false, _castingIndicator);
-	_castingIndicator->drop();
+	_castingIndicator->setColors(video::SColor(155, 255,255,255), video::SColor(220, 80,80,255));
+	_castingIndicator->setLabel(L"Casting ...");
 
-	int spellAttributesInfoPanelWidth = 150;
+	int spellAttributesInfoPanelWidth = castIndLen;
 	int spellAttributeProgBarHeight = 20;
 	auto spellAttributesInfo = new GUIPanelFlowVertical(env, env->getRootGUIElement(), -1, core::rect<s32>(0, 0, spellAttributesInfoPanelWidth, spellAttributeProgBarHeight*3));
 	
@@ -128,13 +127,6 @@ void GUI::onMsg(const EntityEvent& m)
 				if(!wc->getCurrentJob().empty()) {
 					_castingIndicator->setVisible(true);
 					_castingIndicator->setProgress(wc->getCurrentJobProgress()/wc->getCurrentJobDuration());
-					std::string job = wc->getCurrentJob();
-					std::wstring w;
-					w.assign(job.begin(), job.end());
-					auto text = static_cast<gui::IGUIStaticText*>(*_castingIndicator->getChildren().begin());
-					text->setText(w.c_str());
-					vec2i ciSize(_castingIndicator->getAbsolutePosition().getWidth(), _castingIndicator->getAbsolutePosition().getHeight());
-					text->setRelativePosition((ciSize-vec2i(text->getTextWidth(), text->getTextHeight()))/2);
 				}
 				else
 					_castingIndicator->setVisible(false);
