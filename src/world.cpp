@@ -311,6 +311,14 @@ void WizardComponent::setBodyStatus(unsigned available, unsigned total)
 		notifyObservers();
 }
 
+void WizardComponent::setCommandQueue(std::vector<unsigned> commands)
+{
+	bool changed = _commandQueue != commands;
+	_commandQueue = commands;
+	if(changed)
+		notifyObservers();
+}
+
 std::string WizardComponent::getCurrentJob()
 {
 	return _currentJob;
@@ -359,6 +367,11 @@ unsigned WizardComponent::getAvailableBodyC()
 unsigned WizardComponent::getTotalBodyC()
 {
 	return _totalBodyC;
+}
+
+const std::vector<unsigned>& WizardComponent::getCommandQueue()
+{
+	return _commandQueue;
 }
 
 ////////////////////////////////////////////////////////////

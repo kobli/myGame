@@ -129,6 +129,7 @@ class GUI: public Observer<EntityEvent>
 		irr::gui::ProgressBar* _spellAttrSpeedInfo;
 		irr::gui::ProgressBar* _spellAttrSizeInfo;
 		GUIPanelFlowHorizontal* _spellEffectsInfo;
+		GUIPanelFlowHorizontal* _spellCommandQInfo;
 
 		void onMsg(const EntityEvent& m) override;
 		void updateCastingIndicator(float timeDelta);

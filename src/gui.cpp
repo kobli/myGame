@@ -26,9 +26,9 @@ GUI::GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedR
 
 	int castIndLen = 200;
 	_castingIndicator = new gui::ProgressBar(env, core::rect<s32>(0, 0, castIndLen, 20), env->getRootGUIElement());
-	_castingIndicator->setRelativePosition(vec2i((screenSize.Width-castIndLen)/2, screenSize.Height-160));
+	_castingIndicator->setRelativePosition(vec2i((screenSize.Width-castIndLen)/2, screenSize.Height-165));
 	_castingIndicator->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT);
-	_castingIndicator->setColors(video::SColor(155, 255,255,255), video::SColor(220, 80,80,255));
+	_castingIndicator->setColors(video::SColor(155, 255,255,255), video::SColor(255, 255,140,70));
 	_castingIndicator->setLabel(L"Casting ...");
 
 	int spellAttributesInfoPanelWidth = castIndLen;
@@ -58,10 +58,13 @@ GUI::GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedR
 	_spellEffectsInfo = new GUIPanelFlowHorizontal(env, env->getRootGUIElement(), -1, core::rect<s32>(0, 0, 200, spellAttributeProgBarHeight*3));
 	_spellInHandsInfo->addChild(_spellEffectsInfo);
 
+	_spellCommandQInfo = new GUIPanelFlowHorizontal(env, env->getRootGUIElement(), -1, core::rect<s32>(0, 0, 320, 32));
+	_spellCommandQInfo->setRelativePosition(vec2i((screenSize.Width-spellAttributesInfoPanelWidth)/2., screenSize.Height-100-40));
+	_spellCommandQInfo->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT);
 
-	auto bodyCountInfo = new GUIPanelFlowHorizontal(env, env->getRootGUIElement(), -1, core::rect<s32>(20, 100, 220, 164));
-	
-	bodyCountInfo->addChild(env->addImage(_device->getVideoDriver()->getTexture("./media/spell_icon_body.png"), vec2i(0)));
+
+	auto bodyCountInfo = new GUIPanelFlowHorizontal(env, env->getRootGUIElement(), -1, core::rect<s32>(20, 100, 220, 132));
+	bodyCountInfo->addChild(env->addImage(_device->getVideoDriver()->getTexture("./media/spell_icon_body_32.png"), vec2i(0)));
 	bodyCountInfo->addChild(env->addStaticText(L"<bodyC> / <bodyTotal>", core::rect<s32>(0,0,100,20)));
 	bodyCountInfo->setPadding(70);
 	bodyCountInfo->setBackgroundColor(video::SColor(155, 255, 255, 255));
@@ -80,6 +83,8 @@ void GUI::update(float timeDelta)
 
 void GUI::onMsg(const EntityEvent& m)
 {
+	auto env = _device->getGUIEnvironment();
+	static std::map<unsigned, std::string> effectIcons{{0, "body"}, {1,"fire"}, {3, "heal"}};
 	Entity* controlledE = nullptr;
 	if(_sharedRegistry.hasKey("controlled_object_id")) {
 		ID id = _sharedRegistry.getValue("controlled_object_id");
@@ -109,20 +114,27 @@ void GUI::onMsg(const EntityEvent& m)
 					_spellAttrSizeInfo->setProgress(wc->getSpellInHandsRadius());
 					_spellAttrSpeedInfo->setProgress(wc->getSpellInHandsSpeed());
 
-					auto env = _device->getGUIEnvironment();
 					while(!_spellEffectsInfo->getChildren().empty())
 						_spellEffectsInfo->removeChild(*_spellEffectsInfo->getChildren().begin());
-					static std::map<unsigned, std::string> effectIcons{{1,"fire"}, {3, "heal"}};
 					for(unsigned effectID: wc->getSpellInHandsEffects())
 						_spellEffectsInfo->addChild(
 								env->addImage(
-									_device->getVideoDriver()->getTexture(("./media/spell_icon_"+effectIcons[effectID]+".png").c_str()),
+									_device->getVideoDriver()->getTexture(("./media/spell_icon_"+effectIcons[effectID]+"_64.png").c_str()),
 									vec2i(0,0)
 									));
 					_spellInHandsInfo->setVisible(true);
 				}
 				else
 					_spellInHandsInfo->setVisible(false);
+
+				while(!_spellCommandQInfo->getChildren().empty())
+					_spellCommandQInfo->removeChild(*_spellCommandQInfo->getChildren().begin());
+				for(unsigned effectID : wc->getCommandQueue())
+					_spellCommandQInfo->addChild(
+							env->addImage(
+								_device->getVideoDriver()->getTexture(("./media/spell_icon_"+effectIcons[effectID]+"_32.png").c_str()),
+								vec2i(0,0)
+								));
 
 				if(!wc->getCurrentJob().empty()) {
 					_castingIndicator->setVisible(true);

@@ -1,6 +1,3 @@
--- TODO
--- when a spell hits a player and has no effect -> append its bodies to his spell
--- InvocationQ limit
 require("lua/list")
 
 
@@ -133,11 +130,32 @@ function Wizard:updateStatus()
 	end
 	updateWizardStatus(self.ID, self.invocIncantation or "", self.invocT, progress, 
 	p, r, s, effects,
-	Config.Wizard.maxBodiesAlive-self.bodiesInUse, Config.Wizard.maxBodiesAlive)
+	Config.Wizard.maxBodiesAlive-self.bodiesInUse, Config.Wizard.maxBodiesAlive,
+	self:getCommandQueueAsEffectIDs())
+end
+
+function Wizard:getCommandQueueAsEffectIDs()
+	local r = {}
+	for k,v in pairs(List.asTable(self.incantationQ)) do
+		local c, args = incantationToCommandAndArgs(v)
+		local commandProductID = nil
+		if string.find(c, "spell_effect") then
+			commandProductID = Config.Effects[args].effectID
+		elseif string.find(c, "spell_body") then
+			commandProductID = 0
+		end
+		assert(commandProductID ~= nil)
+		table.insert(r, commandProductID)
+	end
+	return r
+end
+
+function incantationToCommandAndArgs(inc)
+	return string.match(inc, "(spell_[^%s]+)%s+(.*)")
 end
 
 function Wizard:execIncantation(inc)
-	command, argStr = string.match(inc, "(spell_[^%s]+)%s+(.*)")
+	command, argStr = incantationToCommandAndArgs(inc)
 	if Wizard.Command[command] ~= nil then
 		self.invocIncantation = inc
 		self.invoc = coroutine.create(
@@ -293,8 +311,8 @@ function Spell:appendBody(body)
 end
 
 function Spell:update(delta)
-	for i=self.collisionsInLastTick.first, self.collisionsInLastTick.last, 1 do
-		local collidedWithEntType = entityIdToTypeName(self.collisionsInLastTick[i])
+	for k,v in pairs(List.asTable(self.collisionsInLastTick)) do
+		local collidedWithEntType = entityIdToTypeName(v)
 		if collidedWithEntType == "map" then
 			setEntityVelocity(self.ID, 0, 0, 0)
 		end
@@ -340,12 +358,12 @@ end
 
 function Spell:die()
 	-- on each colliding character
-	for i=self.collisionsInLastTick.first, self.collisionsInLastTick.last, 1 do
-		dout("col with on death: ",self.collisionsInLastTick[i])
+	for k,v in pairs(List.asTable(self.collisionsInLastTick)) do
+		dout("col with on death: ",v)
 		-- apply all effects
 		for k,v in pairs(self.effects) do
 			local ed = v 
-			addAttributeAffector(self.collisionsInLastTick[i], ed.modifiedAttribute, ed.affectorModifierType, ed.modifierValue*self:getPower(), ed.permanent, ed.period);
+			addAttributeAffector(v, ed.modifiedAttribute, ed.affectorModifierType, ed.modifierValue*self:getPower(), ed.permanent, ed.period);
 		end
 	end
 	removeSpell(self.ID)
