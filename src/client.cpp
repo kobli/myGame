@@ -150,7 +150,7 @@ void ClientApplication::run()
 			cameraLookDir = cameraLookDir.rotationToDirection().normalize();
 			_camera->setTarget(_camera->getAbsolutePosition()+cameraLookDir*10000);
 			if(_sharedRegistry.hasKey("controlled_object_id")) {
-				auto controlledCharSceneNode = _device->getSceneManager()->getSceneNodeFromId(_sharedRegistry.getValue("controlled_object_id"));
+				auto controlledCharSceneNode = _device->getSceneManager()->getSceneNodeFromId(_sharedRegistry.getValue<ID>("controlled_object_id"));
 				if(controlledCharSceneNode)
 					_camera->setPosition(controlledCharSceneNode->getPosition() + vec3f(0,1.6,0) + 0.23f*(cameraLookDir*vec3f(1,0,1)).normalize());
 			}
@@ -377,7 +377,7 @@ void ClientApplication::handlePacket(sf::Packet& p)
 void ClientApplication::bindCameraToControlledEntity()
 {
 	if(_sharedRegistry.hasKey("controlled_object_id")) {
-		auto controlledCharSceneNode = _device->getSceneManager()->getSceneNodeFromId(_sharedRegistry.getValue("controlled_object_id"));
+		auto controlledCharSceneNode = _device->getSceneManager()->getSceneNodeFromId(_sharedRegistry.getValue<ID>("controlled_object_id"));
 		if(controlledCharSceneNode) {
 			_camera->setInputReceiverEnabled(false);
 			_camera->setRotation(vec3f());

@@ -21,7 +21,7 @@ void Session::setCommandHandler(CommandHandler h)
 
 ID Session::getControlledObjID()
 {
-	return static_cast<ID>(getValue("controlled_object_id"));
+	return getValue<ID>("controlled_object_id");
 }
 
 void Session::setControlledObjID(ID objID)

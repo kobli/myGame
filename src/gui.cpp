@@ -87,7 +87,7 @@ void GUI::onMsg(const EntityEvent& m)
 	static std::map<unsigned, std::string> effectIcons{{0, "body"}, {1,"fire"}, {3, "heal"}};
 	Entity* controlledE = nullptr;
 	if(_sharedRegistry.hasKey("controlled_object_id")) {
-		ID id = _sharedRegistry.getValue("controlled_object_id");
+		ID id = _sharedRegistry.getValue<ID>("controlled_object_id");
 		controlledE = _gameWorld.getEntity(id);
 	}
 	if(m.componentT == ComponentType::AttributeStore) {
@@ -149,7 +149,7 @@ void GUI::onMsg(const EntityEvent& m)
 void GUI::updateCastingIndicator(float timeDelta)
 {
 	if(_sharedRegistry.hasKey("controlled_object_id")) {
-		ID id = _sharedRegistry.getValue("controlled_object_id");
+		ID id = _sharedRegistry.getValue<ID>("controlled_object_id");
 		Entity* e = _gameWorld.getEntity(id);
 		if(e != nullptr) {
 			WizardComponent* wc = e->getComponent<WizardComponent>();

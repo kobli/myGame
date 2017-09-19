@@ -420,7 +420,7 @@ bool AttributeStoreComponent::hasAttribute(std::string key)
 
 float AttributeStoreComponent::getAttribute(std::string key)
 {
-	return getValue(key);
+	return getValue<float>(key);
 }
 
 void AttributeStoreComponent::setAttribute(std::string key, float value)
