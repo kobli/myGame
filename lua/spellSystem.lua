@@ -358,12 +358,11 @@ end
 
 function Spell:die()
 	-- on each colliding character
-	for k,v in pairs(List.asTable(self.collisionsInLastTick)) do
-		dout("col with on death: ",v)
+	for k,colEntID in pairs(List.asTable(self.collisionsInLastTick)) do
+		dout("col with on death: ",colEntID)
 		-- apply all effects
-		for k,v in pairs(self.effects) do
-			local ed = v 
-			addAttributeAffector(v, ed.modifiedAttribute, ed.affectorModifierType, ed.modifierValue*self:getPower(), ed.permanent, ed.period);
+		for k,ed in pairs(self.effects) do
+			addAttributeAffector(colEntID, ed.modifiedAttribute, ed.affectorModifierType, ed.modifierValue*self:getPower(), ed.permanent, ed.period);
 		end
 	end
 	removeSpell(self.ID)
