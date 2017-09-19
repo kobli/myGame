@@ -123,9 +123,10 @@ void Session::addPair(std::string key, float value)
 	updateClientSharedRegistry();
 }
 
-void Session::setValue(std::string key, float value)
+template <typename T>
+void Session::setValue(std::string key, T value)
 {
-	KeyValueStore::setValue(key, value);
+	KeyValueStore::setValue<T>(key, value);
 	updateClientSharedRegistry();
 }
 
@@ -525,6 +526,37 @@ void ServerApplication::gameModeRegisterAPIMethods()
 	lua_pushlightuserdata(L, this);
 	lua_pushcclosure(L, callGetEntityPosition, 1);
 	lua_setglobal(L, "getEntityPosition");
+
+	auto callSetSharedRegValue = [](lua_State* s)->int {
+		int argc = lua_gettop(s);
+		if(argc != 3)
+		{
+			std::cerr << "callSetSharedRegValue: wrong number of arguments\n";
+			return 0;		
+		}
+		ID sessionID = lua_tointeger(s, 1);
+		ServerApplication* sApp = (ServerApplication*)lua_touserdata(s, lua_upvalueindex(1));
+		Session& session = sApp->_sessions[sessionID];
+		std::string key = lua_tostring(s, 2);
+		if(lua_isstring(s, 3)) {
+			std::string value = lua_tostring(s, 3);
+			session.setValue(key, value);
+		}
+		else if(lua_isnumber(s, 3) || lua_isinteger(s, 3)) {
+			float value;
+			if(lua_isnumber(s, 3))
+				value = lua_tonumber(s, 3);
+			else
+				value = lua_tointeger(s, 3);
+			session.setValue(key, value);
+		}
+		else
+			assert(false);
+		return 0;
+	};
+	lua_pushlightuserdata(L, this);
+	lua_pushcclosure(L, callSetSharedRegValue, 1);
+	lua_setglobal(L, "setSharedRegValue");
 }
 
 void ServerApplication::gameModeOnClientConnect(ID sessionID)

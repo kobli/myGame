@@ -1,6 +1,10 @@
+#include <sstream>
 #include "gui.hpp"
 #include "CGUITTFont.h"
 #include "crosshair.hpp"
+#include <locale>
+#include <codecvt>
+#include <string>
 
 using namespace irr::gui;
 
@@ -62,6 +66,14 @@ GUI::GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedR
 	_spellCommandQInfo->setRelativePosition(vec2i((screenSize.Width-spellAttributesInfoPanelWidth)/2., screenSize.Height-100-40));
 	_spellCommandQInfo->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT);
 
+	int gameModeInfoXMargin = 300;
+	int gameModeInfoSizeX = 700;
+	_gameModeInfo = new GUIPanelFlowHorizontal(env, env->getRootGUIElement(), -1, core::rect<s32>(0, 0, gameModeInfoSizeX, 25));
+	_gameModeInfo->setRelativePosition(vec2i((screenSize.Width-gameModeInfoSizeX)/2., 30));
+	_gameModeInfo->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT);
+	_gameModeInfo->setBackgroundColor(video::SColor(155, 255, 255, 255));
+	_gameModeInfo->setDrawBackground(true);
+
 
 	auto bodyCountInfo = new GUIPanelFlowHorizontal(env, env->getRootGUIElement(), -1, core::rect<s32>(20, 100, 220, 132));
 	bodyCountInfo->addChild(env->addImage(_device->getVideoDriver()->getTexture("./media/spell_icon_body_32.png"), vec2i(0)));
@@ -79,6 +91,31 @@ GUI::GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedR
 void GUI::update(float timeDelta)
 {
 	updateCastingIndicator(timeDelta);
+	updateGameModeInfo();
+}
+
+void GUI::updateGameModeInfo()
+{
+	clearGUIElement(_gameModeInfo);
+	if(!_sharedRegistry.hasKey("gm_info_template"))
+		return;
+	auto env = _device->getGUIEnvironment();
+	std::string gmInfo = _sharedRegistry.getValue<std::string>("gm_info_template");
+	//TODO substitute real values into template
+	std::istringstream iss(gmInfo);
+	std::string part;
+	int c = 0;
+	int totalTextWidth = 0;
+	while(std::getline(iss, part, '|')) {
+		auto text = env->addStaticText(core::stringw(part.c_str()).c_str(), core::rect<s32>(0,0,0,0));
+		text->setMinSize(core::dimension2du(text->getTextWidth(), 20));
+		totalTextWidth += text->getTextWidth();
+		_gameModeInfo->addChild(text);
+		c++;
+	}
+	_gameModeInfo->setPadding((_gameModeInfo->getAbsolutePosition().getWidth()-totalTextWidth)/(c-1));
+	if(totalTextWidth > _gameModeInfo->getAbsolutePosition().getWidth())
+		std::cerr << "GameModeInfo text too long: " << totalTextWidth << " / " << _gameModeInfo->getAbsolutePosition().getWidth() << std::endl;
 }
 
 void GUI::onMsg(const EntityEvent& m)
@@ -114,8 +151,7 @@ void GUI::onMsg(const EntityEvent& m)
 					_spellAttrSizeInfo->setProgress(wc->getSpellInHandsRadius());
 					_spellAttrSpeedInfo->setProgress(wc->getSpellInHandsSpeed());
 
-					while(!_spellEffectsInfo->getChildren().empty())
-						_spellEffectsInfo->removeChild(*_spellEffectsInfo->getChildren().begin());
+					clearGUIElement(_spellEffectsInfo);
 					for(unsigned effectID: wc->getSpellInHandsEffects())
 						_spellEffectsInfo->addChild(
 								env->addImage(
@@ -127,8 +163,7 @@ void GUI::onMsg(const EntityEvent& m)
 				else
 					_spellInHandsInfo->setVisible(false);
 
-				while(!_spellCommandQInfo->getChildren().empty())
-					_spellCommandQInfo->removeChild(*_spellCommandQInfo->getChildren().begin());
+				clearGUIElement(_spellCommandQInfo);
 				for(unsigned effectID : wc->getCommandQueue())
 					_spellCommandQInfo->addChild(
 							env->addImage(
@@ -157,4 +192,10 @@ void GUI::updateCastingIndicator(float timeDelta)
 				_castingIndicator->setProgress(_castingIndicator->getProgress() + timeDelta/wc->getCurrentJobDuration());
 		}
 	}
+}
+
+void GUI::clearGUIElement(IGUIElement* e)
+{
+	while(!e->getChildren().empty())
+		e->removeChild(*e->getChildren().begin());
 }

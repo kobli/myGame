@@ -130,8 +130,11 @@ class GUI: public Observer<EntityEvent>
 		irr::gui::ProgressBar* _spellAttrSizeInfo;
 		GUIPanelFlowHorizontal* _spellEffectsInfo;
 		GUIPanelFlowHorizontal* _spellCommandQInfo;
+		GUIPanelFlowHorizontal* _gameModeInfo;
 
 		void onMsg(const EntityEvent& m) override;
 		void updateCastingIndicator(float timeDelta);
+		void updateGameModeInfo();
+		void clearGUIElement(irr::gui::IGUIElement* e);
 };
 #endif /* GUI_HPP_17_09_14_21_57_18 */
