@@ -450,8 +450,11 @@ ID AttributeStoreComponent::addAttributeAffector(AttributeAffector aa)
 		setAttribute(aa.getAffectedAttribute(), attr);
 		return NULLID;
 	}
-	else
-		return _attributeAffectors.insert(std::move(aa));
+	else {
+		ID r = _attributeAffectors.insert(std::move(aa));
+		notifyObservers();
+		return r;
+	}
 }
 
 bool AttributeStoreComponent::removeAttributeAffector(ID affectorID)
