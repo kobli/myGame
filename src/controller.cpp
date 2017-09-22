@@ -27,7 +27,7 @@ void Controller::loadSpellBook(std::string fileName) {
 	while(lua_next(L, -2) != 0)
 	{
 		std::string spell = lua_valueAsStr(L, -2);
-		Table t = lua_loadTable(L);
+		Table t = lua_loadTable(L, -1);
 		std::vector<std::string> steps;
 		for(auto& s: t)
 			steps.push_back(s.second);
@@ -45,7 +45,7 @@ void Controller::loadControls(std::string fileName) {
 		std::cerr << "cannot run " << fileName << " configuration file: " << lua_tostring(L, -1);
 
 	lua_getglobal(L, "controls");
-	Table t = lua_loadTable(L);
+	Table t = lua_loadTable(L, -1);
 	for(auto& r: t) {
 		size_t end;
 		try {

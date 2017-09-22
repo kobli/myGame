@@ -52,9 +52,10 @@ quaternion btQ2Q(btQuaternion q);
 btQuaternion Q2btQ(quaternion q);
 
 typedef std::vector<std::pair<std::string,std::string>> Table;
+std::ostream& operator<<(std::ostream&, const Table&);
 
 std::string lua_valueAsStr(lua_State* L, int index);
-Table lua_loadTable(lua_State* l);
+Table lua_loadTable(lua_State* l, int index);
 
 class ImageDumper {
 	public:
@@ -80,5 +81,4 @@ class ImageDumper {
 
 
 extern ImageDumper SAVEIMAGE;
-
 #endif /* MAIN_HPP_16_11_18_13_20_24 */

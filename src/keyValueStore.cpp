@@ -1,26 +1,28 @@
 #include "keyValueStore.hpp"
-#include <cassert>
 
-void KeyValueStore::addPair(std::string key, float value)
+template <>
+void KeyValueStore::addPair<std::string>(std::string key, std::string value)
 {
-	assert(_store.count(key) == 0);
-	_store[key] = value;
+	assert(_strStore.count(key) == 0);
+	_strStore[key] = value;
 }
 
-bool KeyValueStore::hasKey(std::string key)
+bool KeyValueStore::hasKey(std::string key) const
 {
-	return _store.find(key) != _store.end();
+	return _store.find(key) != _store.end() || _strStore.find(key) != _strStore.end();
 }
 
-float KeyValueStore::getValue(std::string key)
+template <>
+std::string KeyValueStore::getValue<std::string>(std::string key) const
 {
-	assert(_store.count(key) == 1);
-	return _store.find(key)->second;
+	assert(_strStore.count(key) == 1);
+	return _strStore.find(key)->second;
 }
 
-void KeyValueStore::setValue(std::string key, float value)
+template <>
+void KeyValueStore::setValue<std::string>(std::string key, std::string value)
 {
-	_store[key] = value;
+	_strStore[key] = value;
 }
 
 void KeyValueStore::serDes(SerDesBase& s)

@@ -26,6 +26,8 @@ class Session: KeyValueStore
 		void send(sf::Packet& p);
 		bool isClosed();
 		void setOnAuthorized(OnAuthorized cb);
+		template <typename T>
+		void setValue(std::string key, T value);
 
 	private:
 		unique_ptr<sf::TcpSocket> _socket;
@@ -37,7 +39,6 @@ class Session: KeyValueStore
 
 		void updateClientSharedRegistry();
 		void addPair(std::string key, float value);
-		void setValue(std::string key, float value);
 		void disconnectUnauthorized(std::string reason = "Unauthorized.");
 };
 

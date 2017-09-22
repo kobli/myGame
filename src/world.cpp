@@ -272,7 +272,7 @@ float CollisionComponent::getGravity()
 ////////////////////////////////////////////////////////////
 
 WizardComponent::WizardComponent(ID parentEntID):
- 	ObservableComponentBase(parentEntID, ComponentType::Wizard)
+ 	ObservableComponentBase(parentEntID, ComponentType::Wizard), _availableBodyC{0}, _totalBodyC{0}
 {
 }
 
@@ -291,12 +291,30 @@ void WizardComponent::setCurrentJobStatus(std::string job, float duration, float
 		notifyObservers();
 }
 
-void WizardComponent::setSpellInHandsData(float power, float radius, float speed)
+void WizardComponent::setSpellInHandsData(float power, float radius, float speed, std::vector<unsigned> effects)
 {
-	bool changed = _spellInHandsPower != power || _spellInHandsRadius != radius || _spellInHandsSpeed != speed;
+	bool changed = _spellInHandsPower != power || _spellInHandsRadius != radius || _spellInHandsSpeed != speed || _spellInHandsEffects != effects;
 	_spellInHandsPower = power;
 	_spellInHandsRadius = radius;
 	_spellInHandsSpeed = speed;
+	_spellInHandsEffects = effects;
+	if(changed)
+		notifyObservers();
+}
+
+void WizardComponent::setBodyStatus(unsigned available, unsigned total)
+{
+	bool changed = _availableBodyC != available || _totalBodyC != total;
+	_availableBodyC = available;
+	_totalBodyC = total;
+	if(changed)
+		notifyObservers();
+}
+
+void WizardComponent::setCommandQueue(std::vector<unsigned> commands)
+{
+	bool changed = _commandQueue != commands;
+	_commandQueue = commands;
 	if(changed)
 		notifyObservers();
 }
@@ -316,6 +334,11 @@ float WizardComponent::getCurrentJobProgress()
 	return _currentJobProgress;
 }
 
+bool WizardComponent::hasSpellInHands()
+{
+	return getSpellInHandsPower() || getSpellInHandsSpeed() || getSpellInHandsRadius();
+}
+
 float WizardComponent::getSpellInHandsPower()
 {
 	return _spellInHandsPower;
@@ -329,6 +352,26 @@ float WizardComponent::getSpellInHandsRadius()
 float WizardComponent::getSpellInHandsSpeed()
 {
 	return _spellInHandsSpeed;
+}
+
+const std::vector<unsigned>& WizardComponent::getSpellInHandsEffects()
+{
+	return _spellInHandsEffects;
+}
+
+unsigned WizardComponent::getAvailableBodyC()
+{
+	return _availableBodyC;
+}
+
+unsigned WizardComponent::getTotalBodyC()
+{
+	return _totalBodyC;
+}
+
+const std::vector<unsigned>& WizardComponent::getCommandQueue()
+{
+	return _commandQueue;
 }
 
 ////////////////////////////////////////////////////////////
@@ -377,7 +420,7 @@ bool AttributeStoreComponent::hasAttribute(std::string key)
 
 float AttributeStoreComponent::getAttribute(std::string key)
 {
-	return getValue(key);
+	return getValue<float>(key);
 }
 
 void AttributeStoreComponent::setAttribute(std::string key, float value)

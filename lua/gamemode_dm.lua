@@ -8,6 +8,12 @@ float(basic),float(affected) getEntityAttributeValue(objectID, attributeName)
 void setEntityAttributeValue(objectID, attributeName, floatValue)
 [entityID] getEntitiesByAttributeValue(attributeName, attributeValue = "")
 xPos,yPos,zPos getEntityPosition(objectID)
+void setSharedRegValue(sessionID, key, value)
+
+TODO
+float getSharedRegValue(sessionID, key)
+
+the gm_info_template string can contain | to separate logical parts and <key> to substite the value of the key
 --]]
 
 -------------------- Cpp interface --------------------
@@ -16,6 +22,7 @@ OBJCONTROLLINGCLIENTS = {}
 
 function onClientConnect(sessionID)
 	setClientControlledObj(sessionID, spawnCharacter())
+	setSharedRegValue(sessionID, "gm_info_template", "Deathmatch|<killCount>/<gm_map_kill_count>|<gm_map_time_left>")
 end
 
 function onClientDisconnect(sessionID)

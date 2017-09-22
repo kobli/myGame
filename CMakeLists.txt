@@ -23,8 +23,10 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -DDEBUG_BUILD")
 file(GLOB CPP_SOURCES
 	"${PROJECT_SOURCE_DIR}/src/*.cpp"
 	)
+find_package(Freetype REQUIRED)
 include_directories(
 	${PROJECT_SOURCE_DIR}/include
+	${FREETYPE_INCLUDE_DIRS}
 	/usr/X11R6/include
 	${PROJECT_SOURCE_DIR}/extlibs/irrlicht-1.8.4/include
 	${PROJECT_SOURCE_DIR}/extlibs/SFML-2.3.2/include
@@ -71,6 +73,7 @@ set(WINDOWS_ONLY_LIBS
 	)
 
 set(GENERAL_LIBS
+	${FREETYPE_LIBRARIES}
 	Irrlicht
 	lua
 	BulletDynamics

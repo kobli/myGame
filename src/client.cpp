@@ -101,8 +101,7 @@ void Animator::onMsg(const EntityEvent& m)
 ////////////////////////////////////////////////////////////
 
 ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ if(d) d->drop(); }),
-	_yAngleSetCommandFilter{0.2, [](float& oldObj, float& newObj)->float&{ if(std::fabs(oldObj-newObj) > 0.01) return newObj; else return oldObj; }},
-	_healthBar{nullptr}
+	_yAngleSetCommandFilter{0.2, [](float& oldObj, float& newObj)->float&{ if(std::fabs(oldObj-newObj) > 0.01) return newObj; else return oldObj; }}
 {
 	irr::SIrrlichtCreationParameters params;
 	params.DriverType=video::E_DRIVER_TYPE::EDT_OPENGL;
@@ -121,34 +120,6 @@ ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ 
 	SAVEIMAGE = ImageDumper(_device->getVideoDriver());
 
 	createCamera();
-
-	auto screenSize = _device->getVideoDriver()->getScreenSize();
-	gui::IGUIEnvironment* env = _device->getGUIEnvironment();
-
-	auto* skin = env->getSkin();
-	auto* font = env->getFont("./media/fontlucida.png");
-	if(!font)
-		std::cerr << "FAILED TO LOAD THE FONT\n";
-	skin->setFont(font);
-
-	_healthBar = new gui::ProgressBar(env, core::rect<s32>(20, 20, 220, 60), env->getRootGUIElement());
-	_healthBar->setColors(video::SColor(155, 255,255,255), video::SColor(200, 255,0,0));
-	env->addStaticText(L"", core::rect<s32>(0, 0, _healthBar->getRelativePosition().getWidth(), _healthBar->getRelativePosition().getHeight()), false, false, _healthBar);
-	_healthBar->drop();
-
-	int castIndLen = 200;
-	_castingIndicator = new gui::ProgressBar(env, core::rect<s32>(0, 0, castIndLen, 40), env->getRootGUIElement());
-	_castingIndicator->setRelativePosition(vec2i((screenSize.Width-castIndLen)/2, 30));
-	_castingIndicator->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT);
-	_castingIndicator->setColors(video::SColor(155, 255,255,255), video::SColor(200, 0,0,255));
-	env->addStaticText(L"", core::rect<s32>(0, 0, _castingIndicator->getRelativePosition().getWidth(), _castingIndicator->getRelativePosition().getHeight()), false, false, _castingIndicator);
-	_castingIndicator->drop();
-
-	int spellInHandsInfoPanelWidth = 100;
-	_spellInHandsInfo = _device->getGUIEnvironment()->addStaticText(L"SIH info", core::rect<s32>(0, 0, spellInHandsInfoPanelWidth, 80), false, false, env->getRootGUIElement(), -1, true);
-	_spellInHandsInfo->setBackgroundColor(video::SColor(200, 255,255,255));
-	_spellInHandsInfo->setRelativePosition(vec2i(screenSize.Width-spellInHandsInfoPanelWidth-30, 30));
-	_spellInHandsInfo->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT, gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT);
 
 	_controller.setCommandHandler(std::bind(&ClientApplication::commandHandler, ref(*this), std::placeholders::_1));
 	_controller.setScreenSizeGetter([this](){ auto ss = _device->getVideoDriver()->getScreenSize(); return vec2i(ss.Width, ss.Height); });
@@ -179,7 +150,7 @@ void ClientApplication::run()
 			cameraLookDir = cameraLookDir.rotationToDirection().normalize();
 			_camera->setTarget(_camera->getAbsolutePosition()+cameraLookDir*10000);
 			if(_sharedRegistry.hasKey("controlled_object_id")) {
-				auto controlledCharSceneNode = _device->getSceneManager()->getSceneNodeFromId(_sharedRegistry.getValue("controlled_object_id"));
+				auto controlledCharSceneNode = _device->getSceneManager()->getSceneNodeFromId(_sharedRegistry.getValue<ID>("controlled_object_id"));
 				if(controlledCharSceneNode)
 					_camera->setPosition(controlledCharSceneNode->getPosition() + vec3f(0,1.6,0) + 0.23f*(cameraLookDir*vec3f(1,0,1)).normalize());
 			}
@@ -208,7 +179,8 @@ void ClientApplication::run()
 				_physics->update(timeDelta);
 			if(_vs)
 				_vs->update(timeDelta);
-			updateCastingIndicator(timeDelta);
+			if(_gui)
+				_gui->update(timeDelta);
 
 			_device->getSceneManager()->drawAll();
 			_device->getGUIEnvironment()->drawAll();
@@ -231,7 +203,7 @@ void ClientApplication::run()
 	}
 }
 
-void ClientApplication::createWorld()
+void ClientApplication::startGame()
 {
 	_gameWorld.reset(new World(*_worldMap));
 	_vs.reset(new ViewSystem(_device->getSceneManager(), *_gameWorld));
@@ -242,8 +214,9 @@ void ClientApplication::createWorld()
 	_gameWorld->addObserver(_animator);
 	_gameWorld->addObserver(*_physics);
 	_gameWorld->addObserver(*_vs);
-	_gameWorld->addObserver(*this);
 	loadTerrain();
+	_gui.reset(new GUI(_device.get(), *_gameWorld.get(), _sharedRegistry));
+	_gameWorld->addObserver(*_gui);
 }
 
 void ClientApplication::createCamera()
@@ -386,7 +359,7 @@ void ClientApplication::handlePacket(sf::Packet& p)
 			{
 				_worldMap.reset(new WorldMap());
 				p >> Deserializer<sf::Packet>(*_worldMap);
-				createWorld();
+				startGame();
 				break;
 			}
 		case PacketType::ServerMessage:
@@ -404,76 +377,13 @@ void ClientApplication::handlePacket(sf::Packet& p)
 void ClientApplication::bindCameraToControlledEntity()
 {
 	if(_sharedRegistry.hasKey("controlled_object_id")) {
-		auto controlledCharSceneNode = _device->getSceneManager()->getSceneNodeFromId(_sharedRegistry.getValue("controlled_object_id"));
+		auto controlledCharSceneNode = _device->getSceneManager()->getSceneNodeFromId(_sharedRegistry.getValue<ID>("controlled_object_id"));
 		if(controlledCharSceneNode) {
 			_camera->setInputReceiverEnabled(false);
 			_camera->setRotation(vec3f());
 			_camera->bindTargetAndRotation(false);
 			_cameraElevation = PI_2;
 			_cameraYAngle = 0;
-		}
-	}
-}
-
-void ClientApplication::onMsg(const EntityEvent& m)
-{
-	Entity* controlledE = nullptr;
-	if(_sharedRegistry.hasKey("controlled_object_id")) {
-		ID id = _sharedRegistry.getValue("controlled_object_id");
-		controlledE = _gameWorld->getEntity(id);
-	}
-	if(m.componentT == ComponentType::AttributeStore) {
-		_healthBar->setProgress(0);
-		if(controlledE != nullptr) {
-			AttributeStoreComponent* as = controlledE->getComponent<AttributeStoreComponent>();
-			if(as != nullptr) {
-				if(as->hasAttribute("health") && as->hasAttribute("max-health")) {
-					_healthBar->setProgress(as->getAttribute("health")/as->getAttribute("max-health"));
-					std::wstring w = std::to_wstring(int(as->getAttribute("health"))) + L" / " + std::to_wstring(int(as->getAttribute("max-health")));
-					auto text = static_cast<gui::IGUIStaticText*>(*_healthBar->getChildren().begin());
-					text->setText(w.c_str());
-					vec2i hbSize(_healthBar->getAbsolutePosition().getWidth(), _healthBar->getAbsolutePosition().getHeight());
-					text->setRelativePosition((hbSize-vec2i(text->getTextWidth(), text->getTextHeight()))/2);
-					return;
-				}
-			}
-		}
-	}
-	else if(m.componentT == ComponentType::Wizard)
-		if(controlledE != nullptr) {
-			WizardComponent* wc = controlledE->getComponent<WizardComponent>();
-			if(wc != nullptr) {
-				_spellInHandsInfo->setText(std::wstring(
-						L"Power:   "+std::to_wstring(wc->getSpellInHandsPower()) + L"\n" +
-						L"Radius:  "+std::to_wstring(wc->getSpellInHandsRadius()) + L"\n" +
-						L"Speed:   "+std::to_wstring(wc->getSpellInHandsSpeed())
-						).c_str());
-				if(!wc->getCurrentJob().empty()) {
-					_castingIndicator->setVisible(true);
-					_castingIndicator->setProgress(wc->getCurrentJobProgress()/wc->getCurrentJobDuration());
-					std::string job = wc->getCurrentJob();
-					std::wstring w;
-					w.assign(job.begin(), job.end());
-					auto text = static_cast<gui::IGUIStaticText*>(*_castingIndicator->getChildren().begin());
-					text->setText(w.c_str());
-					vec2i ciSize(_castingIndicator->getAbsolutePosition().getWidth(), _castingIndicator->getAbsolutePosition().getHeight());
-					text->setRelativePosition((ciSize-vec2i(text->getTextWidth(), text->getTextHeight()))/2);
-				}
-				else
-					_castingIndicator->setVisible(false);
-			}
-		}
-}
-
-void ClientApplication::updateCastingIndicator(float timeDelta)
-{
-	if(_gameWorld && _sharedRegistry.hasKey("controlled_object_id")) {
-		ID id = _sharedRegistry.getValue("controlled_object_id");
-		Entity* e = _gameWorld->getEntity(id);
-		if(e != nullptr) {
-			WizardComponent* wc = e->getComponent<WizardComponent>();
-			if(wc != nullptr)
-				_castingIndicator->setProgress(_castingIndicator->getProgress() + timeDelta/wc->getCurrentJobDuration());
 		}
 	}
 }

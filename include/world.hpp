@@ -233,16 +233,27 @@ class WizardComponent: public ObservableComponentBase
 				t & _spellInHandsPower;
 				t & _spellInHandsRadius;
 				t & _spellInHandsSpeed;
+				t & _availableBodyC;
+				t & _totalBodyC;
+				t & _spellInHandsEffects;
+				t & _commandQueue;
 			}
 
 		void setCurrentJobStatus(std::string job, float duration, float progress);
-		void setSpellInHandsData(float power, float radius, float speed);
+		void setSpellInHandsData(float power, float radius, float speed, std::vector<unsigned> effects);
+		void setBodyStatus(unsigned available, unsigned total);
+		void setCommandQueue(std::vector<unsigned> commands);
 		std::string getCurrentJob();
 		float getCurrentJobDuration();
 		float getCurrentJobProgress();
+		bool hasSpellInHands();
 		float getSpellInHandsPower();
 		float getSpellInHandsRadius();
 		float getSpellInHandsSpeed();
+		const std::vector<unsigned>& getSpellInHandsEffects();
+		unsigned getAvailableBodyC();
+		unsigned getTotalBodyC();
+		const std::vector<unsigned>& getCommandQueue();
 
 	private:
 		std::string _currentJob;
@@ -251,6 +262,10 @@ class WizardComponent: public ObservableComponentBase
 		float _spellInHandsPower;
 		float _spellInHandsRadius;
 		float _spellInHandsSpeed;
+		std::vector<unsigned> _spellInHandsEffects;
+		std::vector<unsigned> _commandQueue;
+		unsigned _availableBodyC;
+		unsigned _totalBodyC;
 };
 
 ////////////////////////////////////////////////////////////
