@@ -277,20 +277,18 @@ class AttributeAffector {
 		};
 
 		AttributeAffector(std::string attribute, ModifierType modifierType
-				, float modifierValue, bool permanent, float period = 0);
+				, float modifierValue, bool permanent);
 
 		std::string getAffectedAttribute();
 		ModifierType getModifierType();
 		float getModifierValue();
 		bool isPermanent();
-		float getPeriod();
 
 	private:
 		std::string _attribute;
 		ModifierType _modifierType;
 		float _modifierValue;
 		bool _permanent;
-	 	float _period;
 };
 
 class AttributeStoreComponent: public ObservableComponentBase, KeyValueStore

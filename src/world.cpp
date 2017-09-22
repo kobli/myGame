@@ -377,9 +377,9 @@ const std::vector<unsigned>& WizardComponent::getCommandQueue()
 ////////////////////////////////////////////////////////////
 
 AttributeAffector::AttributeAffector(std::string attribute, ModifierType modifierType
-				, float modifierValue, bool permanent, float period): 
+				, float modifierValue, bool permanent): 
 	_attribute{attribute}, _modifierType{modifierType}, _modifierValue{modifierValue},
-	_permanent{permanent}, _period{period} {
+	_permanent{permanent} {
 	}
 
 std::string AttributeAffector::getAffectedAttribute() {
@@ -396,10 +396,6 @@ float AttributeAffector::getModifierValue() {
 
 bool AttributeAffector::isPermanent() {
 	return _permanent;
-}
-
-float AttributeAffector::getPeriod() {
-	return _period;
 }
 
 // // // // // // // // // // // // // // // // // // // // 

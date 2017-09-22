@@ -997,7 +997,8 @@ ID SpellSystem::addAttributeAffectorTo(ID eID, std::string attributeName
 	if(!attrStore)
 		return NULLID; //TODO fail in a better way
 	std::cout << "adding attribute affector .." << std::endl;
-	return attrStore->addAttributeAffector(AttributeAffector(attributeName, modifierType, modifierValue, permanent, period));
+	//TODO use period - add (apply) the affector periodically so its tracked in affector history
+	return attrStore->addAttributeAffector(AttributeAffector(attributeName, modifierType, modifierValue, permanent));
 }
 
 ////////////////////////////////////////////////////////////
