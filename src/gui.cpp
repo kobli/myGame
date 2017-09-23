@@ -108,12 +108,14 @@ void GUI::updateGameModeInfo()
 	int totalTextWidth = 0;
 	while(std::getline(iss, part, '|')) {
 		auto text = env->addStaticText(core::stringw(part.c_str()).c_str(), core::rect<s32>(0,0,0,0));
+		text->setWordWrap(false);
 		text->setMinSize(core::dimension2du(text->getTextWidth(), 20));
 		totalTextWidth += text->getTextWidth();
 		_gameModeInfo->addChild(text);
 		c++;
 	}
-	_gameModeInfo->setPadding((_gameModeInfo->getAbsolutePosition().getWidth()-totalTextWidth)/(c-1));
+	if(c > 1)
+		_gameModeInfo->setPadding((_gameModeInfo->getAbsolutePosition().getWidth()-totalTextWidth)/(c-1));
 	if(totalTextWidth > _gameModeInfo->getAbsolutePosition().getWidth())
 		std::cerr << "GameModeInfo text too long: " << totalTextWidth << " / " << _gameModeInfo->getAbsolutePosition().getWidth() << std::endl;
 }
