@@ -376,10 +376,10 @@ const std::vector<unsigned>& WizardComponent::getCommandQueue()
 
 ////////////////////////////////////////////////////////////
 
-AttributeAffector::AttributeAffector(std::string attribute, ModifierType modifierType
+AttributeAffector::AttributeAffector(ID author, std::string attribute, ModifierType modifierType
 				, float modifierValue, bool permanent): 
 	_attribute{attribute}, _modifierType{modifierType}, _modifierValue{modifierValue},
-	_permanent{permanent} {
+	_permanent{permanent}, _author{author} {
 	}
 
 std::string AttributeAffector::getAffectedAttribute() {
@@ -398,9 +398,13 @@ bool AttributeAffector::isPermanent() {
 	return _permanent;
 }
 
+ID AttributeAffector::getAuthor() {
+	return _author;
+}
+
 // // // // // // // // // // // // // // // // // // // // 
 
-AttributeStoreComponent::AttributeStoreComponent(ID parentEntID): ObservableComponentBase(parentEntID, ComponentType::AttributeStore)
+AttributeStoreComponent::AttributeStoreComponent(ID parentEntID): ObservableComponentBase(parentEntID, ComponentType::AttributeStore), _attributeAffectorHistory{10}
 {}
 
 void AttributeStoreComponent::addAttribute(std::string key, float value)
@@ -435,6 +439,7 @@ void AttributeStoreComponent::setOrAddAttribute(std::string key, float value)
 
 ID AttributeStoreComponent::addAttributeAffector(AttributeAffector aa)
 {
+	_attributeAffectorHistory.push_back(aa);
 	if(aa.isPermanent()) {
 		assert(hasAttribute(aa.getAffectedAttribute()));
 		float attr = getAttribute(aa.getAffectedAttribute());
@@ -481,6 +486,11 @@ float AttributeStoreComponent::getAttributeAffected(std::string key)
 			}
 		return std::max(base*mul + add, 0.f);
 	}
+}
+
+std::vector<AttributeAffector> AttributeStoreComponent::getAttributeAffectorHistory()
+{
+	return _attributeAffectorHistory.data();
 }
 
 void AttributeStoreComponent::serDes(SerDesBase& s)
@@ -533,11 +543,11 @@ ID World::createCharacter(vec3f position)
 	ID eID = createEntity();
 	Entity& e = *getEntity(eID);
 
-	e.addComponent<BodyComponent>(position);
 	e.addComponent<MeshGraphicsComponent>("ninja.b3d", true, vec3f(0), vec3f(0,90,0), vec3f(0.2));
 	e.addComponent<CollisionComponent>(0.4, 1, vec3f(0, -0.9, 0), 80);
 	e.addComponent<WizardComponent>();
 	e.addComponent<AttributeStoreComponent>();
+	e.addComponent<BodyComponent>(position);
 	return eID;
 }
 

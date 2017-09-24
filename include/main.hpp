@@ -79,6 +79,12 @@ class ImageDumper {
 		irr::video::IVideoDriver* _driver;
 };
 
+template <typename T>
+std::ostream& operator<<(std::ostream& o, std::vector<T> v) {
+	for(auto& e : v)
+		o << e << ", ";
+	o << std::endl;
+}
 
 extern ImageDumper SAVEIMAGE;
 #endif /* MAIN_HPP_16_11_18_13_20_24 */

@@ -266,11 +266,12 @@ end
 
 Spell = {}
 
-function Spell:new(ID, baseBody)
+function Spell:new(ID, author, baseBody)
 	dout("spell created")
 	local meta = {__index = Spell}
 	local value = {
 		ID = ID,
+		author = author,
 		baseBody = baseBody,
 		bodies = {baseBody},
 		effects = {},
@@ -281,6 +282,7 @@ end
 
 function Spell:destroy()
 	self.ID = nil
+	self.author = nil
 	self.baseBody = nil
 	for k,v in pairs(self.bodies) do
 		v:destroy()
@@ -362,7 +364,7 @@ function Spell:die()
 		dout("col with on death: ",colEntID)
 		-- apply all effects
 		for k,ed in pairs(self.effects) do
-			addAttributeAffector(colEntID, ed.modifiedAttribute, ed.affectorModifierType, ed.modifierValue*self:getPower(), ed.permanent, ed.period);
+			addAttributeAffector(colEntID, self.author, ed.modifiedAttribute, ed.affectorModifierType, ed.modifierValue*self:getPower(), ed.permanent, ed.period);
 		end
 	end
 	removeSpell(self.ID)
@@ -520,7 +522,7 @@ function Wizard.Command:spell_body_create(argStr)
 	end
 	self.bodiesInUse = self.bodiesInUse + 1	
 	if self.spellInHands == nil then
-		self.spellInHands = Spell:new(nil, body)
+		self.spellInHands = Spell:new(nil, self.ID, body)
 	else
 		self.spellInHands:appendBody(body)
 	end

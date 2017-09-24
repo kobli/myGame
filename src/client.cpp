@@ -28,16 +28,16 @@ class MyShaderCallBack : public video::IShaderConstantSetCallBack
 		irr::IrrlichtDevice* _device;
 };
 
-Animator::Animator(scene::ISceneManager* smgr, function<Entity*(u32)> entityResolver, function<vec3f(u32)> entityVelocityGetter)
+Animator::Animator(scene::ISceneManager* smgr, function<Entity*(ID)> entityResolver, function<vec3f(ID)> entityVelocityGetter)
 	: _smgr{smgr}, _entityResolver{entityResolver}, _velGetter{entityVelocityGetter}
 {}
 
-void Animator::setEntityResolver(std::function<Entity*(u32 ID)> entityResolver)
+void Animator::setEntityResolver(std::function<Entity*(ID)> entityResolver)
 {
 	_entityResolver = entityResolver;
 }
 
-void Animator::setEntityVelocityGetter(std::function<vec3f(u32 ID)> entityVelocityGetter)
+void Animator::setEntityVelocityGetter(std::function<vec3f(ID)> entityVelocityGetter)
 {
 	_velGetter = entityVelocityGetter;
 }
@@ -65,6 +65,7 @@ void Animator::onMsg(const EntityEvent& m)
 	int firstFrame = 190;
 	int lastFrame = 290;
 	float animSpeed = 5;
+	std::cout << "vel: " << _velGetter(m.entityID) << " -- " << m.entityID << std::endl;
 	float speed = _velGetter(m.entityID).getLength();
 	{
 		if(b->getStrafeDir().X == 1) {
@@ -210,7 +211,7 @@ void ClientApplication::startGame()
 	_physics.reset(new Physics(*_gameWorld, _device->getSceneManager()));
 	_animator.setEntityResolver(bind(&World::getEntity, ref(*_gameWorld), placeholders::_1));
 	_animator.setSceneManager(_device->getSceneManager());
-	_animator.setEntityVelocityGetter([this](u32 ID)->vec3f {	return _physics->getObjVelocity(ID); });
+	_animator.setEntityVelocityGetter([this](ID id)->vec3f {	return _physics->getObjVelocity(id); });
 	_gameWorld->addObserver(_animator);
 	_gameWorld->addObserver(*_physics);
 	_gameWorld->addObserver(*_vs);
@@ -344,6 +345,7 @@ void ClientApplication::handlePacket(sf::Packet& p)
 						entity->removeComponent(event.componentT);
 					if((modifiedComponent = entity->getComponent(event.componentT)) != nullptr) {
 						p >> Deserializer<sf::Packet>(*modifiedComponent);
+						std::cout << Serializer<std::ostream>(*modifiedComponent) << std::endl;
 						modifiedComponent->notifyObservers();
 					}
 				}

@@ -136,5 +136,6 @@ class GUI: public Observer<EntityEvent>
 		void updateCastingIndicator(float timeDelta);
 		void updateGameModeInfo();
 		void clearGUIElement(irr::gui::IGUIElement* e);
+		std::string fillGamemodeInfoStr(std::string s);
 };
 #endif /* GUI_HPP_17_09_14_21_57_18 */

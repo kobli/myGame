@@ -11,16 +11,16 @@
 class Animator: public Observer<EntityEvent>
 {
 	public:
-		Animator(scene::ISceneManager* smgr = nullptr, function<Entity*(u32)> entityResolver = [](u32){ return nullptr; }
-				, function<vec3f(u32)> entityVelocityGetter = function<vec3f(u32)>());
-		void setEntityResolver(std::function<Entity*(u32 ID)> entityResolver);
-		void setEntityVelocityGetter(std::function<vec3f(u32 ID)> entityVelocityGetter);
+		Animator(scene::ISceneManager* smgr = nullptr, function<Entity*(ID)> entityResolver = [](ID){ return nullptr; }
+				, function<vec3f(ID)> entityVelocityGetter = function<vec3f(ID)>());
+		void setEntityResolver(std::function<Entity*(ID id)> entityResolver);
+		void setEntityVelocityGetter(std::function<vec3f(ID id)> entityVelocityGetter);
 		void setSceneManager(scene::ISceneManager* smgr);
 
 	private:
 		scene::ISceneManager* _smgr;
-		function<Entity*(u32)> _entityResolver;
-		std::function<vec3f(u32 ID)> _velGetter;
+		function<Entity*(ID)> _entityResolver;
+		std::function<vec3f(ID)> _velGetter;
 		void onMsg(const EntityEvent& m);
 
 };

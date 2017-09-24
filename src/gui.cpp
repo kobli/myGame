@@ -1,10 +1,8 @@
 #include <sstream>
+#include <regex>
 #include "gui.hpp"
 #include "CGUITTFont.h"
 #include "crosshair.hpp"
-#include <locale>
-#include <codecvt>
-#include <string>
 
 using namespace irr::gui;
 
@@ -100,8 +98,7 @@ void GUI::updateGameModeInfo()
 	if(!_sharedRegistry.hasKey("gm_info_template"))
 		return;
 	auto env = _device->getGUIEnvironment();
-	std::string gmInfo = _sharedRegistry.getValue<std::string>("gm_info_template");
-	//TODO substitute real values into template
+	std::string gmInfo = fillGamemodeInfoStr(_sharedRegistry.getValue<std::string>("gm_info_template"));
 	std::istringstream iss(gmInfo);
 	std::string part;
 	int c = 0;
@@ -200,4 +197,38 @@ void GUI::clearGUIElement(IGUIElement* e)
 {
 	while(!e->getChildren().empty())
 		e->removeChild(*e->getChildren().begin());
+}
+
+std::string GUI::fillGamemodeInfoStr(std::string s)
+{
+	AttributeStoreComponent* asc = nullptr;
+	if(_sharedRegistry.hasKey("controlled_object_id")) {
+		ID id = _sharedRegistry.getValue<ID>("controlled_object_id");
+		Entity* e = _gameWorld.getEntity(id);
+		if(e != nullptr)
+			asc = e->getComponent<AttributeStoreComponent>();
+	}
+	std::string r;
+	auto callback = [&](std::string const& m){
+		if(m.size() > 0 && m.front() == '<' && m.back() == '>') {
+			std::string tagWithoutBrackets = m.substr(1, m.size()-2);
+			if(asc && asc->hasAttribute(tagWithoutBrackets)) {
+				auto v = asc->getAttribute(tagWithoutBrackets);
+				if(v == int(v))
+					r += std::to_string(int(v));
+				else 
+					r += std::to_string(v);
+			}
+			else
+				r += m;
+		}
+		else
+			r += m;
+	};
+	std::regex tag("<[^>]*>");
+	std::sregex_token_iterator
+		begin(s.begin(), s.end(), tag, {-1,0}),
+		end;
+	std::for_each(begin,end,callback);
+	return r;
 }

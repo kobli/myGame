@@ -362,83 +362,71 @@ void Physics::callCollisionCBs()
 
 void Physics::onMsg(const EntityEvent& m)
 {
-	switch(m.componentT)
+	if(m.componentT == ComponentType::Body)
 	{
-		case ComponentType::Collision:
-			{
-				auto eID = m.entityID;
-				btCollisionObject* o = getCollisionObjectByID(eID);
-				if(o)
-					_physicsWorld->removeCollisionObject(o);
-				if(m.destroyed)
-					break;
+		Entity* e;
+		CollisionComponent* cc;
+		btCollisionObject* o;
+		BodyComponent* b;
+		if(!_updating &&
+				(e = _world.getEntity(m.entityID)) &&
+				(cc = e->getComponent<CollisionComponent>()) &&
+				(o = getCollisionObjectByID(m.entityID)) &&
+				(b = e->getComponent<BodyComponent>())) {
+			auto rigB = dynamic_cast<btRigidBody*>(o);
+			auto v = b->getVelocity();
+			//if(rigB) //TODO only for ghostObjects
+			//rigB->setLinearVelocity(btVector3(v.X, v.Y, v.Z));
+			float rotSpeed = 3;
+			//_physicsWorld->removeCollisionObject(rigB);
+			auto tr = btTransform(Q2btQ(b->getRotation()), V3f2btV3f(b->getPosition()-cc->getPosOffset()));
+			//rigB->proceedToTransform(tr);
+			//rigB->setInterpolationWorldTransform(tr);
+			rigB->setWorldTransform(tr);
+			//rigB->setCenterOfMassTransform(tr);
+			//rigB->setLinearVelocity(btVector3(0,0,0));
+			//rigB->clearForces();
+			rigB->setAngularVelocity(btVector3(0, b->getRotDir()*rotSpeed, 0));
+			//_physicsWorld->addCollisionObject(rigB);
+			rigB->activate(true);
+		}
+	}
+	if(m.componentT == ComponentType::Body && (m.created || m.destroyed)
+			|| m.componentT == ComponentType::Collision)
+	{
+		auto eID = m.entityID;
+		btCollisionObject* o = getCollisionObjectByID(eID);
+		if(o)
+			_physicsWorld->removeCollisionObject(o);
+		Entity* e;
+		CollisionComponent* col;
+		if(!m.destroyed &&
+				(e = _world.getEntity(eID)) &&
+				(e->hasComponent<BodyComponent>()) &&
+				(col = e->getComponent<CollisionComponent>())) {
+			btScalar mass = col->getMass();
+			btScalar iner = 1;
+			btVector3 fallInertia(iner, iner, iner);
 
-				auto e = _world.getEntity(eID);
-				if(!e)
-					break;
-				auto col = e->getComponent<CollisionComponent>();
-				if(!col)
-					break;
-				btScalar mass = col->getMass();
-				btScalar iner = 1;
-				btVector3 fallInertia(iner, iner, iner);
-
-				_objData.emplace(eID, ObjData{});
-				btCollisionShape* pShape = new btCapsuleShape(col->getRadius(), col->getHeight());
-				pShape->calculateLocalInertia(mass,fallInertia);
-				MyMotionState* motionState = new MyMotionState([this, eID]()->Entity* { return _world.getEntity(eID); });
-				btRigidBody::btRigidBodyConstructionInfo bodyCI(mass,motionState,pShape,fallInertia);
-				btRigidBody* body = new btRigidBody(bodyCI);
-				_physicsWorld->addRigidBody(body);
-				body->setUserIndex(eID);
-				//body->setCcdMotionThreshold(1e-7);
-				//body->setCcdSweptSphereRadius(0.2);
-				if(col->isKinematic())
-				{
-					body->setCollisionFlags(body->getCollisionFlags() |	btCollisionObject::CF_NO_CONTACT_RESPONSE | btCollisionObject::CF_KINEMATIC_OBJECT);
-				}
-				//body->setActivationState(DISABLE_DEACTIVATION);
-				body->setAngularFactor(btVector3(0,0,0));
-				body->setGravity(btVector3(0,col->getGravity(),0));
-				//body->setRollingFriction(0);
-				break;
-			}
-		case ComponentType::Body:
+			_objData.emplace(eID, ObjData{});
+			btCollisionShape* pShape = new btCapsuleShape(col->getRadius(), col->getHeight());
+			pShape->calculateLocalInertia(mass,fallInertia);
+			MyMotionState* motionState = new MyMotionState([this, eID]()->Entity* { return _world.getEntity(eID); });
+			btRigidBody::btRigidBodyConstructionInfo bodyCI(mass,motionState,pShape,fallInertia);
+			btRigidBody* body = new btRigidBody(bodyCI);
+			_physicsWorld->addRigidBody(body);
+			body->setUserIndex(eID);
+			//body->setCcdMotionThreshold(1e-7);
+			//body->setCcdSweptSphereRadius(0.2);
+			if(col->isKinematic())
 			{
-				if(_updating)
-					return;
-				auto e = _world.getEntity(m.entityID);
-				if(!e)
-					break;
-				auto cc = e->getComponent<CollisionComponent>();
-				if(!cc)
-					break;
-				btCollisionObject* o = getCollisionObjectByID(m.entityID);
-				if(!o)
-					break;
-				auto b = e->getComponent<BodyComponent>();
-				if(!b)
-					break;
-				auto rigB = dynamic_cast<btRigidBody*>(o);
-				auto v = b->getVelocity();
-				//if(rigB) //TODO only for ghostObjects
-					//rigB->setLinearVelocity(btVector3(v.X, v.Y, v.Z));
-				float rotSpeed = 3;
-				//_physicsWorld->removeCollisionObject(rigB);
-				auto tr = btTransform(Q2btQ(b->getRotation()), V3f2btV3f(b->getPosition()-cc->getPosOffset()));
-				//rigB->proceedToTransform(tr);
-				//rigB->setInterpolationWorldTransform(tr);
-				rigB->setWorldTransform(tr);
-				//rigB->setCenterOfMassTransform(tr);
-				//rigB->setLinearVelocity(btVector3(0,0,0));
-				//rigB->clearForces();
-				rigB->setAngularVelocity(btVector3(0, b->getRotDir()*rotSpeed, 0));
-				//_physicsWorld->addCollisionObject(rigB);
-				rigB->activate(true);
-				break;
+				body->setCollisionFlags(body->getCollisionFlags() |	btCollisionObject::CF_NO_CONTACT_RESPONSE | btCollisionObject::CF_KINEMATIC_OBJECT);
 			}
-		default:
-			break;
+			//body->setActivationState(DISABLE_DEACTIVATION);
+			body->setAngularFactor(btVector3(0,0,0));
+			body->setGravity(btVector3(0,col->getGravity(),0));
+			//body->setRollingFriction(0);
+		}
 	}
 }
 
@@ -474,102 +462,77 @@ ViewSystem::ViewSystem(irr::scene::ISceneManager* smgr, World& world): System{wo
 
 void ViewSystem::onMsg(const EntityEvent& m)
 {
-	switch(m.componentT)
-	{
-		case ComponentType::Body:
-			{
-				scene::ISceneNode* sn = _smgr->getSceneNodeFromId(m.entityID);
-				if(sn && m.destroyed)
-				{
-					sn->removeAll();// remove children
-					sn->remove();
-					return;
-				}
-				else if(!sn && !m.destroyed)
-				{
-					sn = _smgr->addEmptySceneNode(nullptr, m.entityID);
-					sn->setName("body");
-					//sn->setDebugDataVisible(scene::EDS_FULL);
-				}
-				_transformedEntities.insert(m.entityID);
-				break;
-			}
-		case ComponentType::GraphicsSphere:
-			{
-				auto e = _world.getEntity(m.entityID);
-				if(!e)
-					return;
-				if(!e->hasComponent(ComponentType::Body))
-					return;
-				auto bsn = _smgr->getSceneNodeFromId(m.entityID);
-				if(!bsn)
-					return;
-				auto sn = _smgr->getSceneNodeFromName("graphicsSphere", bsn);
-				if(sn)
-					sn->remove();
-				if(m.destroyed)
-					return;
-				if(auto sgc = e->getComponent<SphereGraphicsComponent>()) {
-					sn = _smgr->addSphereSceneNode(sgc->getRadius(), 64, bsn, -1, sgc->getPosOffset());
-					sn->setMaterialFlag(video::EMF_LIGHTING, false);
-					sn->setMaterialFlag(video::EMF_WIREFRAME, true);
-					sn->setName("graphicsSphere");
-				}
-				break;
-			}
-		case ComponentType::GraphicsParticleSystem:
-			{
-				auto e = _world.getEntity(m.entityID);
-				if(!e)
-					return;
-				if(!e->hasComponent(ComponentType::Body))
-					return;
-				auto bsn = _smgr->getSceneNodeFromId(m.entityID);
-				if(!bsn)
-					return;
-				auto sn = static_cast<scene::IParticleSystemSceneNode*>(_smgr->getSceneNodeFromName("graphicsParticleSystem", bsn));
-				if(sn)
-					sn->remove();
-				if(m.destroyed)
-					return;
-				if(auto psgc = e->getComponent<ParticleSystemGraphicsComponent>()) {
-					sn = _smgr->addParticleSystemSceneNode(true, bsn, -1, psgc->getPosOffset(), psgc->getRotOffset(), psgc->getScale());
-					addParticleEffect(psgc->getEffectID(), sn);
-					sn->setName("graphicsParticleSystem");
-				}
-				break;
-			}
-		case ComponentType::GraphicsMesh:
-			{
-				auto e = _world.getEntity(m.entityID);
-				if(!e)
-					return;
-				if(!e->hasComponent(ComponentType::Body))
-					return;
-				auto bsn = _smgr->getSceneNodeFromId(m.entityID);
-				if(!bsn)
-					return;
-				auto sn = _smgr->getSceneNodeFromName("graphicsMesh", bsn);
-				if(sn)
-					sn->remove();
-				if(m.destroyed)
-					return;
-				if(auto mgc = e->getComponent<MeshGraphicsComponent>())
-				{
-					if(mgc->getFileName() == "")
-						return;
-					if(mgc->isAnimated())
-						sn = _smgr->addAnimatedMeshSceneNode(_smgr->getMesh(("./media/" + mgc->getFileName()).c_str()), bsn, -1, mgc->getPosOffset(), mgc->getRotOffset(), mgc->getScale());
-					else
-						sn = _smgr->addMeshSceneNode(_smgr->getMesh(("./media/" + mgc->getFileName()).c_str()), bsn, -1, mgc->getPosOffset(), mgc->getRotOffset(), mgc->getScale());
-					sn->setMaterialFlag(video::EMF_LIGHTING, false);
-					sn->setName("graphicsMesh");
-					//sn->setDebugDataVisible(scene::EDS_FULL);
-				}
-				break;
-			}
-		default:
-			break;
+	if(m.componentT == ComponentType::Body) {
+		scene::ISceneNode* sn = _smgr->getSceneNodeFromId(m.entityID);
+		if(sn && m.destroyed)
+		{
+			sn->removeAll();// remove children
+			sn->remove();
+			return;
+		}
+		else if(!sn && !m.destroyed)
+		{
+			sn = _smgr->addEmptySceneNode(nullptr, m.entityID);
+			sn->setName("body");
+			//sn->setDebugDataVisible(scene::EDS_FULL);
+		}
+		_transformedEntities.insert(m.entityID);
+	}
+	bool bodyComponentAdded = m.created && m.componentT == ComponentType::Body;
+	bool graphicsComponentChanged = 
+		m.componentT == ComponentType::GraphicsMesh || 
+		m.componentT == ComponentType::GraphicsSphere ||
+		m.componentT == ComponentType::GraphicsParticleSystem;
+	if(bodyComponentAdded || graphicsComponentChanged)  {
+		auto e = _world.getEntity(m.entityID);
+		if(!e)
+			return;
+		if(!e->hasComponent(ComponentType::Body))
+			return;
+		auto bsn = _smgr->getSceneNodeFromId(m.entityID);
+		if(!bsn)
+			return;
+		std::cout << "probably will create graphics comp\n" << m << std::endl;
+		if(auto sgc = e->getComponent<SphereGraphicsComponent>())
+		{
+			auto sn = _smgr->getSceneNodeFromName("graphicsSphere", bsn);
+			if(sn)
+				sn->remove();
+			if(graphicsComponentChanged && m.destroyed)
+				return;
+			sn = _smgr->addSphereSceneNode(sgc->getRadius(), 64, bsn, -1, sgc->getPosOffset());
+			sn->setMaterialFlag(video::EMF_LIGHTING, false);
+			sn->setMaterialFlag(video::EMF_WIREFRAME, true);
+			sn->setName("graphicsSphere");
+		}
+		if(auto psgc = e->getComponent<ParticleSystemGraphicsComponent>())
+		{
+			auto sn = static_cast<scene::IParticleSystemSceneNode*>(_smgr->getSceneNodeFromName("graphicsParticleSystem", bsn));
+			if(sn)
+				sn->remove();
+			if(graphicsComponentChanged && m.destroyed)
+				return;
+			sn = _smgr->addParticleSystemSceneNode(true, bsn, -1, psgc->getPosOffset(), psgc->getRotOffset(), psgc->getScale());
+			addParticleEffect(psgc->getEffectID(), sn);
+			sn->setName("graphicsParticleSystem");
+		}
+		if(auto mgc = e->getComponent<MeshGraphicsComponent>())
+		{
+			auto sn = _smgr->getSceneNodeFromName("graphicsMesh", bsn);
+			if(sn)
+				sn->remove();
+			if(graphicsComponentChanged && m.destroyed)
+				return;
+			if(mgc->getFileName() == "")
+				return;
+			if(mgc->isAnimated())
+				sn = _smgr->addAnimatedMeshSceneNode(_smgr->getMesh(("./media/" + mgc->getFileName()).c_str()), bsn, -1, mgc->getPosOffset(), mgc->getRotOffset(), mgc->getScale());
+			else
+				sn = _smgr->addMeshSceneNode(_smgr->getMesh(("./media/" + mgc->getFileName()).c_str()), bsn, -1, mgc->getPosOffset(), mgc->getRotOffset(), mgc->getScale());
+			sn->setMaterialFlag(video::EMF_LIGHTING, false);
+			sn->setName("graphicsMesh");
+			//sn->setDebugDataVisible(scene::EDS_FULL);
+		}
 	}
 }
 
@@ -718,10 +681,11 @@ void SpellSystem::onMsg(const EntityEvent& m)
 	{
 		if(m.created)
 		{
-
+			/*
 #ifdef DEBUG_BUILD
 			reload(); // for more comfortable testing - every time a player connects reset and reload the spellsystem
 #endif
+*/
 			addWizard(m.entityID);
 		}
 		else if(m.destroyed)
@@ -862,21 +826,22 @@ void SpellSystem::init()
 
 	auto callAddAttributeAffector = [](lua_State* s)->int {
 		int argc = lua_gettop(s);
-		if(argc != 5 && argc != 6)
+		if(argc != 6 && argc != 7)
 		{
 			std::cerr << "callAddAttributeAffector: wrong number of arguments\n";
 			return 0;		
 		}
 		ID eID = lua_tointeger(s, 1);
-		std::string attributeName = lua_tostring(s, 2);
-		AttributeAffector::ModifierType modifierType = static_cast<AttributeAffector::ModifierType>(lua_tointeger(s, 3));
-		float modifierValue = lua_tonumber(s, 4);
-		bool permanent = lua_toboolean(s, 5);
+		ID authorID = lua_tointeger(s, 2);
+		std::string attributeName = lua_tostring(s, 3);
+		AttributeAffector::ModifierType modifierType = static_cast<AttributeAffector::ModifierType>(lua_tointeger(s, 4));
+		float modifierValue = lua_tonumber(s, 5);
+		bool permanent = lua_toboolean(s, 6);
 		float period = 0;
-		if(argc == 6)
-			period = lua_tonumber(s, 6);
+		if(argc == 7)
+			period = lua_tonumber(s, 7);
 		SpellSystem* ss = (SpellSystem*)lua_touserdata(s, lua_upvalueindex(1));
-		ss->addAttributeAffectorTo(eID, attributeName, modifierType, modifierValue, permanent, period);
+		ss->addAttributeAffectorTo(eID, authorID, attributeName, modifierType, modifierValue, permanent, period);
 		return 1;
 	};
 	lua_pushlightuserdata(_luaState, this);
@@ -986,7 +951,7 @@ void SpellSystem::removeSpell(ID spell)
 	_world.removeEntity(spell);
 }
 
-ID SpellSystem::addAttributeAffectorTo(ID eID, std::string attributeName
+ID SpellSystem::addAttributeAffectorTo(ID eID, ID authorID, std::string attributeName
 		, AttributeAffector::ModifierType modifierType, float modifierValue
 		, bool permanent, float period)
 {
@@ -998,7 +963,7 @@ ID SpellSystem::addAttributeAffectorTo(ID eID, std::string attributeName
 		return NULLID; //TODO fail in a better way
 	std::cout << "adding attribute affector .." << std::endl;
 	//TODO use period - add (apply) the affector periodically so its tracked in affector history
-	return attrStore->addAttributeAffector(AttributeAffector(attributeName, modifierType, modifierValue, permanent));
+	return attrStore->addAttributeAffector(AttributeAffector(authorID, attributeName, modifierType, modifierValue, permanent));
 }
 
 ////////////////////////////////////////////////////////////

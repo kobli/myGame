@@ -9,6 +9,7 @@
 #include "observableEntityComponent.hpp"
 #include "keyValueStore.hpp"
 #include "worldMap.hpp"
+#include "ringBuffer.hpp"
 
 using ec::ID;
 using ec::NULLID;
@@ -276,19 +277,21 @@ class AttributeAffector {
 			Mul = 1,
 		};
 
-		AttributeAffector(std::string attribute, ModifierType modifierType
+		AttributeAffector(ID author, std::string attribute, ModifierType modifierType
 				, float modifierValue, bool permanent);
 
 		std::string getAffectedAttribute();
 		ModifierType getModifierType();
 		float getModifierValue();
 		bool isPermanent();
+		ID getAuthor();
 
 	private:
 		std::string _attribute;
 		ModifierType _modifierType;
 		float _modifierValue;
 		bool _permanent;
+		ID _author;
 };
 
 class AttributeStoreComponent: public ObservableComponentBase, KeyValueStore
@@ -305,6 +308,7 @@ class AttributeStoreComponent: public ObservableComponentBase, KeyValueStore
 		ID addAttributeAffector(AttributeAffector aa);
 		bool removeAttributeAffector(ID affectorID);
 		float getAttributeAffected(std::string key);
+		std::vector<AttributeAffector> getAttributeAffectorHistory();
 
 		virtual void serDes(SerDesBase& s);
 		template <typename T>
@@ -314,6 +318,7 @@ class AttributeStoreComponent: public ObservableComponentBase, KeyValueStore
 
 	private:
 		SolidVector<AttributeAffector, ID, NULLID> _attributeAffectors;
+		RingBuffer<AttributeAffector> _attributeAffectorHistory;
 };
 
 ////////////////////////////////////////////////////////////

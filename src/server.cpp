@@ -557,6 +557,98 @@ void ServerApplication::gameModeRegisterAPIMethods()
 	lua_pushlightuserdata(L, this);
 	lua_pushcclosure(L, callSetSharedRegValue, 1);
 	lua_setglobal(L, "setSharedRegValue");
+
+	auto callGetAttributeModifierHistory = [](lua_State* s)->int {
+		int argc = lua_gettop(s);
+		if(argc != 1)
+		{
+			std::cerr << "callGetAttributeModifierHistory: wrong number of arguments\n";
+			return 0;		
+		}
+		ID eID  = lua_tointeger(s, 1);
+		ServerApplication* sApp = (ServerApplication*)lua_touserdata(s, lua_upvalueindex(1));
+		Entity* e = sApp->_gameWorld.getEntity(eID);
+		if(!e)
+			return 0;
+		AttributeStoreComponent* asc = e->getComponent<AttributeStoreComponent>();
+		if(!asc)
+			return 0;
+		auto aaHistory = asc->getAttributeAffectorHistory();
+		lua_newtable(s);
+		int t = lua_gettop(s);
+		int i = 1;
+		for(AttributeAffector& aa : aaHistory)
+		{
+			lua_newtable(s);
+
+			lua_pushstring(s, "author");
+			lua_pushinteger(s, aa.getAuthor());
+			lua_settable(s, -3);
+
+			lua_pushstring(s, "attributeName");
+			lua_pushstring(s, aa.getAffectedAttribute().c_str());
+			lua_settable(s, -3);
+			
+			lua_pushstring(s, "modifierType");
+			lua_pushinteger(s, aa.getModifierType());
+			lua_settable(s, -3);
+
+			lua_pushstring(s, "modifierValue");
+			lua_pushnumber(s, aa.getModifierValue());
+			lua_settable(s, -3);
+
+			lua_pushstring(s, "permanent");
+			lua_pushboolean(s, aa.isPermanent());
+			lua_settable(s, -3);
+			
+			lua_rawseti(s, t, i);
+			i++;
+		}
+		return 1;
+	};
+	lua_pushlightuserdata(L, this);
+	lua_pushcclosure(L, callGetAttributeModifierHistory, 1);
+	lua_setglobal(L, "getAttributeModifierHistory");
+
+	auto callRemoveBodyComponent = [](lua_State* s)->int {
+		int argc = lua_gettop(s);
+		if(argc != 1)
+		{
+			std::cerr << "callRemoveBodyComponent: wrong number of arguments\n";
+			return 0;		
+		}
+		ID entityID = lua_tonumber(s, 1);
+		ServerApplication* sApp = (ServerApplication*)lua_touserdata(s, lua_upvalueindex(1));
+		auto e = sApp->_gameWorld.getEntity(entityID);
+		if(e)
+			e->removeComponent<BodyComponent>();
+		return 0;
+	};
+	lua_pushlightuserdata(L, this);
+	lua_pushcclosure(L, callRemoveBodyComponent, 1);
+	lua_setglobal(L, "removeBodyComponent");
+
+	auto callAddBodyComponent = [](lua_State* s)->int {
+		int argc = lua_gettop(s);
+		if(argc != 4)
+		{
+			std::cerr << "callAddBodyComponent: wrong number of arguments\n";
+			return 0;		
+		}
+		ID entityID = lua_tonumber(s, 1);
+		float posX = lua_tonumber(s, 2);
+		float posY = lua_tonumber(s, 3);
+		float posZ = lua_tonumber(s, 4);
+		std::cout << "adding bodyComponent: " << vec3f(posX, posY, posZ) << std::endl;
+		ServerApplication* sApp = (ServerApplication*)lua_touserdata(s, lua_upvalueindex(1));
+		auto e = sApp->_gameWorld.getEntity(entityID);
+		if(e)
+			e->addComponent<BodyComponent>(vec3f(posX,posY,posZ));
+		return 0;
+	};
+	lua_pushlightuserdata(L, this);
+	lua_pushcclosure(L, callAddBodyComponent, 1);
+	lua_setglobal(L, "addBodyComponent");
 }
 
 void ServerApplication::gameModeOnClientConnect(ID sessionID)
