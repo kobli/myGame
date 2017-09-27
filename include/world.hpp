@@ -65,7 +65,7 @@ typedef ec::ObservableEntityManager<ObservableComponentBase,ComponentType,Entity
 class BodyComponent: public ObservableComponentBase
 {
 	public:
-		BodyComponent(ID parentEntID, vec3f position = vec3f(0), quaternion rotation = quaternion(0,0,0,0), vec3f velocity = vec3f(0));
+		BodyComponent(ID parentEntID, vec3f position = vec3f(0), quaternion rotation = quaternion(0,0,0,1), vec3f velocity = vec3f(0));
 		vec3f getPosition() const;
 		quaternion getRotation() const;
 		vec3f getVelocity() const;
