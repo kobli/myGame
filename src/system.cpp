@@ -86,7 +86,6 @@ class MyMotionState : public btMotionState
 			bc->setRotation(r*180/M_PI);
 			*/
 			bc->setRotation(btQ2Q(worldTrans.getRotation()));
-			//cout << "ROT: " << btQ2Q(worldTrans.getRotation()) << endl;
 			bc->setPosition(btV3f2V3f(worldTrans.getOrigin()) + cc->getPosOffset());
 		}
 };
@@ -99,7 +98,6 @@ System::System(World& world): _world{world}
 
 Physics::Physics(World& world, scene::ISceneManager* smgr): System{world}, _tAcc{0}, _updating{false}, _heightMap{nullptr}
 {
-	//TODO cleanup
 	btBroadphaseInterface* broadphase = new btDbvtBroadphase();
 	btDefaultCollisionConfiguration* collisionConfiguration = new btDefaultCollisionConfiguration();
 	btCollisionDispatcher* dispatcher = new btCollisionDispatcher(collisionConfiguration);
@@ -113,7 +111,6 @@ Physics::Physics(World& world, scene::ISceneManager* smgr): System{world}, _tAcc
 		DebugDrawer* debugDrawer = new DebugDrawer(smgr);
 		_physicsWorld->setDebugDrawer(debugDrawer);
 		//_physicsWorld->getDebugDrawer()->setDebugMode(btIDebugDraw::DBG_DrawWireframe);
-		_physicsWorld->getDebugDrawer()->setDebugMode(btIDebugDraw::DBG_DrawText);
 	}
 
 	const WorldMap& m = _world.getMap();
@@ -190,30 +187,6 @@ void Physics::update(float timeDelta)
 	float dt = 0.01;
 	_tAcc += timeDelta;
 
-	/*
-	_physicsWorld->stepSimulation(timeDelta, 0.1/dt, dt);
-	bodyDoStrafe(timeDelta);
-	*/
-
-	/*
-	// horrible
-	dt = 0.04;
-	if(_tAcc < dt)
-		return;
-	timeDelta = _tAcc;
-	_tAcc = 0;
-	_physicsWorld->stepSimulation(timeDelta, 100);
-	bodyDoStrafe(timeDelta);
-	*/
-
-	/*
-	int steps = _tAcc/dt;
-	timeDelta = steps*dt;
-	_tAcc -= timeDelta;
-	_physicsWorld->stepSimulation(timeDelta, steps, dt);
-	bodyDoStrafe(timeDelta);
-	*/
-
 	timeDelta = 0;
 	while(_tAcc >= dt)
 	{
@@ -244,73 +217,39 @@ void Physics::bodyDoStrafe(float timeDelta)
 		btRigidBody* b = dynamic_cast<btRigidBody*>(o);
 		if(!b)
 			continue;
-		/*
-		float rotSpeed = 180; // degrees per second
-		vec3f rot = bc->getRotation(),
-					pos = bc->getPosition();
-		rot.Y = fmod(rot.Y+(rotSpeed*bc->getRotDir()*timeDelta), 360);
-		bc->setRotation(rot);
-		auto cc = e.getCollisionComponent();
-		if(cc)
-			;//TODO pos = cc->getCollisionResultPosition(timeDelta);
-		else
-			pos += bc->getTotalVelocity()*timeDelta;
-		bc->setPosition(pos);
-		*/
 		float& t = _objData[e.getID()].walkTimer;
 		
-		//if(t > 0.35)
+		float fMul = 800;
 		{
-			//t = 0;
-			//float fMul = 19000;
-			//float fMul = 13000;
-			//float fMul = 4000;
-			//float fMul = 1300;
-			//float fMul = 4300;
-			float fMul = 800;
+			vec2f strDir = bc->getStrafeDir();
+			vec3f dir{strDir.X, 0, strDir.Y};
+			vec3f rot;
+			bc->getRotation().toEuler(rot);
+			rot *= 180/PI;
+			dir.rotateYZBy(-rot.X);
+			dir.rotateXZBy(-rot.Y);
+			dir.rotateXYBy(-rot.Z);
+			dir.Y = 0;
+			dir.normalize();
+
+			if(dir.getLength() > 0.1 && _objData[e.getID()].onGround)
 			{
-				vec2f strDir = bc->getStrafeDir();
-				vec3f dir{strDir.X, 0, strDir.Y};
-				vec3f rot;
-				bc->getRotation().toEuler(rot);
-				rot *= 180/PI;
-				dir.rotateYZBy(-rot.X);
-				dir.rotateXZBy(-rot.Y);
-				dir.rotateXYBy(-rot.Z);
-				dir.Y = 0;
-				dir.normalize();
-
-				//if(receiver.IsKeyDown(irr::KEY_SPACE))
-					//dir.Y = 1;
-
-				//dynamicsWorld->removeRigidBody(b);
-				//pSphereShape->calculateLocalInertia(mass2, fallInertia);
-				if(dir.getLength() > 0.1 && _objData[e.getID()].onGround)
+				b->setDamping(0.41, 0);
+				if(getObjVelocity(e.getID()).getLength() < 2)
 				{
-					b->setDamping(0.41, 0);
-					if(getObjVelocity(e.getID()).getLength() < 2)
-					{
-						//cout << "climbing a hill\n";
-						fMul *= 1.5;
-					}
-					b->setFriction(1.0);
-					//b->setMassProps(mass, fallInertia);
-					//b->applyCentralForce(btVector3(dir.X, dir.Y+0.1, dir.Z)*fMul);
-					b->applyCentralImpulse(btVector3(dir.X, 0., dir.Z)*fMul*timeDelta);//*abs(cos(2*M_PI*(1/0.5)*t)));
-					//b->applyCentralImpulse(btVector3(dir.X, 0.05, dir.Z)*fMul/*abs(cos(2*M_PI*(1/0.5)*t))*/); // !! working
-					//t = 0;
+					fMul *= 1.5;
 				}
-				else
-				{
-					t = 0;
-					b->setFriction(10);
-					//if(getObjVelocity(e.getID()).getLength() < 0.1)
-						//b->setDamping(50, 0);
-					
-					//b->setMassProps(mass2, fallInertia);
-				}
-				//b->setLinearVelocity(b->getLinearVelocity() + btVector3(dir.X*MOVEMENT_SPEED, 0, dir.Z*MOVEMENT_SPEED));
-				//dynamicsWorld->addRigidBody(b);
+				b->setFriction(1.0);
+				//b->setMassProps(mass, fallInertia);
+				b->applyCentralImpulse(btVector3(dir.X, 0., dir.Z)*fMul*timeDelta);
+			}
+			else
+			{
+				t = 0;
+				b->setFriction(10);
+				//if(getObjVelocity(e.getID()).getLength() < 0.1)
+					//b->setDamping(50, 0);
+				//b->setMassProps(mass2, fallInertia);
 			}
 		}
 	}
@@ -373,20 +312,12 @@ void Physics::onMsg(const EntityEvent& m)
 				(b = e->getComponent<BodyComponent>())) {
 			auto rigB = dynamic_cast<btRigidBody*>(o);
 			auto v = b->getVelocity();
-			//if(rigB) //TODO only for ghostObjects
-			//rigB->setLinearVelocity(btVector3(v.X, v.Y, v.Z));
 			float rotSpeed = 3;
 			//_physicsWorld->removeCollisionObject(rigB);
 			auto tr = btTransform(Q2btQ(b->getRotation()), V3f2btV3f(b->getPosition()-cc->getPosOffset()));
-			//rigB->proceedToTransform(tr);
-			//rigB->setInterpolationWorldTransform(tr);
 			rigB->setWorldTransform(tr);
-			//rigB->setCenterOfMassTransform(tr);
-			//rigB->setLinearVelocity(btVector3(0,0,0));
-			//rigB->clearForces();
 			rigB->setAngularVelocity(btVector3(0, b->getRotDir()*rotSpeed, 0));
 			//_physicsWorld->addCollisionObject(rigB);
-			rigB->activate(true);
 		}
 	}
 	if(m.componentT == ComponentType::Body && (m.created || m.destroyed)
@@ -414,16 +345,11 @@ void Physics::onMsg(const EntityEvent& m)
 			btRigidBody* body = new btRigidBody(bodyCI);
 			_physicsWorld->addRigidBody(body);
 			body->setUserIndex(eID);
-			//body->setCcdMotionThreshold(1e-7);
-			//body->setCcdSweptSphereRadius(0.2);
 			if(col->isKinematic())
-			{
 				body->setCollisionFlags(body->getCollisionFlags() |	btCollisionObject::CF_NO_CONTACT_RESPONSE | btCollisionObject::CF_KINEMATIC_OBJECT);
-			}
-			//body->setActivationState(DISABLE_DEACTIVATION);
+			body->setActivationState(DISABLE_DEACTIVATION);
 			body->setAngularFactor(btVector3(0,0,0));
 			body->setGravity(btVector3(0,col->getGravity(),0));
-			//body->setRollingFriction(0);
 		}
 	}
 }
@@ -490,7 +416,6 @@ void ViewSystem::onMsg(const EntityEvent& m)
 		auto bsn = _smgr->getSceneNodeFromId(m.entityID);
 		if(!bsn)
 			return;
-		std::cout << "probably will create graphics comp\n" << m << std::endl;
 		if(auto sgc = e->getComponent<SphereGraphicsComponent>())
 		{
 			auto sn = _smgr->getSceneNodeFromName("graphicsSphere", bsn);
@@ -569,14 +494,6 @@ void ViewSystem::updateTransforms(float timeDelta)
 				resPos = oldPos;
 			else
 				resPos = oldPos + d.normalize()*interpolSpeed*timeDelta;
-			//resPos = newPos; //TODO remove
-			/*
-			std::cout << "obj desired p: " << resPos << std::endl;
-			std::cout << "obj abs p: " << _smgr->getSceneNodeFromId(0)->getAbsolutePosition() << std::endl;
-			std::cout << "obj p: " << _smgr->getSceneNodeFromId(0)->getPosition() << std::endl;
-			std::cout << "cam abs p: " << _smgr->getSceneNodeFromId(-2)->getAbsolutePosition() << std::endl;
-			std::cout << "cam p: " << _smgr->getSceneNodeFromId(ObjStaticID::Camera)->getPosition() << std::endl;
-			*/
 			sn->setPosition(resPos);
 			sn->updateAbsolutePosition();
 			if(resPos != newPos || resRot != newRot) {
@@ -739,7 +656,6 @@ void SpellSystem::cast(std::string& incantation, ID authorID)
 
 void SpellSystem::collisionCallback(ID objID, ID otherObjID)
 {
-	//std::cout << "WIZ COMP: collision of " << objID << " and " << otherObjID << std::endl;
 	lua_getglobal(_luaState, "handleCollision");
 	lua_pushinteger(_luaState, objID);
 	lua_pushinteger(_luaState, otherObjID);
