@@ -57,17 +57,15 @@ class MyMotionState : public btMotionState
 
 		virtual void getWorldTransform(btTransform& worldTrans) const
 		{
-			auto e = _getEntity();
-			if(!e)
-				return;
-			auto bc = e->getComponent<BodyComponent>();
-			if(!bc)
-				return;
-			auto cc = e->getComponent<CollisionComponent>();
-			if(!cc)
-				return;
-			worldTrans.setOrigin(V3f2btV3f(bc->getPosition() - cc->getPosOffset()));
-			//worldTrans.setRotation(Q2btQ(bc->getRotation()));
+			Entity* e;
+			BodyComponent* bc;
+			CollisionComponent* cc;
+			if((e = _getEntity()) &&
+					(bc = e->getComponent<BodyComponent>()) &&
+					(cc = e->getComponent<CollisionComponent>())) {
+				worldTrans.setOrigin(V3f2btV3f(bc->getPosition() - cc->getPosOffset()));
+				worldTrans.setRotation(Q2btQ(bc->getRotation()));
+			}
 		}
 
 		virtual void setWorldTransform(const btTransform& worldTrans)
