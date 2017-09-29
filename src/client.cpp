@@ -65,7 +65,6 @@ void Animator::onMsg(const EntityEvent& m)
 	int firstFrame = 190;
 	int lastFrame = 290;
 	float animSpeed = 5;
-	std::cout << "vel: " << _velGetter(m.entityID) << " -- " << m.entityID << std::endl;
 	float speed = _velGetter(m.entityID).getLength();
 	{
 		if(b->getStrafeDir().X == 1) {

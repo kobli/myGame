@@ -51,7 +51,7 @@ class Session: KeyValueStore
 class Updater: public Observer<EntityEvent>
 {
 	public:
-		using ClientFilterPredicate = function<bool(Entity* e)>; 
+		using ClientFilterPredicate = function<bool(ID e)>; 
 			// decides, if the client controlling entity "e" should be informed about these WorldChanges
 		using Sender = function<void(sf::Packet& p, ClientFilterPredicate fp)>;
 		using EntityResolver = function<Entity*(ID entID)>;
@@ -70,36 +70,32 @@ class Updater: public Observer<EntityEvent>
 
 ////////////////////////////////////////////////////////////
 
-class ServerApplication: private Observer<EntityEvent>
+class Game: public Observabler<EntityEvent>
 {
 	public:
-		ServerApplication(IrrlichtDevice* irrDev);
-		bool listen(short port);
-		void run();
-		~ServerApplication();
+		Game(const WorldMap& map);
+		~Game();
+
+		void update(float timeDelta);
+		void onMessage(const EntityEvent& m);
+		ID addCharacter();
+		void removeCharacter(ID entityID);
+		Entity* getWorldEntity(ID eID);
+		void handlePlayerCommand(Command& c, ID entity);
 
 	private:
-		virtual void onMsg(const EntityEvent& m) override;
-		void acceptClient();
-		void onClientConnect(unique_ptr<sf::TcpSocket>&& s);
-		void onClientDisconnect(ID sessionID);
-		void send(sf::Packet& p, Updater::ClientFilterPredicate fp);
-		void gameModeRegisterAPIMethods();
-		void gameModeOnClientConnect(ID sessionID);
-		void onClientAuthorized(ID sessionID);
-		void gameModeOnClientDisconnect(ID sessionID);
-		void gameModeOnEntityEvent(const EntityEvent& e);
-		void sendMapTo(Session& client);
+		void loadMap();
 
-		sf::TcpListener _listener;
-		SolidVector<Session,ID,NULLID> _sessions;
-		IrrlichtDevice* _irrDevice;
-		WorldMap _map;
+		void gameModeRegisterAPIMethods();
+		void gameModeOnEntityEvent(const EntityEvent& e);
+		void gameModeOnPlayerJoined(ID character);
+		void gameModeOnPlayerLeft(ID character);
+
+		const WorldMap& _map;
 		World _gameWorld;
 		Physics _physics;
 		SpellSystem _spells;
 		InputSystem _input;
-		Updater _updater;
 		lua_State* _LuaStateGameMode;
 		std::queue<EntityEvent> _eventQueue;
 
@@ -111,6 +107,34 @@ class ServerApplication: private Observer<EntityEvent>
 				void onMsg(const EntityEvent& e) final;
 		};
 		GameModeEntityEventObserver _gameModeEntityEventObserver;
+};
+
+////////////////////////////////////////////////////////////
+
+class ServerApplication
+{
+	public:
+		ServerApplication(IrrlichtDevice* irrDev);
+		bool listen(short port);
+		void run();
+		~ServerApplication();
+
+	private:
+		void acceptClient();
+		void onClientConnect(unique_ptr<sf::TcpSocket>&& s);
+		void onClientDisconnect(ID sessionID);
+		void send(sf::Packet& p, Updater::ClientFilterPredicate fp);
+		void onClientAuthorized(ID sessionID);
+		void sendMapTo(Session& client);
+
+		sf::TcpListener _listener;
+		SolidVector<Session,ID,NULLID> _sessions;
+		IrrlichtDevice* _irrDevice;
+
+		WorldMap _map;
+		Game _game;
+
+		Updater _updater;
 };
 
 #endif /* SERVER_HPP_16_11_26_09_22_02 */
