@@ -6,13 +6,15 @@
 #include <world.hpp>
 #include <system.hpp>
 #include "keyValueStore.hpp"
+#include "observableKeyValueStore.hpp"
+#include "network.hpp"
 #include <queue>
 
 #ifndef SERVER_HPP_16_11_26_09_22_02
 #define SERVER_HPP_16_11_26_09_22_02 
 
 // receives and processes data
-class Session: KeyValueStore
+class Session: ObservableKeyValueStore<PacketType,PacketType::RegistryUpdate>, public Observer<KeyValueStoreChange<PacketType>>
 {
 	public:
 		using CommandHandler = std::function<void(Command& c, ID charID)>;
@@ -28,8 +30,10 @@ class Session: KeyValueStore
 		void setOnAuthorized(OnAuthorized cb);
 		template <typename T>
 		void setValue(std::string key, T value);
+		virtual void onMsg(const MessageT& m) final;
 
 	private:
+		using Store = ObservableKeyValueStore<PacketType,PacketType::RegistryUpdate>;
 		unique_ptr<sf::TcpSocket> _socket;
 		CommandHandler _commandHandler;
 		void handlePacket(sf::Packet& p);
@@ -37,7 +41,6 @@ class Session: KeyValueStore
 		bool _authorized;
 		OnAuthorized _onAuthorized;
 
-		void updateClientSharedRegistry();
 		void addPair(std::string key, float value);
 		void disconnectUnauthorized(std::string reason = "Unauthorized.");
 };

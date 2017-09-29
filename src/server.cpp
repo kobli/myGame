@@ -1,11 +1,11 @@
 #include <server.hpp>
-#include <network.hpp>
 #include <cassert>
 #include <serdes.hpp>
 
 Session::Session(unique_ptr<sf::TcpSocket>&& socket, CommandHandler h)
 	: _socket{std::move(socket)}, _commandHandler{h}, _closed{false}, _authorized{false}
 {
+	this->addObserver(*this);
 	addPair("controlled_object_id", NULLID);
 }
 
@@ -110,24 +110,22 @@ void Session::setOnAuthorized(OnAuthorized cb)
 	_onAuthorized = cb;
 }
 
-void Session::updateClientSharedRegistry()
-{
-	sf::Packet p;
-	p << PacketType::RegistryUpdate << Serializer<sf::Packet>(*static_cast<KeyValueStore*>(this));
-	send(p);
-}
-
 void Session::addPair(std::string key, float value)
 {
-	KeyValueStore::addPair(key, value);
-	updateClientSharedRegistry();
+	Store::addPair(key, value);
 }
 
 template <typename T>
 void Session::setValue(std::string key, T value)
 {
-	KeyValueStore::setValue<T>(key, value);
-	updateClientSharedRegistry();
+	Store::setValue(key, value);
+}
+
+void Session::onMsg(const MessageT& m)
+{
+	sf::Packet p;
+	p << m.typeID << Serializer<sf::Packet>(*static_cast<KeyValueStore*>(this));
+	send(p);
 }
 
 void Session::disconnectUnauthorized(std::string reason)

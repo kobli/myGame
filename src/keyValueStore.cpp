@@ -1,7 +1,15 @@
 #include "keyValueStore.hpp"
 
-template <>
-void KeyValueStore::addPair<std::string>(std::string key, std::string value)
+KeyValueStore::~KeyValueStore()
+{}
+
+void KeyValueStore::addPair(std::string key, float value)
+{
+	assert(_store.count(key) == 0);
+	_store[key] = static_cast<float>(value);
+}
+
+void KeyValueStore::addPair(std::string key, std::string value)
 {
 	assert(_strStore.count(key) == 0);
 	_strStore[key] = value;
@@ -19,8 +27,12 @@ std::string KeyValueStore::getValue<std::string>(std::string key) const
 	return _strStore.find(key)->second;
 }
 
-template <>
-void KeyValueStore::setValue<std::string>(std::string key, std::string value)
+void KeyValueStore::setValue(std::string key, float value)
+{
+	_store[key] = static_cast<float>(value);
+}
+
+void KeyValueStore::setValue(std::string key, std::string value)
 {
 	_strStore[key] = value;
 }
