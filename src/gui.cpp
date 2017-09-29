@@ -25,7 +25,6 @@ GUI::GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedR
 	_healthBar->setColors(video::SColor(155, 255,255,255), video::SColor(200, 255,0,0));
 	_healthBar->setLabel(L"HP:");
 	_healthBar->setValueDisplayMode(irr::gui::ProgressBar::ValueDisplayMode::Abs);
-	_healthBar->drop();
 
 	int castIndLen = 200;
 	_castingIndicator = new gui::ProgressBar(env, core::rect<s32>(0, 0, castIndLen, 20), env->getRootGUIElement());
@@ -85,6 +84,11 @@ GUI::GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedR
 	};
 
 	new irr::gui::CrossHair(env, "./media/crosshair.png", 5, env->getRootGUIElement());
+}
+
+GUI::~GUI()
+{
+	_device->getGUIEnvironment()->clear();
 }
 
 void GUI::update(float timeDelta)

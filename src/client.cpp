@@ -215,6 +215,7 @@ void ClientApplication::startGame()
 	_gameWorld->addObserver(*_physics);
 	_gameWorld->addObserver(*_vs);
 	loadTerrain();
+	_gui.reset();
 	_gui.reset(new GUI(_device.get(), *_gameWorld.get(), _sharedRegistry, _gameRegistry));
 	_gameWorld->addObserver(*_gui);
 }

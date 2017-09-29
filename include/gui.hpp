@@ -111,6 +111,7 @@ class GUI: public Observer<EntityEvent>
 {
 	public:
 		GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedRegistry, const KeyValueStore& gameRegistry);
+		~GUI();
 		void update(float timeDelta);
 
 	private:
