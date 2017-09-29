@@ -490,7 +490,9 @@ float AttributeStoreComponent::getAttributeAffected(std::string key)
 
 std::vector<AttributeAffector> AttributeStoreComponent::getAttributeAffectorHistory()
 {
-	return _attributeAffectorHistory.data();
+	auto h = _attributeAffectorHistory.data();
+	std::reverse(h.begin(), h.end());
+	return h;
 }
 
 void AttributeStoreComponent::serDes(SerDesBase& s)
