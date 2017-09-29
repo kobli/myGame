@@ -29,7 +29,7 @@ GUI::GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedR
 	int castIndLen = 200;
 	_castingIndicator = new gui::ProgressBar(env, core::rect<s32>(0, 0, castIndLen, 20), env->getRootGUIElement());
 	_castingIndicator->setRelativePosition(vec2i((screenSize.Width-castIndLen)/2, screenSize.Height-165));
-	_castingIndicator->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT);
+	_castingIndicator->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT, gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT);
 	_castingIndicator->setColors(video::SColor(155, 255,255,255), video::SColor(255, 255,140,70));
 	_castingIndicator->setLabel(L"Casting ...");
 
@@ -55,7 +55,7 @@ GUI::GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedR
 	_spellInHandsInfo = new GUIPanelFlowHorizontal(env, env->getRootGUIElement(), -1, core::rect<s32>(0, 0, spellAttributesInfoPanelWidth+400, spellAttributesInfo->getAbsolutePosition().getHeight()));
 	_spellInHandsInfo->addChild(spellAttributesInfo);
 	_spellInHandsInfo->setRelativePosition(vec2i((screenSize.Width-spellAttributesInfoPanelWidth)/2., screenSize.Height-100));
-	_spellInHandsInfo->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT);
+	_spellInHandsInfo->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT, gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT);
 
 	_spellEffectsInfo = new GUIPanelFlowHorizontal(env, env->getRootGUIElement(), -1, core::rect<s32>(0, 0, 200, spellAttributeProgBarHeight*3));
 	_spellInHandsInfo->addChild(_spellEffectsInfo);
