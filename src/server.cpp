@@ -142,7 +142,7 @@ void Session::disconnectUnauthorized(std::string reason)
 
 ////////////////////////////////////////////////////////////
 
-Updater::Updater(Sender s, EntityResolver getEntity): _send{s}, _getEntity{getEntity}
+Updater::Updater(Sender s, EntityResolver getEntity): _send{s}, _getEntity{getEntity}, _timeSinceLastUpdateSent{0}
 {}
 
 void Updater::tick(float delta)
