@@ -23,8 +23,12 @@ bool KeyValueStore::hasKey(std::string key) const
 template <>
 std::string KeyValueStore::getValue<std::string>(std::string key) const
 {
-	assert(_strStore.count(key) == 1);
-	return _strStore.find(key)->second;
+	if(_strStore.count(key) == 1)
+		return _strStore.find(key)->second;
+	else if(_store.count(key) == 1)
+		return std::to_string(_store.find(key)->second);
+	else
+		assert(false);
 }
 
 void KeyValueStore::setValue(std::string key, float value)

@@ -85,6 +85,8 @@ class Game: public Observabler<EntityEvent>
 		void removeCharacter(ID entityID);
 		Entity* getWorldEntity(ID eID);
 		void handlePlayerCommand(Command& c, ID entity);
+		using Store = ObservableKeyValueStore<PacketType,PacketType::GameRegistryUpdate>;
+		Store& getRegistry();
 
 	private:
 		void loadMap();
@@ -93,6 +95,7 @@ class Game: public Observabler<EntityEvent>
 		void gameModeOnEntityEvent(const EntityEvent& e);
 		void gameModeOnPlayerJoined(ID character);
 		void gameModeOnPlayerLeft(ID character);
+		void gameModeOnGameStart();
 
 		const WorldMap& _map;
 		World _gameWorld;
@@ -101,6 +104,7 @@ class Game: public Observabler<EntityEvent>
 		InputSystem _input;
 		lua_State* _LuaStateGameMode;
 		std::queue<EntityEvent> _eventQueue;
+		Store _registry;
 
 		class GameModeEntityEventObserver: public Observer<EntityEvent> {
 			typedef std::function<void(const EntityEvent& e)> EntityEventCallback;

@@ -7,6 +7,7 @@ xPos,yPos,zPos getEntityPosition(objectID)
 [author,attributeName,modifierType,modifierValue,permanent] getAttributeModifierHistory(entityID)
 void removeBodyComponent(entityID)
 void addBodyComponent(entityID, posX, posY, posZ)
+void setGameRegValue(key, value)
 
 the gm_info_template string can contain | to separate logical parts and <key> to substite the value of the key
 --]]
@@ -15,8 +16,9 @@ Config = {}
 Config.mapKillCount = 15
 -------------------- Cpp interface --------------------
 
---TODO on gameStart
---setSharedRegValue(sessionID, "gm_info_template", string.format(" Deathmatch | <killCount> / %i ", Config.mapKillCount))
+function onGameStart()
+	setGameRegValue("gm_info_template", string.format(" Deathmatch | <killCount> / %i ", Config.mapKillCount))
+end
 
 function onPlayerJoined(charID)
 	setEntityAttributeValue(charID, "max-health", 50)

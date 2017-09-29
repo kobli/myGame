@@ -215,7 +215,7 @@ void ClientApplication::startGame()
 	_gameWorld->addObserver(*_physics);
 	_gameWorld->addObserver(*_vs);
 	loadTerrain();
-	_gui.reset(new GUI(_device.get(), *_gameWorld.get(), _sharedRegistry));
+	_gui.reset(new GUI(_device.get(), *_gameWorld.get(), _sharedRegistry, _gameRegistry));
 	_gameWorld->addObserver(*_gui);
 }
 
@@ -354,6 +354,12 @@ void ClientApplication::handlePacket(sf::Packet& p)
 			{
 					p >> Deserializer<sf::Packet>(_sharedRegistry);
 					cout << "shared reg update: " << Serializer<ostream>(_sharedRegistry) << endl;
+				break;
+			}
+		case PacketType::GameRegistryUpdate:
+			{
+					p >> Deserializer<sf::Packet>(_gameRegistry);
+					cout << "game reg update: " << Serializer<ostream>(_gameRegistry) << endl;
 				break;
 			}
 		case PacketType::GameInit:

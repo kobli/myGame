@@ -124,7 +124,7 @@ void Session::setValue(std::string key, T value)
 void Session::onMsg(const MessageT& m)
 {
 	sf::Packet p;
-	p << m.typeID << Serializer<sf::Packet>(*static_cast<KeyValueStore*>(this));
+	p << m.typeID << Serializer<sf::Packet>(*static_cast<KeyValueStore*>(m.store));
 	send(p);
 }
 
@@ -200,6 +200,7 @@ Game::Game(const WorldMap& map): _map{map}, _gameWorld{_map}, _physics{_gameWorl
 		printf("%s\n", lua_tostring(_LuaStateGameMode, -1));
 
 	loadMap();
+	gameModeOnGameStart();
 }
 
 Game::~Game()
@@ -467,6 +468,35 @@ void Game::gameModeRegisterAPIMethods()
 	lua_pushlightuserdata(L, this);
 	lua_pushcclosure(L, callAddBodyComponent, 1);
 	lua_setglobal(L, "addBodyComponent");
+
+	auto callSetGameRegValue = [](lua_State* s)->int {
+		int argc = lua_gettop(s);
+		if(argc != 2)
+		{
+			std::cerr << "callSetGameRegValue: wrong number of arguments\n";
+			return 0;		
+		}
+		Game* g = (Game*)lua_touserdata(s, lua_upvalueindex(1));
+		std::string key = lua_tostring(s, 1);
+		if(lua_isstring(s, 2)) {
+			std::string value = lua_tostring(s, 2);
+			g->_registry.setValue(key, value);
+		}
+		else if(lua_isnumber(s, 2) || lua_isinteger(s, 2)) {
+			float value;
+			if(lua_isnumber(s, 2))
+				value = lua_tonumber(s, 2);
+			else
+				value = lua_tointeger(s, 2);
+			g->_registry.setValue(key, value);
+		}
+		else
+			assert(false);
+		return 0;
+	};
+	lua_pushlightuserdata(L, this);
+	lua_pushcclosure(L, callSetGameRegValue, 1);
+	lua_setglobal(L, "setGameRegValue");
 }
 
 void Game::gameModeOnPlayerJoined(ID character)
@@ -491,6 +521,15 @@ void Game::gameModeOnPlayerLeft(ID character)
 	}
 }
 
+void Game::gameModeOnGameStart()
+{
+	lua_State* L = _LuaStateGameMode;
+	lua_getglobal(L, "onGameStart");
+	if(lua_pcall(L, 0, 0, 0) != 0) {
+		cerr << "something went wrong with onGameStart: " << lua_tostring(L, -1) << endl;
+	}
+}
+
 ID Game::addCharacter()
 {
 	ID character = _gameWorld.createCharacter(vec3f(0));
@@ -511,6 +550,11 @@ Entity* Game::getWorldEntity(ID eID)
 void Game::handlePlayerCommand(Command& c, ID entity)
 {
 	_input.handleCommand(c, entity);
+}
+
+Game::Store& Game::getRegistry()
+{
+	return _registry;
 }
 
 void Game::gameModeOnEntityEvent(const EntityEvent& e)
@@ -616,6 +660,7 @@ void ServerApplication::onClientConnect(std::unique_ptr<sf::TcpSocket>&& sock)
 void ServerApplication::onClientAuthorized(ID sessionID)
 {
 	Session& s = _sessions[sessionID];
+	_game.getRegistry().addObserver(s);
 	sendMapTo(s);
 	_game.sendHelloMsgTo(_updater); // TODO send updates only to newly connected client
 	s.setControlledObjID(_game.addCharacter());

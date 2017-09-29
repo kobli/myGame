@@ -48,6 +48,7 @@ class ClientApplication
 		Animator _animator;
 		scene::ICameraSceneNode* _camera;
 		KeyValueStore _sharedRegistry;
+		KeyValueStore _gameRegistry;
 		float _cameraElevation;
 		float _cameraYAngle;
 		TimedFilter<float> _yAngleSetCommandFilter;

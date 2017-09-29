@@ -110,13 +110,14 @@ class GUIPanelFlowVertical: public GUIPanel
 class GUI: public Observer<EntityEvent>
 {
 	public:
-		GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedRegistry);
+		GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedRegistry, const KeyValueStore& gameRegistry);
 		void update(float timeDelta);
 
 	private:
 		irr::IrrlichtDevice* _device;
 		World& _gameWorld;
 		const KeyValueStore& _sharedRegistry;
+		const KeyValueStore& _gameRegistry;
 
 		typedef std::function<void(const wchar_t* l)> TextSetter;
 		std::map<std::string, TextSetter> _textSetters;

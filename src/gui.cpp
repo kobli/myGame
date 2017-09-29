@@ -6,7 +6,8 @@
 
 using namespace irr::gui;
 
-GUI::GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedRegistry): _device{device}, _gameWorld{world}, _sharedRegistry{sharedRegistry}
+GUI::GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedRegistry, const KeyValueStore& gameRegistry)
+	: _device{device}, _gameWorld{world}, _sharedRegistry{sharedRegistry}, _gameRegistry{gameRegistry}
 {
 	_device->getCursorControl()->setVisible(false);
 
@@ -95,10 +96,10 @@ void GUI::update(float timeDelta)
 void GUI::updateGameModeInfo()
 {
 	clearGUIElement(_gameModeInfo);
-	if(!_sharedRegistry.hasKey("gm_info_template"))
+	if(!_gameRegistry.hasKey("gm_info_template"))
 		return;
 	auto env = _device->getGUIEnvironment();
-	std::string gmInfo = fillGamemodeInfoStr(_sharedRegistry.getValue<std::string>("gm_info_template"));
+	std::string gmInfo = fillGamemodeInfoStr(_gameRegistry.getValue<std::string>("gm_info_template"));
 	std::istringstream iss(gmInfo);
 	std::string part;
 	int c = 0;
@@ -219,6 +220,8 @@ std::string GUI::fillGamemodeInfoStr(std::string s)
 				else 
 					r += std::to_string(v);
 			}
+			else if(_gameRegistry.hasKey(tagWithoutBrackets))
+				r += _gameRegistry.getValue<std::string>(tagWithoutBrackets);
 			else
 				r += m;
 		}
