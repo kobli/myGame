@@ -8,12 +8,13 @@ xPos,yPos,zPos getEntityPosition(objectID)
 void removeBodyComponent(entityID)
 void addBodyComponent(entityID, posX, posY, posZ)
 void setGameRegValue(key, value)
+void endRound()
 
 the gm_info_template string can contain | to separate logical parts and <key> to substite the value of the key
 --]]
 
 Config = {}
-Config.mapKillCount = 15
+Config.mapKillCount = 2
 -------------------- Cpp interface --------------------
 
 function onGameStart()
@@ -94,7 +95,7 @@ function giveScoreForKilling(entityID)
 		local killC = getEntityAttributeValue(killer, "killCount") + 1
 		setEntityAttributeValue(killer, "killCount", killC)
 		if killC == Config.mapKillCount then
-			--endRound()
+			endRound()
 		end
 	end
 end

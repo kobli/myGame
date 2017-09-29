@@ -79,7 +79,7 @@ class Game: public Observabler<EntityEvent>
 		Game(const WorldMap& map);
 		~Game();
 
-		void update(float timeDelta);
+		bool run(float timeDelta);
 		void onMessage(const EntityEvent& m);
 		ID addCharacter();
 		void removeCharacter(ID entityID);
@@ -114,6 +114,7 @@ class Game: public Observabler<EntityEvent>
 				void onMsg(const EntityEvent& e) final;
 		};
 		GameModeEntityEventObserver _gameModeEntityEventObserver;
+		bool _ended;
 };
 
 ////////////////////////////////////////////////////////////
@@ -133,13 +134,15 @@ class ServerApplication
 		void send(sf::Packet& p, Updater::ClientFilterPredicate fp);
 		void onClientAuthorized(ID sessionID);
 		void sendMapTo(Session& client);
+		void joinGame(Session& s);
+		void newGame();
 
 		sf::TcpListener _listener;
 		SolidVector<Session,ID,NULLID> _sessions;
 		IrrlichtDevice* _irrDevice;
 
 		WorldMap _map;
-		Game _game;
+		std::unique_ptr<Game> _game;
 
 		Updater _updater;
 };

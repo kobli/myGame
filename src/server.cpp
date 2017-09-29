@@ -188,7 +188,7 @@ void Updater::sendEvent(const EntityEvent& e)
 ////////////////////////////////////////////////////////////
 
 Game::Game(const WorldMap& map): _map{map}, _gameWorld{_map}, _physics{_gameWorld}, _spells{_gameWorld}, _input{_gameWorld, _spells}, _LuaStateGameMode{nullptr},
-	_gameModeEntityEventObserver{[this](const EntityEvent& e){ this->gameModeOnEntityEvent(e); }}
+	_gameModeEntityEventObserver{[this](const EntityEvent& e){ this->gameModeOnEntityEvent(e); }}, _ended{false}
 {
 	_gameWorld.addObserver(*this);
 	_physics.registerCollisionCallback(std::bind(&SpellSystem::collisionCallback, std::ref(_spells), placeholders::_1, placeholders::_2));
@@ -208,7 +208,7 @@ Game::~Game()
 	lua_close(_LuaStateGameMode);
 }
 
-void Game::update(float timeDelta)
+bool Game::run(float timeDelta)
 {
 	while(!_eventQueue.empty()) {
 		EntityEvent e = _eventQueue.front();
@@ -220,6 +220,8 @@ void Game::update(float timeDelta)
 
 	_physics.update(timeDelta);
 	_spells.update(timeDelta);
+
+	return !_ended;
 }
 
 void Game::onMessage(const EntityEvent& m)
@@ -497,6 +499,21 @@ void Game::gameModeRegisterAPIMethods()
 	lua_pushlightuserdata(L, this);
 	lua_pushcclosure(L, callSetGameRegValue, 1);
 	lua_setglobal(L, "setGameRegValue");
+
+	auto callEndRound = [](lua_State* s)->int {
+		int argc = lua_gettop(s);
+		if(argc != 0)
+		{
+			std::cerr << "callEndRound: wrong number of arguments\n";
+			return 0;		
+		}
+		Game* g = (Game*)lua_touserdata(s, lua_upvalueindex(1));
+		g->_ended = true;
+		return 0;
+	};
+	lua_pushlightuserdata(L, this);
+	lua_pushcclosure(L, callEndRound, 1);
+	lua_setglobal(L, "endRound");
 }
 
 void Game::gameModeOnPlayerJoined(ID character)
@@ -590,12 +607,12 @@ ServerApplication::ServerApplication(IrrlichtDevice* irrDev)
 	std::random_device()()
 #endif
 	}
-	, _game{_map}, 
+	,
 	_updater(std::bind(&ServerApplication::send, ref(*this), placeholders::_1, placeholders::_2),
 			std::bind(&Game::getWorldEntity, ref(_game), placeholders::_1))
 {
 	_listener.setBlocking(false);
-	_game.addObserver(_updater);
+	newGame();
 }
 
 bool ServerApplication::listen(short port)
@@ -621,7 +638,9 @@ void ServerApplication::run()
 
 		float timeDelta = c.restart().asSeconds();
 
-		_game.update(timeDelta);
+		if(_game)
+			if(!_game->run(timeDelta))
+				newGame();
 		_updater.tick(timeDelta);
 
 		sf::sleep(sf::milliseconds(50));
@@ -651,26 +670,35 @@ void ServerApplication::onClientConnect(std::unique_ptr<sf::TcpSocket>&& sock)
 {
 	cout << "Client connected from " << sock->getRemoteAddress() << endl;
 	auto sID = _sessions.emplace(std::move(sock));
-	_sessions[sID].setCommandHandler([this](Command& c, ID objID){
-			_game.handlePlayerCommand(c, objID);
-			});
 	_sessions[sID].setOnAuthorized([this, sID](){ onClientAuthorized(sID); });
 }
 
 void ServerApplication::onClientAuthorized(ID sessionID)
 {
 	Session& s = _sessions[sessionID];
-	_game.getRegistry().addObserver(s);
-	sendMapTo(s);
-	_game.sendHelloMsgTo(_updater); // TODO send updates only to newly connected client
-	s.setControlledObjID(_game.addCharacter());
+	joinGame(s);
+}
+
+void ServerApplication::joinGame(Session& s)
+{
+	if(_game)
+	{
+		s.setCommandHandler([this](Command& c, ID objID){
+				_game->handlePlayerCommand(c, objID);
+				});
+		_game->getRegistry().addObserver(s);
+		sendMapTo(s);
+		_game->sendHelloMsgTo(_updater); // TODO send updates only to newly connected client
+		s.setControlledObjID(_game->addCharacter());
+	}
 }
 
 void ServerApplication::onClientDisconnect(ID sessionID)
 {
 	Session& s = _sessions[sessionID];
 	cout << "Client disconnected: " << s.getSocket().getRemoteAddress() << endl;
-	_game.removeCharacter(s.getControlledObjID());
+	if(_game)
+		_game->removeCharacter(s.getControlledObjID());
 	_sessions.remove(sessionID);
 }
 
@@ -684,4 +712,12 @@ void ServerApplication::sendMapTo(Session& client)
 	sf::Packet p;
 	p << PacketType::GameInit << Serializer<sf::Packet>(_map);
 	client.send(p);
+}
+
+void ServerApplication::newGame()
+{
+	_game.reset(new Game(_map));
+	_game->addObserver(_updater);
+	for(Session& s : _sessions)
+		joinGame(s);
 }
