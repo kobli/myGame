@@ -557,6 +557,7 @@ ID Game::addCharacter()
 void Game::removeCharacter(ID entityID)
 {
 	gameModeOnPlayerLeft(entityID);
+	_gameWorld.removeEntity(entityID);
 }
 
 Entity* Game::getWorldEntity(ID eID)
