@@ -135,6 +135,17 @@ bool ClientApplication::connect(string host, unsigned short port)
 	return r == sf::Socket::Done;
 }
 
+vec3f interpolate(vec3f current, vec3f target, float timeDelta, float maxSpeed, float maxDistance)
+{
+	float distance = current.getDistanceFrom(target);
+	if(distance > maxDistance)
+		return target;
+	else {
+		float d = std::min(distance, (distance/maxDistance)*maxSpeed*timeDelta);
+		return current + (target-current).normalize()*d;
+	}
+}
+
 void ClientApplication::run()
 {
 	int lastFPS = -1;
@@ -143,6 +154,7 @@ void ClientApplication::run()
 	sf::Clock c;
 	while(_device->run())
 	{
+		float timeDelta = c.restart().asSeconds();
 		if(_camera->isInputReceiverEnabled() && !_controller.isCameraFree())
 			bindCameraToControlledEntity();
 		if(!_camera->isInputReceiverEnabled()) {
@@ -152,7 +164,13 @@ void ClientApplication::run()
 			if(_sharedRegistry.hasKey("controlled_object_id")) {
 				auto controlledCharSceneNode = _device->getSceneManager()->getSceneNodeFromId(_sharedRegistry.getValue<ID>("controlled_object_id"));
 				if(controlledCharSceneNode)
-					_camera->setPosition(controlledCharSceneNode->getPosition() + vec3f(0,1.6,0) + 0.23f*(cameraLookDir*vec3f(1,0,1)).normalize());
+					_camera->setPosition(interpolate(
+								_camera->getPosition(),
+								controlledCharSceneNode->getPosition() + vec3f(0,1.6,0) + 0.23f*(cameraLookDir*vec3f(1,0,1)).normalize(),
+								timeDelta,
+								10,
+								1
+								));
 			}
 		}
 
@@ -166,7 +184,6 @@ void ClientApplication::run()
 			f32 ar = (float)driver->getScreenSize().Width/(float)driver->getScreenSize().Height;
 			if(ar != _camera->getAspectRatio() && _camera)
 				_camera->setAspectRatio(ar);
-			float timeDelta = c.restart().asSeconds();
 			//std::cout << "number of scene nodes: " << _device->getSceneManager()->getRootSceneNode()->getChildren().size() << std::endl;
 				
 			if(_yAngleSetCommandFilter.tick(timeDelta) && _yAngleSetCommandFilter.objUpdated()) {
