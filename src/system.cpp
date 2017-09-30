@@ -827,6 +827,30 @@ void SpellSystem::init()
 	lua_pushlightuserdata(_luaState, &_world);
 	lua_pushcclosure(_luaState, updateWizardStatus, 1);
 	lua_setglobal(_luaState, "updateWizardStatus");
+
+	auto entityInGround = [](lua_State* s)->int {
+		int argc = lua_gettop(s);
+		if(argc != 1)
+		{
+			std::cerr << "entityInGround: wrong number of arguments\n";
+			return 0;		
+		}
+		ID eID = lua_tointeger(s, 1);
+		World* world = (World*)lua_touserdata(s, lua_upvalueindex(1));
+		Entity* e = world->getEntity(eID);
+		bool r = false;
+		if(e != nullptr) {
+			BodyComponent* bc = e->getComponent<BodyComponent>();
+			if(bc != nullptr) {
+				r = world->getMap().isInGround(bc->getPosition());
+			}
+		}
+		lua_pushboolean(s, r);
+		return 1;
+	};
+	lua_pushlightuserdata(_luaState, &_world);
+	lua_pushcclosure(_luaState, entityInGround, 1);
+	lua_setglobal(_luaState, "entityInGround");
 }
 
 void SpellSystem::deinit()

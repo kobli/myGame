@@ -33,6 +33,12 @@ unsigned Terrain::getSeed()
 	return _seed;
 }
 
+
+bool Terrain::contains(float x, float y) const
+{
+	return _heightMap.contains(x,y);
+}
+
 bool Terrain::dumpHeightmapToImage(std::string fileName)
 {
 	float min, max;

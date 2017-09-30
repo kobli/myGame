@@ -11,6 +11,7 @@ class Terrain {
 	vec2u size() const;
 	float heightAt(float x, float y) const;
 	vec3f normalAt(float x, float y) const;
+	bool contains(float x, float y) const;
 	void setSeed(unsigned seed);
 	unsigned getSeed();
 
@@ -50,11 +51,15 @@ class Terrain {
 
 			void set(unsigned x, unsigned y, float z) { data[y * _size.X + x] = z; }
 			void set(unsigned i, float z) { data[i] = z; }
+			bool contains(float x, float y) const {
+				return
+					x >= 0 &&
+					y >= 0 &&
+					x < _size.X &&
+					y < _size.Y;
+			}
 			float get(unsigned x, unsigned y) const {
-				assert(x >= 0);
-				assert(y >= 0);
-				assert(x < _size.X);
-				assert(y < _size.Y);
+				assert(contains(x,y));
 				return data[y * _size.X + x];
 		 	}
 			float get(float x, float y) const

@@ -317,7 +317,9 @@ function Spell:update(delta)
 	for k,v in pairs(List.asTable(self.collisionsInLastTick)) do
 		local collidedWithEntType = entityIdToTypeName(v)
 		if collidedWithEntType == "map" then
-			setEntityVelocity(self.ID, 0, 0, 0)
+			if entityInGround(self.ID) then
+				setEntityVelocity(self.ID, 0, 0, 0)
+			end
 		end
 		if self:shouldDieOnCollisionWith(collidedWithEntType) then
 			self:die()
