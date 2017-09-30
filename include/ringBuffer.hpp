@@ -13,10 +13,12 @@ class RingBuffer {
 		void push_back(T& t) {
 			if(size() < _capacity)
 				_store.push_back(t);
-			else
-				_store[firstFree()] = t;
-			if(firstFree() == _first)
-				advance(_first);
+			else {
+				unsigned writeI = firstFree();
+				_store[writeI] = t;
+				if(writeI == _first)
+					advance(_first);
+			}
 		}
 
 		T pop_first() {
