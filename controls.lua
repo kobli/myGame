@@ -8,6 +8,7 @@ controls = {
 	[KEY_A] = "LEFT",
 	[KEY_D] = "RIGHT",
 
+	[ESCAPE] = "spell_abort_now",
 	[LBUTTON] = "LAUNCH_SPELL_DIRECT",
 	[KEY_F] = "CAST Big fireball",
 	[KEY_G] = "CAST Fast fireball",

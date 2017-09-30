@@ -9,6 +9,7 @@ void removeBodyComponent(entityID)
 void addBodyComponent(entityID, posX, posY, posZ)
 void setGameRegValue(key, value)
 void endRound()
+void commandCharacter(entityID, commandStr)
 
 the gm_info_template string can contain | to separate logical parts and <key> to substite the value of the key
 --]]
@@ -72,6 +73,8 @@ function characterDie(entityID)
 end
 
 function onCharacterDeath(entityID)
+	commandCharacter(entityID, "spell_cancel_now")
+	commandCharacter(entityID, "spell_abort_now")
 	giveScoreForKilling(entityID)
 end
 

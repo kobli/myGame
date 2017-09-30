@@ -86,7 +86,7 @@ end
 function Wizard:handleIncantation(inc)
 	dout(LF,"======= Spell system <handleIncantation> called =======",inc)
 	dout("Wizard ID: "..self.ID)
-	if(string.match(inc, "[^%s]+_now%s.+") ~= nil) then
+	if(string.match(inc, "[^%s]+_now%s*.*") ~= nil) then
 		-- execute the _now commands immediately
 		dout("exec now")
 		self:resetInvocation()
@@ -144,14 +144,15 @@ function Wizard:getCommandQueueAsEffectIDs()
 		elseif string.find(c, "spell_body") then
 			commandProductID = 0
 		end
-		assert(commandProductID ~= nil)
-		table.insert(r, commandProductID)
+		if commandProductID ~= nil then
+			table.insert(r, commandProductID)
+		end
 	end
 	return r
 end
 
 function incantationToCommandAndArgs(inc)
-	return string.match(inc, "(spell_[^%s]+)%s+(.*)")
+	return string.match(inc, "(spell_[^%s]+)%s*(.*)")
 end
 
 function Wizard:execIncantation(inc)

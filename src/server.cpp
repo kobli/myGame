@@ -514,6 +514,26 @@ void Game::gameModeRegisterAPIMethods()
 	lua_pushlightuserdata(L, this);
 	lua_pushcclosure(L, callEndRound, 1);
 	lua_setglobal(L, "endRound");
+
+	auto callHandlePlayerCommand = [](lua_State* s)->int {
+		int argc = lua_gettop(s);
+		if(argc != 2)
+		{
+			std::cerr << "callHandlePlayerCommand: wrong number of arguments\n";
+			return 0;		
+		}
+		Game* g = (Game*)lua_touserdata(s, lua_upvalueindex(1));
+		ID entityID = lua_tonumber(s, 1);
+		std::string command = lua_tostring(s, 2);
+		Command c;
+		c._type = Command::Type::STR;
+		c._str = command;
+		g->handlePlayerCommand(c, entityID);
+		return 0;
+	};
+	lua_pushlightuserdata(L, this);
+	lua_pushcclosure(L, callHandlePlayerCommand, 1);
+	lua_setglobal(L, "commandCharacter");
 }
 
 void Game::gameModeOnPlayerJoined(ID character)

@@ -135,6 +135,12 @@ bool Controller::OnEvent(const SEvent& event)
 			}
 		}
 	}
+	else {
+		Command command(Command::Type::STR);
+		command._str = c;
+		_commandHandler(command);
+	}
+
 
 	if (event.EventType == irr::EET_MOUSE_INPUT_EVENT)
 	{
