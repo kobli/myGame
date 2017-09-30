@@ -621,14 +621,7 @@ Game::GameModeEntityEventObserver::GameModeEntityEventObserver(EntityEventCallba
 ////////////////////////////////////////////////////////////
 
 ServerApplication::ServerApplication(IrrlichtDevice* irrDev)
-	: _irrDevice{irrDev}, _map{vec2u(64),
-#ifdef DEBUG_BUILD
-	1
-#else
-	std::random_device()()
-#endif
-	}
-	,
+	: _irrDevice{irrDev},
 	_updater(std::bind(&ServerApplication::send, ref(*this), placeholders::_1, placeholders::_2),
 			std::bind(&Game::getWorldEntity, ref(_game), placeholders::_1))
 {
@@ -737,6 +730,13 @@ void ServerApplication::sendMapTo(Session& client)
 
 void ServerApplication::newGame()
 {
+	_map.generate(vec2u(64),
+#ifdef DEBUG_BUILD
+	1
+#else
+	std::random_device()()
+#endif
+	);
 	_game.reset(new Game(_map));
 	_game->addObserver(_updater);
 	for(Session& s : _sessions)
