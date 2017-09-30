@@ -207,7 +207,7 @@ void ClientApplication::run()
 			int fps = driver->getFPS();
 			if (lastFPS != fps)
 			{
-				core::stringw str = L"Terrain Renderer - Irrlicht Engine [";
+				core::stringw str = L"MyGame [";
 				str += driver->getName();
 				str += "] FPS:";
 				str += fps;
