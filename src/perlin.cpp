@@ -4,7 +4,7 @@
 
 Perlin::Perlin(unsigned gridSizeX, unsigned gridSizeY, unsigned seed):
  	_seed{seed}, _generator{seed}, _gridSizeX{gridSizeX}, _gridSizeY{gridSizeY} {
-		initGradients();
+		setSeed(_seed);
 }
 
 float Perlin::val(float x, float y) {
