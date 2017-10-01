@@ -394,6 +394,13 @@ void ClientApplication::handlePacket(sf::Packet& p)
 				cout << "ServerMessage: " << message << std::endl;
 				break;
 			}
+			case PacketType::GameOver:
+			{
+				sf::Packet p;
+				p << PacketType::JoinGame;
+				sendPacket(p);
+				break;
+			}
 		default:
 			cerr << "Received packet of unknown type.\n";
 	}

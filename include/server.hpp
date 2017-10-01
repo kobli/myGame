@@ -13,66 +13,6 @@
 #ifndef SERVER_HPP_16_11_26_09_22_02
 #define SERVER_HPP_16_11_26_09_22_02 
 
-// receives and processes data
-class Session: ObservableKeyValueStore<PacketType,PacketType::RegistryUpdate>, public Observer<KeyValueStoreChange<PacketType>>
-{
-	public:
-		using CommandHandler = std::function<void(Command& c, ID charID)>;
-		using OnAuthorized = std::function<void(void)>;
-		Session(unique_ptr<sf::TcpSocket>&& socket, CommandHandler commandHandler = [](Command&, ID){});
-		sf::TcpSocket& getSocket();
-		void setCommandHandler(CommandHandler h);
-		ID getControlledObjID();
-		void setControlledObjID(ID objID);
-		bool receive();
-		void send(sf::Packet& p);
-		bool isClosed();
-		void setOnAuthorized(OnAuthorized cb);
-		template <typename T>
-		void setValue(std::string key, T value);
-		virtual void onMsg(const MessageT& m) final;
-
-	private:
-		using Store = ObservableKeyValueStore<PacketType,PacketType::RegistryUpdate>;
-		unique_ptr<sf::TcpSocket> _socket;
-		CommandHandler _commandHandler;
-		void handlePacket(sf::Packet& p);
-		bool _closed;
-		bool _authorized;
-		OnAuthorized _onAuthorized;
-
-		void addPair(std::string key, float value);
-		void disconnectUnauthorized(std::string reason = "Unauthorized.");
-};
-
-////////////////////////////////////////////////////////////
-
-// decides, which clients should be informed about a change in the world
-// -> builds a packet 
-// for example by visibility check, areas, or simply send to all
-//TODO rename
-class Updater: public Observer<EntityEvent>
-{
-	public:
-		using ClientFilterPredicate = function<bool(ID e)>; 
-			// decides, if the client controlling entity "e" should be informed about these WorldChanges
-		using Sender = function<void(sf::Packet& p, ClientFilterPredicate fp)>;
-		using EntityResolver = function<Entity*(ID entID)>;
-		Updater(Sender s, EntityResolver getEntity);
-		void tick(float delta);
-		void onMsg(const EntityEvent& m) final;
-
-	private:
-		Sender _send;
-		EntityResolver _getEntity;
-		std::unordered_set<EntityEvent> _updateEventQueue;
-		float _timeSinceLastUpdateSent;
-
-		void sendEvent(const EntityEvent&);
-};
-
-////////////////////////////////////////////////////////////
-
 class Game: public Observabler<EntityEvent>
 {
 	public:
@@ -87,6 +27,7 @@ class Game: public Observabler<EntityEvent>
 		void handlePlayerCommand(Command& c, ID entity);
 		using Store = ObservableKeyValueStore<PacketType,PacketType::GameRegistryUpdate>;
 		Store& getRegistry();
+		const WorldMap& getMap() const;
 
 	private:
 		void loadMap();
@@ -119,6 +60,84 @@ class Game: public Observabler<EntityEvent>
 
 ////////////////////////////////////////////////////////////
 
+// receives and processes data
+class Session: public Observer<KeyValueStoreChange<PacketType>>
+{
+		using Store = ObservableKeyValueStore<PacketType,PacketType::RegistryUpdate>;
+		using MessageT = Store::MessageT;
+
+	public:
+		using GameJoinRequestHandler = std::function<bool(Session& s)>;
+		Session(unique_ptr<sf::TcpSocket>&& socket, GameJoinRequestHandler h);
+		Session(const Session&) = delete;
+		Session& operator=(const Session&) = delete;
+		Session(Session&&);
+		Session& operator=(Session&&);
+		virtual void swap(Session& other);
+		~Session();
+		sf::TcpSocket& getSocket();
+		bool receive();
+		void send(sf::Packet& p);
+		void send(PacketType t);
+		bool isClosed();
+		template <typename T>
+		void setValue(std::string key, T value);
+		virtual void onMsg(const MessageT& m) final;
+		void joinGame(Game& game);
+		void leaveGame();
+		ID getControlledObjID() const;
+		std::string getRemoteAddress() const;
+
+	private:
+		Session();
+		Game* _game;
+		Store _sharedRegistry;
+		GameJoinRequestHandler _requestGameJoin;
+		unique_ptr<sf::TcpSocket> _socket;
+		void handlePacket(sf::Packet& p);
+		bool _closed;
+		bool _authorized;
+
+		void addPair(std::string key, float value);
+		void disconnectUnauthorized(std::string reason = "Unauthorized.");
+		void onAuthorized();
+		void sendMap(const WorldMap& map);
+
+		void setControlledObjID(ID id);
+};
+
+void swap(Session& lhs, Session& rhs);
+std::ostream& operator<<(std::ostream& o, const Session& s);
+
+////////////////////////////////////////////////////////////
+
+// decides, which clients should be informed about a change in the world
+// -> builds a packet 
+// for example by visibility check, areas, or simply send to all
+//TODO rename
+class Updater: public Observer<EntityEvent>
+{
+	public:
+		using ClientFilterPredicate = function<bool(ID e)>; 
+			// decides, if the client controlling entity "e" should be informed about these WorldChanges
+		using Sender = function<void(sf::Packet& p, ClientFilterPredicate fp)>;
+		using EntityResolver = function<Entity*(ID entID)>;
+		Updater(Sender s, EntityResolver getEntity);
+		void tick(float delta);
+		void onMsg(const EntityEvent& m) final;
+		void reset();
+
+	private:
+		Sender _send;
+		EntityResolver _getEntity;
+		std::unordered_set<EntityEvent> _updateEventQueue;
+		float _timeSinceLastUpdateSent;
+
+		void sendEvent(const EntityEvent&);
+};
+
+////////////////////////////////////////////////////////////
+
 class ServerApplication
 {
 	public:
@@ -126,15 +145,14 @@ class ServerApplication
 		bool listen(short port);
 		void run();
 		~ServerApplication();
+		bool requestGameJoin(Session& s);
 
 	private:
 		void acceptClient();
 		void onClientConnect(unique_ptr<sf::TcpSocket>&& s);
 		void onClientDisconnect(ID sessionID);
-		void send(sf::Packet& p, Updater::ClientFilterPredicate fp);
-		void onClientAuthorized(ID sessionID);
-		void sendMapTo(Session& client);
-		void joinGame(Session& s);
+		void broadcast(sf::Packet& p, Updater::ClientFilterPredicate fp);
+		void gameOver();
 		void newGame();
 
 		sf::TcpListener _listener;

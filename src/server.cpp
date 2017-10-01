@@ -2,31 +2,51 @@
 #include <cassert>
 #include <serdes.hpp>
 
-Session::Session(unique_ptr<sf::TcpSocket>&& socket, CommandHandler h)
-	: _socket{std::move(socket)}, _commandHandler{h}, _closed{false}, _authorized{false}
+Session::Session(unique_ptr<sf::TcpSocket>&& socket, GameJoinRequestHandler h)
+	: _game{nullptr}, _requestGameJoin{h}, _socket{std::move(socket)}, _closed{false}, _authorized{false}
 {
-	this->addObserver(*this);
+	_sharedRegistry.addObserver(*this);
 	addPair("controlled_object_id", NULLID);
 }
+
+Session::~Session()
+{
+	if(_game)
+		leaveGame();
+}
+
+Session::Session(Session&& other): Session()
+{
+	swap(other);
+}
+
+Session& Session::operator=(Session&& other)
+{
+	swap(other);
+}
+
+void Session::swap(Session& other)
+{
+	using std::swap;
+	swap(_game, other._game);
+	swap(_requestGameJoin, other._requestGameJoin);
+	swap(_socket, other._socket);
+	swap(_closed, other._closed);
+	swap(_authorized, other._authorized);
+	swap(_sharedRegistry, other._sharedRegistry);
+}
+
+void swap(Session& lhs, Session& rhs)
+{
+	lhs.swap(rhs);
+}
+
+Session::Session(): Session(std::unique_ptr<sf::TcpSocket>(nullptr), [](Session&) { return false; })
+{}
 
 sf::TcpSocket& Session::getSocket()
 {
 	return *_socket;
-}
-
-void Session::setCommandHandler(CommandHandler h)
-{
-	_commandHandler = h;
-}
-
-ID Session::getControlledObjID()
-{
-	return getValue<ID>("controlled_object_id");
-}
-
-void Session::setControlledObjID(ID objID)
-{
-	setValue("controlled_object_id", objID);
 }
 
 bool Session::receive()
@@ -55,6 +75,10 @@ bool Session::receive()
 
 void Session::send(sf::Packet& p)
 {
+	if(!_socket) {
+		cerr << "SEND ON NULL SOCKET\n";
+		return;
+	}
 	sf::Socket::Status r;
 	while((r = _socket->send(p)) == sf::Socket::Status::Partial);
 	if(r == sf::Socket::Status::Disconnected)
@@ -68,6 +92,13 @@ void Session::send(sf::Packet& p)
 		cerr << "Attept to send data through a socket that was not ready.\n";
 }
 
+void Session::send(PacketType t)
+{
+	sf::Packet p;
+	p << t;
+	send(p);
+}
+
 void Session::handlePacket(sf::Packet& p)
 {
 	PacketType pt;
@@ -79,8 +110,8 @@ void Session::handlePacket(sf::Packet& p)
 			disconnectUnauthorized();
 			Command c;
 			p >> c;
-			//cout << "command type: " << unsigned(c._type) << endl;
-			_commandHandler(c, getControlledObjID());
+			if(_game)
+				_game->handlePlayerCommand(c, getControlledObjID());
 			break;
 		}
 		case PacketType::ClientHello:
@@ -91,8 +122,13 @@ void Session::handlePacket(sf::Packet& p)
 				disconnectUnauthorized("Version mismatch.");
 			else {
 				_authorized = true;
-				_onAuthorized();
+				onAuthorized();
 			}
+			break;
+		}
+		case PacketType::JoinGame:
+		{
+			_requestGameJoin(*this);
 			break;
 		}
 		default:
@@ -105,20 +141,15 @@ bool Session::isClosed()
 	return _closed;
 }
 
-void Session::setOnAuthorized(OnAuthorized cb)
-{
-	_onAuthorized = cb;
-}
-
 void Session::addPair(std::string key, float value)
 {
-	Store::addPair(key, value);
+	_sharedRegistry.addPair(key, value);
 }
 
 template <typename T>
 void Session::setValue(std::string key, T value)
 {
-	Store::setValue(key, value);
+	_sharedRegistry.setValue(key, value);
 }
 
 void Session::onMsg(const MessageT& m)
@@ -138,6 +169,60 @@ void Session::disconnectUnauthorized(std::string reason)
 		send(p);
 		_socket->disconnect();
 	}
+}
+
+void Session::onAuthorized()
+{
+	_requestGameJoin(*this);
+}
+
+void Session::sendMap(const WorldMap& map)
+{
+	sf::Packet p;
+	//TODO FIXME const_cast
+	p << PacketType::GameInit << Serializer<sf::Packet>(const_cast<WorldMap&>(map));
+	send(p);
+}
+
+ID Session::getControlledObjID() const
+{
+	return _sharedRegistry.getValue<ID>("controlled_object_id");
+}
+
+std::string Session::getRemoteAddress() const
+{
+	return _socket->getRemoteAddress().toString();
+}
+
+std::ostream& operator<<(std::ostream& o, const Session& s)
+{
+	o << s.getRemoteAddress();
+	ID controlledObjID = s.getControlledObjID();
+	if(controlledObjID != NULLID)
+		o << " (controlling " << controlledObjID << ")";
+	return o;
+}
+
+void Session::setControlledObjID(ID id)
+{
+	setValue("controlled_object_id", id);
+}
+
+void Session::joinGame(Game& game)
+{
+	_game = &game;
+	sendMap(_game->getMap());
+	_game->getRegistry().addObserver(*this);
+	setControlledObjID(_game->addCharacter());
+}
+
+void Session::leaveGame()
+{
+	ID character = getControlledObjID();
+	setControlledObjID(NULLID);
+	_game->removeCharacter(character);
+	send(PacketType::GameOver);
+	_game = nullptr;
 }
 
 ////////////////////////////////////////////////////////////
@@ -183,6 +268,11 @@ void Updater::sendEvent(const EntityEvent& e)
 	if(modifiedComponent != nullptr && !e.destroyed)
 		cout << "\tcomponent: " << Serializer<ostream>(*modifiedComponent) << endl;
 		*/
+}
+
+void Updater::reset()
+{
+	_updateEventQueue.clear();
 }
 
 ////////////////////////////////////////////////////////////
@@ -595,6 +685,11 @@ Game::Store& Game::getRegistry()
 	return _registry;
 }
 
+const WorldMap& Game::getMap() const
+{
+	return _map;
+}
+
 void Game::gameModeOnEntityEvent(const EntityEvent& e)
 {
 	lua_State* L = _LuaStateGameMode;
@@ -622,8 +717,8 @@ Game::GameModeEntityEventObserver::GameModeEntityEventObserver(EntityEventCallba
 
 ServerApplication::ServerApplication(IrrlichtDevice* irrDev)
 	: _irrDevice{irrDev},
-	_updater(std::bind(&ServerApplication::send, ref(*this), placeholders::_1, placeholders::_2),
-			std::bind(&Game::getWorldEntity, ref(_game), placeholders::_1))
+	_updater(std::bind(&ServerApplication::broadcast, ref(*this), placeholders::_1, placeholders::_2),
+			[this](ID entID)->Entity* { if(_game) return _game->getWorldEntity(entID); else return nullptr; })
 {
 	_listener.setBlocking(false);
 	newGame();
@@ -654,7 +749,7 @@ void ServerApplication::run()
 
 		if(_game)
 			if(!_game->run(timeDelta))
-				newGame();
+				gameOver();
 		_updater.tick(timeDelta);
 
 		sf::sleep(sf::milliseconds(50));
@@ -668,12 +763,10 @@ void ServerApplication::acceptClient()
 	sock->setBlocking(false);
 	
 	if(_listener.accept(*sock) == sf::Socket::Done)
-	{
 		onClientConnect(std::move(sock));
-	}
 }
 
-void ServerApplication::send(sf::Packet& p, Updater::ClientFilterPredicate fp)
+void ServerApplication::broadcast(sf::Packet& p, Updater::ClientFilterPredicate fp)
 {
 	for(auto& s : _sessions)
 		if(fp(s.getControlledObjID()))
@@ -683,36 +776,13 @@ void ServerApplication::send(sf::Packet& p, Updater::ClientFilterPredicate fp)
 void ServerApplication::onClientConnect(std::unique_ptr<sf::TcpSocket>&& sock)
 {
 	cout << "Client connected from " << sock->getRemoteAddress() << endl;
-	auto sID = _sessions.emplace(std::move(sock));
-	_sessions[sID].setOnAuthorized([this, sID](){ onClientAuthorized(sID); });
-}
-
-void ServerApplication::onClientAuthorized(ID sessionID)
-{
-	Session& s = _sessions[sessionID];
-	joinGame(s);
-}
-
-void ServerApplication::joinGame(Session& s)
-{
-	if(_game)
-	{
-		s.setCommandHandler([this](Command& c, ID objID){
-				_game->handlePlayerCommand(c, objID);
-				});
-		_game->getRegistry().addObserver(s);
-		sendMapTo(s);
-		_game->sendHelloMsgTo(_updater); // TODO send updates only to newly connected client
-		s.setControlledObjID(_game->addCharacter());
-	}
+	_sessions.emplace(std::move(sock), [this](Session& s){ return requestGameJoin(s); });
 }
 
 void ServerApplication::onClientDisconnect(ID sessionID)
 {
 	Session& s = _sessions[sessionID];
-	cout << "Client disconnected: " << s.getSocket().getRemoteAddress() << endl;
-	if(_game)
-		_game->removeCharacter(s.getControlledObjID());
+	cout << "Client disconnected: " << s << endl;
 	_sessions.remove(sessionID);
 }
 
@@ -721,11 +791,24 @@ ServerApplication::~ServerApplication()
 	_listener.close();
 }
 
-void ServerApplication::sendMapTo(Session& client)
+bool ServerApplication::requestGameJoin(Session& s)
 {
-	sf::Packet p;
-	p << PacketType::GameInit << Serializer<sf::Packet>(_map);
-	client.send(p);
+	if(_game) {
+		s.joinGame(*_game);
+		_game->sendHelloMsgTo(_updater); // TODO send updates only to newly connected client
+		return true;
+	}
+	else
+		return false;
+}
+
+void ServerApplication::gameOver()
+{
+	for(Session& s : _sessions)
+		s.leaveGame();
+	_game.reset();
+	_updater.reset();
+	newGame();
 }
 
 void ServerApplication::newGame()
@@ -739,6 +822,4 @@ void ServerApplication::newGame()
 	);
 	_game.reset(new Game(_map));
 	_game->addObserver(_updater);
-	for(Session& s : _sessions)
-		joinGame(s);
 }
