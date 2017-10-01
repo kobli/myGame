@@ -23,6 +23,7 @@ class WorldMap: public Serializable {
 		{
 			_terrain.reset(new Terrain(size, seed));
 			_trees = TreePlanter::plant(*_terrain, seed);
+			_spawns.clear();
 			placeSpawnpoints();
 		}
 
