@@ -44,11 +44,26 @@ class ObservableKeyValueStore: public KeyValueStore, public Observable<KeyValueS
 			notify();
 		}
 
+		void swap(ObservableKeyValueStore& other)
+		{
+			using std::swap;
+			swap(static_cast<KeyValueStore&>(*this), static_cast<KeyValueStore&>(other));
+			using ObservableT = Observable<KeyValueStoreChange<KeyValueStoreIDType>>;
+			swap(static_cast<ObservableT&>(*this), static_cast<ObservableT&>(other));
+		}
+
 	private:
 		void notify()
 		{
 			this->broadcastMsg(KeyValueStoreChange<KeyValueStoreIDType>(typeID, this));
 		}
 };
+
+
+template <typename KeyValueStoreIDType, KeyValueStoreIDType typeID>
+void swap(ObservableKeyValueStore<KeyValueStoreIDType, typeID>& lhs, ObservableKeyValueStore<KeyValueStoreIDType, typeID>& rhs)
+{
+	lhs.swap(rhs);
+}
 
 #endif /* OBSERVABLEKEYVALUESTORE_HPP_17_09_29_15_25_34 */
