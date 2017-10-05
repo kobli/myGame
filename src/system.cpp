@@ -1,5 +1,7 @@
 #define _USE_MATH_DEFINES
 #include "system.hpp"
+#include "heightmapMesh.hpp"
+#include "terrainTexturer.hpp"
 
 class DebugDrawer: public btIDebugDraw
 {
@@ -89,6 +91,25 @@ class MyMotionState : public btMotionState
 			bc->setPosition(btV3f2V3f(worldTrans.getOrigin()) + cc->getPosOffset());
 		}
 };
+
+class MyShaderCallBack : public video::IShaderConstantSetCallBack
+{
+	public:
+		virtual void OnSetConstants(video::IMaterialRendererServices* services, s32)
+		{
+			video::IVideoDriver* driver = services->getVideoDriver();
+
+			core::matrix4 worldViewProj;
+			worldViewProj *= driver->getTransform(video::ETS_PROJECTION);
+			worldViewProj *= driver->getTransform(video::ETS_VIEW);
+			worldViewProj *= driver->getTransform(video::ETS_WORLD);
+			services->setVertexShaderConstant("mWorldViewProj", worldViewProj.pointer(), 16);
+
+			s32 TextureLayerID[] = {0, 1, 2, 3}; 
+			services->setPixelShaderConstant("textures[0]", TextureLayerID, 4);
+		}
+};
+
 
 System::System(World& world): _world{world}
 {
@@ -382,6 +403,12 @@ void Physics::registerPairCollisionCallback(std::function<void(ID, ID)> callback
 
 ViewSystem::ViewSystem(irr::scene::ISceneManager* smgr, World& world): System{world}, _smgr{smgr}
 {
+	loadTerrain();
+}
+
+ViewSystem::~ViewSystem()
+{
+	_smgr->clear();
 }
 
 void ViewSystem::onMsg(const EntityEvent& m)
@@ -567,6 +594,62 @@ scene::IParticleEmitter* ViewSystem::addParticleEffect(ID effectID, scene::IPart
 		sn->setEmitter(em);
 		em->drop();
 	}
+}
+
+void ViewSystem::loadTerrain()
+{
+	std::cout << "loading terrain .. \n";
+	io::path psFileName = "./media/opengl.frag";
+	io::path vsFileName = "./media/opengl.vert";
+
+	auto driver = _smgr->getVideoDriver();
+	if (!driver->queryFeature(video::EVDF_PIXEL_SHADER_1_1) &&
+			!driver->queryFeature(video::EVDF_ARB_FRAGMENT_PROGRAM_1))
+	{
+		std::cerr << "WARNING: Pixel shaders disabled "\
+				"because of missing driver/hardware support.\n";
+		psFileName = "";
+	}
+
+	if (!driver->queryFeature(video::EVDF_VERTEX_SHADER_1_1) &&
+			!driver->queryFeature(video::EVDF_ARB_VERTEX_PROGRAM_1))
+	{
+		std::cerr << "WARNING: Vertex shaders disabled "\
+				"because of missing driver/hardware support.\n";
+		vsFileName = "";
+	}
+
+	// create material
+	video::IGPUProgrammingServices* gpu = driver->getGPUProgrammingServices();
+	s32 multiTextureMaterialType = 0;
+
+	if (gpu)
+	{
+		MyShaderCallBack* mc = new MyShaderCallBack();
+
+		multiTextureMaterialType = gpu->addHighLevelShaderMaterialFromFiles(
+				vsFileName, "vertexMain", video::EVST_VS_1_1,
+				psFileName, "pixelMain", video::EPST_PS_1_1,
+				mc, video::EMT_TRANSPARENT_VERTEX_ALPHA, 0 , video::EGSL_DEFAULT);
+		mc->drop();
+	}
+
+	HeightmapMesh mesh;
+	mesh.init(_world.getMap().getTerrain(), TerrainTexturer::texture, driver);
+	scene::IMeshSceneNode* terrain = _smgr->addMeshSceneNode(mesh.Mesh, nullptr);
+
+	terrain->setMaterialFlag(video::EMF_BACK_FACE_CULLING, true);
+	terrain->setMaterialFlag(video::EMF_LIGHTING, false);
+	//terrain->setMaterialFlag(video::EMF_WIREFRAME, true);
+	terrain->setMaterialFlag(video::EMF_BLEND_OPERATION, true);
+	terrain->setMaterialType((video::E_MATERIAL_TYPE)multiTextureMaterialType);
+	terrain->setMaterialTexture(TerrainTexture::grass, driver->getTexture("./media/grass.jpg"));
+	terrain->setMaterialTexture(TerrainTexture::rock, driver->getTexture("./media/rock.jpg"));
+	terrain->setMaterialTexture(TerrainTexture::snow, driver->getTexture("./media/snow.jpg"));
+	terrain->setMaterialTexture(TerrainTexture::sand, driver->getTexture("./media/sand.jpg"));
+	terrain->getMaterial(0).TextureLayer->getTextureMatrix().setTextureScale(30,30);
+	terrain->getMaterial(0).TextureLayer->TextureWrapU = video::E_TEXTURE_CLAMP::ETC_REPEAT;
+	terrain->getMaterial(0).TextureLayer->TextureWrapV = video::E_TEXTURE_CLAMP::ETC_REPEAT;
 }
 
 ////////////////////////////////////////////////////////////

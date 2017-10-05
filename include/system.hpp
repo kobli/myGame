@@ -48,6 +48,7 @@ class ViewSystem: public System
 {
 	public:
 		ViewSystem(irr::scene::ISceneManager* smgr, World& world);
+		~ViewSystem();
 		virtual void onMsg(const EntityEvent& m);
 		virtual void update(float timeDelta);
 
@@ -57,6 +58,7 @@ class ViewSystem: public System
 		
 		void updateTransforms(float timeDelta);
 		scene::IParticleEmitter* addParticleEffect(ID effectID, scene::IParticleSystemSceneNode* sn);
+		void loadTerrain();
 };
 
 class SpellSystem: public System

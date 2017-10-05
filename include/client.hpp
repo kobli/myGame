@@ -46,7 +46,6 @@ class ClientApplication
 		unique_ptr<Physics> _physics;
 		unique_ptr<GUI> _gui;
 		Animator _animator;
-		scene::ICameraSceneNode* _camera;
 		KeyValueStore _sharedRegistry;
 		KeyValueStore _gameRegistry;
 		float _cameraElevation;
@@ -59,8 +58,8 @@ class ClientApplication
 		bool receive();
 		void handlePacket(sf::Packet& p);
 		void bindCameraToControlledEntity();
-		void loadTerrain();
 		void sendHello();
+		scene::ICameraSceneNode* getCamera();
 };
 
 #endif /* CLIENT_HPP_16_11_26_10_46_45 */
