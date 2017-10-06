@@ -34,6 +34,8 @@ void Session::swap(Session& other)
 	swap(_closed, other._closed);
 	swap(_authorized, other._authorized);
 	swap(_sharedRegistry, other._sharedRegistry);
+	using ObserverT = Observer<KeyValueStoreChange<PacketType>>;
+	swap(static_cast<ObserverT&>(*this), static_cast<ObserverT&>(other));
 }
 
 void swap(Session& lhs, Session& rhs)
