@@ -303,6 +303,7 @@ class AttributeStoreComponent: public ObservableComponentBase, KeyValueStore
 		bool hasAttribute(std::string key);
 		float getAttribute(std::string key);
 		void setAttribute(std::string key, float value);
+		void setAttribute(std::string key, std::string value);
 		void setOrAddAttribute(std::string key, float value);
 
 		ID addAttributeAffector(AttributeAffector aa);

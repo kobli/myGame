@@ -1018,6 +1018,13 @@ void InputSystem::handleCommand(Command& c, ID controlledObjID)
 				{
 					_spells.cast(c._str, controlledObjID);
 				}
+				if(c._str.find("NAME") == 0)
+				{
+					Entity* e = _world.getEntity(controlledObjID);
+					AttributeStoreComponent* as = nullptr;
+					if(e && (as = e->getComponent<AttributeStoreComponent>()))
+						as->setAttribute("name", c._str.substr(strlen("name ")));
+				}
 				break;
 			}
 		case Command::Type::Y_ANGLE_SET:

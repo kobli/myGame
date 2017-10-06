@@ -429,6 +429,12 @@ void AttributeStoreComponent::setAttribute(std::string key, float value)
 	notifyObservers();
 }
 
+void AttributeStoreComponent::setAttribute(std::string key, std::string value)
+{
+	setValue(key, value);
+	notifyObservers();
+}
+
 void AttributeStoreComponent::setOrAddAttribute(std::string key, float value)
 {
 	if(!hasAttribute(key))
