@@ -73,6 +73,7 @@ class Session: public Observer<KeyValueStoreChange<PacketType>>
 		Session& operator=(const Session&) = delete;
 		Session(Session&&);
 		Session& operator=(Session&&);
+		using Observer<KeyValueStoreChange<PacketType>>::swap;
 		virtual void swap(Session& other);
 		~Session();
 		sf::TcpSocket& getSocket();
