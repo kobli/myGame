@@ -39,7 +39,7 @@ class Controller: public IEventReceiver
 	public:
 		typedef std::function<vec2i()> GetScreenSize;
 		typedef std::function<void()> Exit;
-		Controller();
+		Controller(IrrlichtDevice* dev);
 
 		virtual bool OnEvent(const SEvent& event);
 		void setCommandHandler(std::function<void(Command& c)> commandHandler);
@@ -48,8 +48,10 @@ class Controller: public IEventReceiver
 		void loadSpellBook(std::string fileName);
 		void loadControls(std::string fileName);
 		bool isCameraFree();
+		void setDevice(IrrlichtDevice* dev);
 
 	private:
+		IrrlichtDevice* _device;
 		typedef std::map<std::string, std::vector<std::string>> SpellBook;
 		typedef std::map<irr::EKEY_CODE, std::string> KeyMap;
 		bool _keyPressed[KEY_KEY_CODES_COUNT];

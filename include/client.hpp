@@ -38,8 +38,8 @@ class ClientApplication
 		
 	private:
 		sf::TcpSocket _server;
-		Controller _controller;
 		unique_ptr<IrrlichtDevice, void(*)(IrrlichtDevice*)> _device;
+		Controller _controller;
 		unique_ptr<WorldMap> _worldMap;
 		unique_ptr<World> _gameWorld;
 		unique_ptr<ViewSystem> _vs;
@@ -59,6 +59,7 @@ class ClientApplication
 		void handlePacket(sf::Packet& p);
 		void bindCameraToControlledEntity();
 		void sendHello();
+		void displayMessage(std::string message);
 		scene::ICameraSceneNode* getCamera();
 };
 

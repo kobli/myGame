@@ -300,11 +300,17 @@ class AttributeStoreComponent: public ObservableComponentBase, KeyValueStore
 		AttributeStoreComponent(ID parentEntID);
 
 		void addAttribute(std::string key, float value);
+		void addAttribute(std::string key, std::string value);
 		bool hasAttribute(std::string key);
-		float getAttribute(std::string key);
+		template <typename T>
+		T getAttribute(std::string key) const
+		{
+			return getValue<T>(key);
+		}
 		void setAttribute(std::string key, float value);
 		void setAttribute(std::string key, std::string value);
 		void setOrAddAttribute(std::string key, float value);
+		void setOrAddAttribute(std::string key, std::string value);
 
 		ID addAttributeAffector(AttributeAffector aa);
 		bool removeAttributeAffector(ID affectorID);

@@ -2,6 +2,11 @@
 #define GUI_HPP_17_09_14_21_57_18 
 #include "world.hpp"
 #include "progressBar.hpp"
+enum GUIElementID
+{
+	ChatInput,
+	ChatContent,
+};
 
 class GUIPanel: public irr::gui::IGUIElement
 {
@@ -113,6 +118,7 @@ class GUI: public Observer<EntityEvent>
 		GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedRegistry, const KeyValueStore& gameRegistry);
 		~GUI();
 		void update(float timeDelta);
+		void displayMessage(std::string message, std::string tag);
 
 	private:
 		irr::IrrlichtDevice* _device;

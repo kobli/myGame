@@ -75,7 +75,7 @@ void Animator::onMsg(const EntityEvent& m)
 
 ////////////////////////////////////////////////////////////
 
-ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ if(d) d->drop(); }),
+ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ if(d) d->drop(); }), _controller{nullptr},
 	_yAngleSetCommandFilter{0.2, [](float& oldObj, float& newObj)->float&{ if(std::fabs(oldObj-newObj) > 0.01) return newObj; else return oldObj; }}
 {
 	irr::SIrrlichtCreationParameters params;
@@ -97,6 +97,7 @@ ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ 
 	_controller.setCommandHandler(std::bind(&ClientApplication::commandHandler, ref(*this), std::placeholders::_1));
 	_controller.setScreenSizeGetter([this](){ auto ss = _device->getVideoDriver()->getScreenSize(); return vec2i(ss.Width, ss.Height); });
 	_controller.setExit([this](){ _device->closeDevice(); });
+	_controller.setDevice(_device.get());
 }
 
 bool ClientApplication::connect(string host, unsigned short port)
@@ -366,11 +367,11 @@ void ClientApplication::handlePacket(sf::Packet& p)
 				startGame();
 				break;
 			}
-		case PacketType::ServerMessage:
+		case PacketType::Message:
 			{
 				string message;
 				p >> message;
-				cout << "ServerMessage: " << message << std::endl;
+				displayMessage(message);
 				break;
 			}
 			case PacketType::GameOver:
@@ -406,6 +407,20 @@ void ClientApplication::sendHello()
 	sf::Packet p;
 	p << PacketType::ClientHello << u16(myGame_VERSION_MAJOR) << u16(myGame_VERSION_MINOR);
 	sendPacket(p);
+}
+
+void ClientApplication::displayMessage(std::string message)
+{
+	std::string tag;
+	if(message.find("{") == 0) {
+		int end = message.find("}");
+		tag = message.substr(1, end-1);
+		message = message.substr(end+1);
+	}
+	if(_gui)
+		_gui->displayMessage(message, tag);
+	//else
+		std::cout << "Message" << (tag.length()?std::string(" (")+tag+std::string(")"):std::string())	<< ": " << message << std::endl;
 }
 
 scene::ICameraSceneNode* ClientApplication::getCamera()

@@ -25,10 +25,15 @@ std::string KeyValueStore::getValue<std::string>(std::string key) const
 {
 	if(_strStore.count(key) == 1)
 		return _strStore.find(key)->second;
-	else if(_store.count(key) == 1)
-		return std::to_string(_store.find(key)->second);
-	else
-		assert(false);
+	else if(_store.count(key) == 1) {
+		float val = _store.find(key)->second;
+
+		if(val == int(val))
+			return std::to_string(int(val));
+		else
+			return std::to_string(val);
+	}
+	assert(false);
 }
 
 void KeyValueStore::setValue(std::string key, float value)

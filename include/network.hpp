@@ -15,7 +15,7 @@ enum PacketType: u8
 	GameInit,
 	GameOver,
 	ClientHello,
-	ServerMessage,
+	Message,
 };
 
 /*

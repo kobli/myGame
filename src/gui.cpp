@@ -84,6 +84,19 @@ GUI::GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedR
 	};
 
 	new irr::gui::CrossHair(env, "./media/crosshair.png", 5, env->getRootGUIElement());
+
+	int chatBoxWidth = 350;
+	int chatBoxHeight = 300;
+	int chatInputHeight = 30;
+	auto chat = new GUIPanelFlowVertical(env, env->getRootGUIElement(), -1, core::rect<s32>(0, 0, chatBoxWidth, chatBoxHeight));
+	chat->setRelativePosition(vec2i(20, screenSize.Height-chatBoxHeight-20));
+	chat->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT, gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT, gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT);
+
+	auto chatContent = env->addListBox(core::rect<s32>(0, 0, chatBoxWidth, chatBoxHeight-chatInputHeight), nullptr, GUIElementID::ChatContent);
+	chatContent->setAutoScrollEnabled(true);
+	auto chatInput = env->addEditBox(L"", core::rect<s32>(0, 0, chatBoxWidth, chatInputHeight), false, nullptr, GUIElementID::ChatInput);
+	chat->addChild(chatContent);
+	chat->addChild(chatInput);
 }
 
 GUI::~GUI()
@@ -95,6 +108,14 @@ void GUI::update(float timeDelta)
 {
 	updateCastingIndicator(timeDelta);
 	updateGameModeInfo();
+}
+
+void GUI::displayMessage(std::string message, std::string /*tag*/)
+{
+	auto chatContent = static_cast<gui::IGUIListBox*>(_device->getGUIEnvironment()->getRootGUIElement()->getElementFromId(GUIElementID::ChatContent, true));
+	chatContent->addItem(std::wstring(message.begin(), message.end()).c_str());
+	chatContent->setSelected(chatContent->getItemCount()-1);
+	chatContent->setSelected(-1);
 }
 
 void GUI::updateGameModeInfo()
@@ -137,8 +158,8 @@ void GUI::onMsg(const EntityEvent& m)
 			AttributeStoreComponent* as = controlledE->getComponent<AttributeStoreComponent>();
 			if(as != nullptr) {
 				if(as->hasAttribute("health") && as->hasAttribute("max-health")) {
-					_healthBar->setProgress(as->getAttribute("health")/as->getAttribute("max-health"));
-					_healthBar->setMaxValue(as->getAttribute("max-health"));
+					_healthBar->setProgress(as->getAttribute<float>("health")/as->getAttribute<float>("max-health"));
+					_healthBar->setMaxValue(as->getAttribute<float>("max-health"));
 					return;
 				}
 			}
@@ -217,13 +238,8 @@ std::string GUI::fillGamemodeInfoStr(std::string s)
 	auto callback = [&](std::string const& m){
 		if(m.size() > 0 && m.front() == '<' && m.back() == '>') {
 			std::string tagWithoutBrackets = m.substr(1, m.size()-2);
-			if(asc && asc->hasAttribute(tagWithoutBrackets)) {
-				auto v = asc->getAttribute(tagWithoutBrackets);
-				if(v == int(v))
-					r += std::to_string(int(v));
-				else 
-					r += std::to_string(v);
-			}
+			if(asc && asc->hasAttribute(tagWithoutBrackets))
+				r += asc->getAttribute<std::string>(tagWithoutBrackets);
 			else if(_gameRegistry.hasKey(tagWithoutBrackets))
 				r += _gameRegistry.getValue<std::string>(tagWithoutBrackets);
 			else

@@ -2,8 +2,8 @@
 #include <cassert>
 #include <serdes.hpp>
 
-Session::Session(unique_ptr<sf::TcpSocket>&& socket, GameJoinRequestHandler h)
-	: _game{nullptr}, _requestGameJoin{h}, _socket{std::move(socket)}, _closed{false}, _authorized{false}
+Session::Session(unique_ptr<sf::TcpSocket>&& socket, GameJoinRequestHandler h, Broadcaster b)
+	: _game{nullptr}, _requestGameJoin{h}, _broadcast{b}, _socket{std::move(socket)}, _closed{false}, _authorized{false}
 {
 	_sharedRegistry.addObserver(*this);
 	addPair("controlled_object_id", NULLID);
@@ -30,6 +30,7 @@ void Session::swap(Session& other)
 	using std::swap;
 	swap(_game, other._game);
 	swap(_requestGameJoin, other._requestGameJoin);
+	swap(_broadcast, other._broadcast);
 	swap(_socket, other._socket);
 	swap(_closed, other._closed);
 	swap(_authorized, other._authorized);
@@ -43,7 +44,7 @@ void swap(Session& lhs, Session& rhs)
 	lhs.swap(rhs);
 }
 
-Session::Session(): Session(std::unique_ptr<sf::TcpSocket>(nullptr), [](Session&) { return false; })
+Session::Session(): Session(std::unique_ptr<sf::TcpSocket>(nullptr), [](Session&) { return false; }, [](sf::Packet&, ClientFilterPredicate){})
 {}
 
 sf::TcpSocket& Session::getSocket()
@@ -112,7 +113,25 @@ void Session::handlePacket(sf::Packet& p)
 			disconnectUnauthorized();
 			Command c;
 			p >> c;
-			if(_game)
+			if(c._type == Command::Type::STR && c._str.find("SAY") == 0) {
+				std::string msg = c._str.substr(strlen("SAY "));
+				std::string name;
+				Entity* e;
+				AttributeStoreComponent* as;
+				if(_game &&
+						(e = _game->getWorldEntity(getControlledObjID())) &&
+						 (as = e->getComponent<AttributeStoreComponent>()) &&
+						 (as->hasAttribute("name")))
+						name = as->getAttribute<std::string>("name");
+				if(name.length() > 0)
+					msg = name + ": " + msg;
+				sf::Packet p;
+				p << PacketType::Message << std::string("{all}")+msg;
+				ID author = getControlledObjID();
+				std::cout << "MESSAGE: " << msg << std::endl;
+				_broadcast(p, [author](ID)->bool{ return true; });
+			}
+			else if(_game)
 				_game->handlePlayerCommand(c, getControlledObjID());
 			break;
 		}
@@ -167,7 +186,7 @@ void Session::disconnectUnauthorized(std::string reason)
 	{
 		std::cout << "Disconnecting unauthorized client: " << reason << std::endl;
 		sf::Packet p;
-		p << PacketType::ServerMessage << reason;
+		p << PacketType::Message << reason;
 		send(p);
 		_socket->disconnect();
 	}
@@ -370,7 +389,7 @@ void Game::gameModeRegisterAPIMethods()
 		auto e = g->_gameWorld.getEntity(entityID);
 		AttributeStoreComponent* as = nullptr;
 		if(e != nullptr && (as = e->getComponent<AttributeStoreComponent>()) != nullptr && as->hasAttribute(key)) {
-			lua_pushnumber(s, as->getAttribute(key));
+			lua_pushnumber(s, as->getAttribute<float>(key));
 			lua_pushnumber(s, as->getAttributeAffected(key));
 			return 2;
 		}
@@ -422,7 +441,7 @@ void Game::gameModeRegisterAPIMethods()
 			{
 				if(asc->hasAttribute(attributeName))
 					try {
-						if(attributeValue == "" || asc->getAttribute(attributeName) == std::stof(attributeValue))
+						if(attributeValue == "" || asc->getAttribute<std::string>(attributeName) == attributeValue)
 							entities.push_back(e.getID());
 					}
 				catch(std::invalid_argument& e) {
@@ -768,7 +787,7 @@ void ServerApplication::acceptClient()
 		onClientConnect(std::move(sock));
 }
 
-void ServerApplication::broadcast(sf::Packet& p, Updater::ClientFilterPredicate fp)
+void ServerApplication::broadcast(sf::Packet& p, ClientFilterPredicate fp)
 {
 	for(auto& s : _sessions)
 		if(fp(s.getControlledObjID()))
@@ -778,7 +797,7 @@ void ServerApplication::broadcast(sf::Packet& p, Updater::ClientFilterPredicate 
 void ServerApplication::onClientConnect(std::unique_ptr<sf::TcpSocket>&& sock)
 {
 	cout << "Client connected from " << sock->getRemoteAddress() << endl;
-	_sessions.emplace(std::move(sock), [this](Session& s){ return requestGameJoin(s); });
+	_sessions.emplace(std::move(sock), [this](Session& s){ return requestGameJoin(s); }, [this](sf::Packet& p, ClientFilterPredicate fp){ broadcast(p, fp); });
 }
 
 void ServerApplication::onClientDisconnect(ID sessionID)

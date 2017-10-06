@@ -413,14 +413,15 @@ void AttributeStoreComponent::addAttribute(std::string key, float value)
 	notifyObservers();
 }
 
+void AttributeStoreComponent::addAttribute(std::string key, std::string value)
+{
+	addPair(key, value);
+	notifyObservers();
+}
+
 bool AttributeStoreComponent::hasAttribute(std::string key)
 {
 	return hasKey(key);
-}
-
-float AttributeStoreComponent::getAttribute(std::string key)
-{
-	return getValue<float>(key);
 }
 
 void AttributeStoreComponent::setAttribute(std::string key, float value)
@@ -443,12 +444,20 @@ void AttributeStoreComponent::setOrAddAttribute(std::string key, float value)
 		setAttribute(key, value);
 }
 
+void AttributeStoreComponent::setOrAddAttribute(std::string key, std::string value)
+{
+	if(!hasAttribute(key))
+		addAttribute(key, value);
+	else
+		setAttribute(key, value);
+}
+
 ID AttributeStoreComponent::addAttributeAffector(AttributeAffector aa)
 {
 	_attributeAffectorHistory.push_back(aa);
 	if(aa.isPermanent()) {
 		assert(hasAttribute(aa.getAffectedAttribute()));
-		float attr = getAttribute(aa.getAffectedAttribute());
+		float attr = getAttribute<float>(aa.getAffectedAttribute());
 		if(aa.getModifierType() == AttributeAffector::ModifierType::Mul)
 			attr *= aa.getModifierValue();
 		else if(aa.getModifierType() == AttributeAffector::ModifierType::Add)
@@ -480,7 +489,7 @@ float AttributeStoreComponent::getAttributeAffected(std::string key)
 	if(!hasAttribute(key))
 		return -1;
 	else {
-		float base = getAttribute(key);
+		float base = getAttribute<float>(key);
 		float add = 0;
 		float mul = 1;
 		for(auto& a : _attributeAffectors)

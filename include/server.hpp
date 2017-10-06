@@ -12,6 +12,7 @@
 
 #ifndef SERVER_HPP_16_11_26_09_22_02
 #define SERVER_HPP_16_11_26_09_22_02 
+using ClientFilterPredicate = function<bool(ID e)>; 
 
 class Game: public Observabler<EntityEvent>
 {
@@ -68,7 +69,8 @@ class Session: public Observer<KeyValueStoreChange<PacketType>>
 
 	public:
 		using GameJoinRequestHandler = std::function<bool(Session& s)>;
-		Session(unique_ptr<sf::TcpSocket>&& socket, GameJoinRequestHandler h);
+		using Broadcaster = std::function<void(sf::Packet& p, ClientFilterPredicate fp)>;
+		Session(unique_ptr<sf::TcpSocket>&& socket, GameJoinRequestHandler h, Broadcaster b);
 		Session(const Session&) = delete;
 		Session& operator=(const Session&) = delete;
 		Session(Session&&);
@@ -94,6 +96,7 @@ class Session: public Observer<KeyValueStoreChange<PacketType>>
 		Game* _game;
 		Store _sharedRegistry;
 		GameJoinRequestHandler _requestGameJoin;
+		Broadcaster _broadcast;
 		unique_ptr<sf::TcpSocket> _socket;
 		void handlePacket(sf::Packet& p);
 		bool _closed;
@@ -119,8 +122,6 @@ std::ostream& operator<<(std::ostream& o, const Session& s);
 class Updater: public Observer<EntityEvent>
 {
 	public:
-		using ClientFilterPredicate = function<bool(ID e)>; 
-			// decides, if the client controlling entity "e" should be informed about these WorldChanges
 		using Sender = function<void(sf::Packet& p, ClientFilterPredicate fp)>;
 		using EntityResolver = function<Entity*(ID entID)>;
 		Updater(Sender s, EntityResolver getEntity);
@@ -152,7 +153,7 @@ class ServerApplication
 		void acceptClient();
 		void onClientConnect(unique_ptr<sf::TcpSocket>&& s);
 		void onClientDisconnect(ID sessionID);
-		void broadcast(sf::Packet& p, Updater::ClientFilterPredicate fp);
+		void broadcast(sf::Packet& p, ClientFilterPredicate fp);
 		void gameOver();
 		void newGame();
 
