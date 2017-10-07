@@ -15,7 +15,7 @@ the gm_info_template string can contain | to separate logical parts and <key> to
 --]]
 
 Config = {}
-Config.mapKillCount = 10
+Config.mapKillCount = 5
 -------------------- Cpp interface --------------------
 
 function onGameStart()
