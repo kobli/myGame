@@ -1,12 +1,13 @@
 #include <memory>
 #include "controller.hpp"
+#include "gui.hpp"
 
 Command::Command(Type type): _type{type}
 {}
 
 ////////////////////////////////////////////////////////////
 
-Controller::Controller(): _commandHandler{[](Command&){}}, _lastSentMovD{0,0}, _freeCamera{false}
+Controller::Controller(IrrlichtDevice* device): _device{device}, _commandHandler{[](Command&){}}, _lastSentMovD{0,0}, _freeCamera{false}
 {
 	loadSpellBook("spellBook.lua");
 	loadControls("controls.lua");
@@ -27,7 +28,7 @@ void Controller::loadSpellBook(std::string fileName) {
 	while(lua_next(L, -2) != 0)
 	{
 		std::string spell = lua_valueAsStr(L, -2);
-		Table t = lua_loadTable(L);
+		Table t = lua_loadTable(L, -1);
 		std::vector<std::string> steps;
 		for(auto& s: t)
 			steps.push_back(s.second);
@@ -45,7 +46,7 @@ void Controller::loadControls(std::string fileName) {
 		std::cerr << "cannot run " << fileName << " configuration file: " << lua_tostring(L, -1);
 
 	lua_getglobal(L, "controls");
-	Table t = lua_loadTable(L);
+	Table t = lua_loadTable(L, -1);
 	for(auto& r: t) {
 		size_t end;
 		try {
@@ -56,11 +57,22 @@ void Controller::loadControls(std::string fileName) {
 			std::cerr << "error in control settings: \"" << r.first << " = " << r.second << "\"\n";
 		}
 	}
+
+	lua_getglobal(L, "settings");
+	t = lua_loadTable(L, -1);
+	for(auto& r: t)
+		_settings.setValue(r.first, r.second);
 }
 
 bool Controller::OnEvent(const SEvent& event)
 {
 	std::string c;
+
+	auto gui = _device->getGUIEnvironment();
+	gui::IGUIElement* chatInput = nullptr;
+	if(gui)
+		chatInput = gui->getRootGUIElement()->getElementFromId(GUIElementID::ChatInput, true);
+	bool chatMode = gui->hasFocus(chatInput);
 
 	irr::EKEY_CODE key = irr::EKEY_CODE::KEY_KEY_CODES_COUNT;
 	bool pressedDown = false;
@@ -88,7 +100,7 @@ bool Controller::OnEvent(const SEvent& event)
 		key = event.KeyInput.Key;
 	}
 	
-	if(key != irr::EKEY_CODE::KEY_KEY_CODES_COUNT) {
+	if(key != irr::EKEY_CODE::KEY_KEY_CODES_COUNT && !chatMode) {
 		if(_keyPressed[key] != pressedDown)
 			if(_keyMap.count(key)) {
 				c = _keyMap[key];
@@ -135,6 +147,12 @@ bool Controller::OnEvent(const SEvent& event)
 			}
 		}
 	}
+	else {
+		Command command(Command::Type::STR);
+		command._str = c;
+		_commandHandler(command);
+	}
+
 
 	if (event.EventType == irr::EET_MOUSE_INPUT_EVENT)
 	{
@@ -160,7 +178,8 @@ bool Controller::OnEvent(const SEvent& event)
 				break;
 		}
 	}
-	if (event.EventType == irr::EET_KEY_INPUT_EVENT)
+
+	if (event.EventType == irr::EET_KEY_INPUT_EVENT && pressedDown)
 	{
 		switch(event.KeyInput.Key)
 		{
@@ -168,6 +187,33 @@ bool Controller::OnEvent(const SEvent& event)
 				{
 					if(_keyPressed[EKEY_CODE::KEY_LMENU])
 						_exit();
+					break;
+				}
+			case irr::KEY_RETURN:
+				{
+					if(chatMode){
+						std::wstring t(chatInput->getText()); 
+						std::string s(t.begin(), t.end());
+
+						if(s.length() > 0) {
+							Command c;
+							c._type = Command::Type::STR;
+							c._str = std::string("SAY "+s);
+							_commandHandler(c);
+						}
+
+						gui->removeFocus(chatInput);
+						chatInput->setText(L"");
+					}
+					else
+						gui->setFocus(chatInput);
+					break;
+				}
+			case irr::KEY_ESCAPE:
+				{
+					if(chatMode) {
+						gui->removeFocus(chatInput);
+					}
 					break;
 				}
 			default:
@@ -195,4 +241,14 @@ void Controller::setExit(Exit exit)
 bool Controller::isCameraFree()
 {
 	return _freeCamera;
+}
+
+void Controller::setDevice(IrrlichtDevice* dev)
+{
+	_device = dev;
+}
+
+const KeyValueStore& Controller::getSettings() const
+{
+	return _settings;	
 }

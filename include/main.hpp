@@ -6,6 +6,7 @@
 #include <vector>
 #include <functional>
 #include "config.hpp"
+#include <map>
 
 #ifndef MAIN_HPP_16_11_18_13_20_24
 #define MAIN_HPP_16_11_18_13_20_24 
@@ -52,9 +53,10 @@ quaternion btQ2Q(btQuaternion q);
 btQuaternion Q2btQ(quaternion q);
 
 typedef std::vector<std::pair<std::string,std::string>> Table;
+std::ostream& operator<<(std::ostream&, const Table&);
 
 std::string lua_valueAsStr(lua_State* L, int index);
-Table lua_loadTable(lua_State* l);
+Table lua_loadTable(lua_State* l, int index);
 
 class ImageDumper {
 	public:
@@ -78,7 +80,35 @@ class ImageDumper {
 		irr::video::IVideoDriver* _driver;
 };
 
+template <typename T>
+std::ostream& operator<<(std::ostream& o, std::vector<T> v) {
+	for(auto& e : v)
+		o << e << ", ";
+	o << std::endl;
+}
+
+template <typename K, typename V>
+std::ostream& operator <<(std::ostream& t, const std::map<K,V>& m) {
+	t << static_cast<u32>(m.size());
+	t << " ";
+	for(auto& p : m)
+		t << p;
+	return t;
+}
+template <typename K, typename V>
+std::ostream& operator >>(std::ostream& /*t*/, std::map<K,V>& /*m*/) {
+	assert(false); //TODO
+}
+
+template <typename K, typename V>
+std::ostream& operator <<(std::ostream& o, const std::pair<K,V>& p) {
+	return o << p.first << ": " << p.second << "; ";
+}
+template <typename K, typename V>
+std::ostream& operator >>(std::ostream& /*o*/, std::pair<K,V>& /*p*/) {
+	assert(false); //TODO
+}
+
 
 extern ImageDumper SAVEIMAGE;
-
 #endif /* MAIN_HPP_16_11_18_13_20_24 */

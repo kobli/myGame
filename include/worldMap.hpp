@@ -23,6 +23,7 @@ class WorldMap: public Serializable {
 		{
 			_terrain.reset(new Terrain(size, seed));
 			_trees = TreePlanter::plant(*_terrain, seed);
+			_spawns.clear();
 			placeSpawnpoints();
 		}
 
@@ -41,6 +42,15 @@ class WorldMap: public Serializable {
 		{
 			assert(_terrain.get() != nullptr);
 			return _terrain->heightAt(x,y);
+		}
+		
+		bool isInGround(vec3f p) const
+		{
+			assert(_terrain.get() != nullptr);
+			if(!_terrain->contains(p.X, p.Z))
+				return false;
+			else
+				return _terrain->heightAt(p.X, p.Z) > p.Y;
 		}
 
 		vec2u getSize() const 

@@ -1,6 +1,3 @@
--- TODO
--- when a spell hits a player and has no effect -> append its bodies to his spell
--- InvocationQ limit
 require("lua/list")
 
 
@@ -43,6 +40,7 @@ Config.Body.baseRadius = 2			-- base radius of the body sphere [?]
 
 Config.Spell.maxSpeed = 60			-- maximum traveling speed of the spell[?]
 Config.Spell.maxRadius = 20			-- maximum radius of the spell body sphere [?]
+Config.Spell.maxPower = 5				-- maximum power of the spell [?]
 
 BODYEFFECTID = 0
 Config.Effects = {}
@@ -88,7 +86,7 @@ end
 function Wizard:handleIncantation(inc)
 	dout(LF,"======= Spell system <handleIncantation> called =======",inc)
 	dout("Wizard ID: "..self.ID)
-	if(string.match(inc, "[^%s]+_now%s.+") ~= nil) then
+	if(string.match(inc, "[^%s]+_now%s*.*") ~= nil) then
 		-- execute the _now commands immediately
 		dout("exec now")
 		self:resetInvocation()
@@ -121,17 +119,44 @@ function Wizard:updateStatus()
 		progress = math.min(self.invocT, math.max(0, self.invocT-self.invocRemainT))
 	end
 	local p,r,s
+	local effects = {}
 	if self.spellInHands ~= nil then
-		p = self.spellInHands:getPower()
-		r = self.spellInHands:getRadius()
-		s = self.spellInHands:getSpeed()
+		p = self.spellInHands:getPower()/Config.Spell.maxPower
+		r = self.spellInHands:getRadius()/Config.Spell.maxRadius
+		s = self.spellInHands:getSpeed()/Config.Spell.maxSpeed
+		for k, v in pairs(self.spellInHands.effects) do
+			table.insert(effects, v.effectID)
+		end
 	end
 	updateWizardStatus(self.ID, self.invocIncantation or "", self.invocT, progress, 
-	p, r, s)
+	p, r, s, effects,
+	Config.Wizard.maxBodiesAlive-self.bodiesInUse, Config.Wizard.maxBodiesAlive,
+	self:getCommandQueueAsEffectIDs())
+end
+
+function Wizard:getCommandQueueAsEffectIDs()
+	local r = {}
+	for k,v in pairs(List.asTable(self.incantationQ)) do
+		local c, args = incantationToCommandAndArgs(v)
+		local commandProductID = nil
+		if string.find(c, "spell_effect") then
+			commandProductID = Config.Effects[args].effectID
+		elseif string.find(c, "spell_body") then
+			commandProductID = 0
+		end
+		if commandProductID ~= nil then
+			table.insert(r, commandProductID)
+		end
+	end
+	return r
+end
+
+function incantationToCommandAndArgs(inc)
+	return string.match(inc, "(spell_[^%s]+)%s*(.*)")
 end
 
 function Wizard:execIncantation(inc)
-	command, argStr = string.match(inc, "(spell_[^%s]+)%s+(.*)")
+	command, argStr = incantationToCommandAndArgs(inc)
 	if Wizard.Command[command] ~= nil then
 		self.invocIncantation = inc
 		self.invoc = coroutine.create(
@@ -242,11 +267,12 @@ end
 
 Spell = {}
 
-function Spell:new(ID, baseBody)
+function Spell:new(ID, author, baseBody)
 	dout("spell created")
 	local meta = {__index = Spell}
 	local value = {
 		ID = ID,
+		author = author,
 		baseBody = baseBody,
 		bodies = {baseBody},
 		effects = {},
@@ -257,6 +283,7 @@ end
 
 function Spell:destroy()
 	self.ID = nil
+	self.author = nil
 	self.baseBody = nil
 	for k,v in pairs(self.bodies) do
 		v:destroy()
@@ -272,9 +299,9 @@ function Spell:appendEffect(effect)
 	dout("spell now contains "..#self.effects.." effects")
 end
 
-function Spell:hasEffect(effectName)
+function Spell:hasEffect(effectID)
 		for k,v in pairs(self.effects) do
-			if v.name == effectName then
+			if v.effectID == effectID then
 				return true
 			end
 		end
@@ -287,10 +314,12 @@ function Spell:appendBody(body)
 end
 
 function Spell:update(delta)
-	for i=self.collisionsInLastTick.first, self.collisionsInLastTick.last, 1 do
-		local collidedWithEntType = entityIdToTypeName(self.collisionsInLastTick[i])
+	for k,v in pairs(List.asTable(self.collisionsInLastTick)) do
+		local collidedWithEntType = entityIdToTypeName(v)
 		if collidedWithEntType == "map" then
-			setEntityVelocity(self.ID, 0, 0, 0)
+			if entityInGround(self.ID) then
+				setEntityVelocity(self.ID, 0, 0, 0)
+			end
 		end
 		if self:shouldDieOnCollisionWith(collidedWithEntType) then
 			self:die()
@@ -313,7 +342,7 @@ function Spell:getPower()
 	for k,v in pairs(self.bodies) do
 		s = s + v:getPower()
 	end
-	return stackedBodiesMultipltier(#self.bodies)*s
+	return math.min(stackedBodiesMultipltier(#self.bodies)*s, Config.Spell.maxPower)
 end
 
 function Spell:getRadius()
@@ -334,12 +363,11 @@ end
 
 function Spell:die()
 	-- on each colliding character
-	for i=self.collisionsInLastTick.first, self.collisionsInLastTick.last, 1 do
-		dout("col with on death: ",self.collisionsInLastTick[i])
+	for k,colEntID in pairs(List.asTable(self.collisionsInLastTick)) do
+		dout("col with on death: ",colEntID)
 		-- apply all effects
-		for k,v in pairs(self.effects) do
-			local ed = Config.Effects[v.name]
-			addAttributeAffector(self.collisionsInLastTick[i], ed.modifiedAttribute, ed.affectorModifierType, ed.modifierValue*self:getPower(), ed.permanent, ed.period);
+		for k,ed in pairs(self.effects) do
+			addAttributeAffector(colEntID, self.author, ed.modifiedAttribute, ed.affectorModifierType, ed.modifierValue*self:getPower(), ed.permanent, ed.period);
 		end
 	end
 	removeSpell(self.ID)
@@ -349,7 +377,7 @@ end
 
 function Spell:getEffectID()
 	if self.effects[1] ~= nil then
-		return Config.Effects[self.effects[1].name].effectID
+		return self.effects[1].effectID
 	else
 		return BODYEFFECTID
 	end
@@ -497,7 +525,7 @@ function Wizard.Command:spell_body_create(argStr)
 	end
 	self.bodiesInUse = self.bodiesInUse + 1	
 	if self.spellInHands == nil then
-		self.spellInHands = Spell:new(nil, body)
+		self.spellInHands = Spell:new(nil, self.ID, body)
 	else
 		self.spellInHands:appendBody(body)
 	end
@@ -547,7 +575,8 @@ function Wizard.Command:spell_effect_create(argStr)
 	dout("create effect: "..argStr)
 	-- validate and parse arg str
 	local effectName = argStr
-	if Config.Effects[effectName] == nil then
+	local effect = Config.Effects[effectName]
+	if effect.effectID == nil then
 		dout("such effect does not exist")
 		return
 	end
@@ -557,14 +586,13 @@ function Wizard.Command:spell_effect_create(argStr)
 		return
 	end
 	--
-	if self.spellInHands:hasEffect(effectName) then
+	if self.spellInHands:hasEffect(effect.effectID) then
 		dout("The currenly held spell already contains this effect.")
 		return
 	end
 	dout("starting effect invocation...")
 	-- invocation delay
-	self:doInvocation(Config.Effects[effectName].castingTime)
+	self:doInvocation(effect.castingTime)
 	-- create and append the effect
-	local effect = Effect:new(effectName)
 	self.spellInHands:appendEffect(effect)
 end

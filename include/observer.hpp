@@ -42,6 +42,9 @@ class Observable_ {
 		Observable_(messageT obsHelloMsg, messageT obsByeMsg): _obsHelloMsg{obsHelloMsg}, _obsByeMsg{obsByeMsg}
 		{}
 
+		Observable_(messageT obsHelloMsg): _obsHelloMsg{obsHelloMsg}
+		{}
+
 		Observable_()
 		{}
 

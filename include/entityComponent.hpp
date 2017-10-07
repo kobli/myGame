@@ -1,6 +1,5 @@
 #ifndef ENTITY_HPP_17_04_20_11_22_33
 #define ENTITY_HPP_17_04_20_11_22_33 
-#include <iostream>
 #include <vector>
 #include <memory>
 #include <array>
@@ -239,7 +238,6 @@ class EntityManager : public EntityManagerBase<ComponentBase,ComponentType> {
 
 		virtual ID createEntity(ID hintID = NULLID) {
 			if(hintID != NULLID && !_entities.indexValid(hintID)) {
-				std::cout << "\t\tCREATE ENT REQ ID\n";
 				ID insertedID = _entities.insert(EntityT(*this, hintID), hintID);
 				assert(hintID == insertedID);
 				assert(insertedID == getEntity(insertedID)->getID());
@@ -270,7 +268,6 @@ class EntityManager : public EntityManagerBase<ComponentBase,ComponentType> {
 		virtual void removeEntity(ID eid) {
 			if(_entities.indexValid(eid)) {
 				_entities.remove(eid);
-				std::cout << "removed E " << eid << std::endl;
 				assert(!_entities.indexValid(eid));
 			}
 		}

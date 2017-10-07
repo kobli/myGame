@@ -9,6 +9,7 @@
 #include "observableEntityComponent.hpp"
 #include "keyValueStore.hpp"
 #include "worldMap.hpp"
+#include "ringBuffer.hpp"
 
 using ec::ID;
 using ec::NULLID;
@@ -64,7 +65,7 @@ typedef ec::ObservableEntityManager<ObservableComponentBase,ComponentType,Entity
 class BodyComponent: public ObservableComponentBase
 {
 	public:
-		BodyComponent(ID parentEntID, vec3f position = vec3f(0), quaternion rotation = quaternion(0,0,0,0), vec3f velocity = vec3f(0));
+		BodyComponent(ID parentEntID, vec3f position = vec3f(0), quaternion rotation = quaternion(0,0,0,1), vec3f velocity = vec3f(0));
 		vec3f getPosition() const;
 		quaternion getRotation() const;
 		vec3f getVelocity() const;
@@ -233,16 +234,27 @@ class WizardComponent: public ObservableComponentBase
 				t & _spellInHandsPower;
 				t & _spellInHandsRadius;
 				t & _spellInHandsSpeed;
+				t & _availableBodyC;
+				t & _totalBodyC;
+				t & _spellInHandsEffects;
+				t & _commandQueue;
 			}
 
 		void setCurrentJobStatus(std::string job, float duration, float progress);
-		void setSpellInHandsData(float power, float radius, float speed);
+		void setSpellInHandsData(float power, float radius, float speed, std::vector<unsigned> effects);
+		void setBodyStatus(unsigned available, unsigned total);
+		void setCommandQueue(std::vector<unsigned> commands);
 		std::string getCurrentJob();
 		float getCurrentJobDuration();
 		float getCurrentJobProgress();
+		bool hasSpellInHands();
 		float getSpellInHandsPower();
 		float getSpellInHandsRadius();
 		float getSpellInHandsSpeed();
+		const std::vector<unsigned>& getSpellInHandsEffects();
+		unsigned getAvailableBodyC();
+		unsigned getTotalBodyC();
+		const std::vector<unsigned>& getCommandQueue();
 
 	private:
 		std::string _currentJob;
@@ -251,6 +263,10 @@ class WizardComponent: public ObservableComponentBase
 		float _spellInHandsPower;
 		float _spellInHandsRadius;
 		float _spellInHandsSpeed;
+		std::vector<unsigned> _spellInHandsEffects;
+		std::vector<unsigned> _commandQueue;
+		unsigned _availableBodyC;
+		unsigned _totalBodyC;
 };
 
 ////////////////////////////////////////////////////////////
@@ -261,21 +277,21 @@ class AttributeAffector {
 			Mul = 1,
 		};
 
-		AttributeAffector(std::string attribute, ModifierType modifierType
-				, float modifierValue, bool permanent, float period = 0);
+		AttributeAffector(ID author, std::string attribute, ModifierType modifierType
+				, float modifierValue, bool permanent);
 
 		std::string getAffectedAttribute();
 		ModifierType getModifierType();
 		float getModifierValue();
 		bool isPermanent();
-		float getPeriod();
+		ID getAuthor();
 
 	private:
 		std::string _attribute;
 		ModifierType _modifierType;
 		float _modifierValue;
 		bool _permanent;
-	 	float _period;
+		ID _author;
 };
 
 class AttributeStoreComponent: public ObservableComponentBase, KeyValueStore
@@ -284,14 +300,22 @@ class AttributeStoreComponent: public ObservableComponentBase, KeyValueStore
 		AttributeStoreComponent(ID parentEntID);
 
 		void addAttribute(std::string key, float value);
+		void addAttribute(std::string key, std::string value);
 		bool hasAttribute(std::string key);
-		float getAttribute(std::string key);
+		template <typename T>
+		T getAttribute(std::string key) const
+		{
+			return getValue<T>(key);
+		}
 		void setAttribute(std::string key, float value);
+		void setAttribute(std::string key, std::string value);
 		void setOrAddAttribute(std::string key, float value);
+		void setOrAddAttribute(std::string key, std::string value);
 
 		ID addAttributeAffector(AttributeAffector aa);
 		bool removeAttributeAffector(ID affectorID);
 		float getAttributeAffected(std::string key);
+		std::vector<AttributeAffector> getAttributeAffectorHistory();
 
 		virtual void serDes(SerDesBase& s);
 		template <typename T>
@@ -301,6 +325,7 @@ class AttributeStoreComponent: public ObservableComponentBase, KeyValueStore
 
 	private:
 		SolidVector<AttributeAffector, ID, NULLID> _attributeAffectors;
+		RingBuffer<AttributeAffector> _attributeAffectorHistory;
 };
 
 ////////////////////////////////////////////////////////////
