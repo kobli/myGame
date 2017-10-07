@@ -215,6 +215,13 @@ void ClientApplication::startGame()
 	_gui.reset(new GUI(_device.get(), *_gameWorld.get(), _sharedRegistry, _gameRegistry));
 	_gameWorld->addObserver(*_gui);
 	createCamera();
+
+	if(_controller.getSettings().hasKey("NAME")) {
+		Command c;
+		c._type = Command::Type::STR;
+		c._str = "NAME "+_controller.getSettings().getValue<std::string>("NAME");
+		sendCommand(c);
+	}
 }
 
 void ClientApplication::createCamera()

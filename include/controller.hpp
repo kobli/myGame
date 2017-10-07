@@ -5,6 +5,7 @@
 #include <map>
 #include <set>
 #include "main.hpp"
+#include "keyValueStore.hpp"
 
 class Command
 {
@@ -49,6 +50,7 @@ class Controller: public IEventReceiver
 		void loadControls(std::string fileName);
 		bool isCameraFree();
 		void setDevice(IrrlichtDevice* dev);
+		const KeyValueStore& getSettings() const;
 
 	private:
 		IrrlichtDevice* _device;
@@ -64,5 +66,6 @@ class Controller: public IEventReceiver
 		SpellBook _spellBook;
 		KeyMap _keyMap;
 		bool _freeCamera;
+		KeyValueStore _settings;
 };
 #endif /* CONTROLLER_HPP_16_11_18_13_06_55 */

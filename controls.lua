@@ -2,6 +2,10 @@ require "keymap"
 -- You can edit this file to adjust controlls.
 -- See keymap.lua for key names.
 
+settings = {
+	["NAME"] = "My name"
+}
+
 controls = {
 	[KEY_W] = "FORWARD",
 	[KEY_S] = "BACKWARD",

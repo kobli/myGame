@@ -57,6 +57,11 @@ void Controller::loadControls(std::string fileName) {
 			std::cerr << "error in control settings: \"" << r.first << " = " << r.second << "\"\n";
 		}
 	}
+
+	lua_getglobal(L, "settings");
+	t = lua_loadTable(L, -1);
+	for(auto& r: t)
+		_settings.setValue(r.first, r.second);
 }
 
 bool Controller::OnEvent(const SEvent& event)
@@ -241,4 +246,9 @@ bool Controller::isCameraFree()
 void Controller::setDevice(IrrlichtDevice* dev)
 {
 	_device = dev;
+}
+
+const KeyValueStore& Controller::getSettings() const
+{
+	return _settings;	
 }
