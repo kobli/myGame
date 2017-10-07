@@ -23,7 +23,6 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -DDEBUG_BUILD")
 file(GLOB CPP_SOURCES
 	"${PROJECT_SOURCE_DIR}/src/*.cpp"
 	)
-find_package(Freetype REQUIRED)
 include_directories(
 	${PROJECT_SOURCE_DIR}/include
 	${FREETYPE_INCLUDE_DIRS}
@@ -33,6 +32,7 @@ include_directories(
 	${PROJECT_SOURCE_DIR}/extlibs/bullet3-2.83.7/include
 	${PROJECT_SOURCE_DIR}/extlibs/bullet3-2.83.7/include/bullet
 	${PROJECT_SOURCE_DIR}/extlibs/lua-5.3.4/include
+	${PROJECT_SOURCE_DIR}/extlibs/freetype-2.8.1/include
 	)
 set(PLATFORM CACHE STRING "The destination platform.")
 set(PLATFORMS lin_64 lin_32 win_gcc_32)
@@ -44,6 +44,7 @@ link_directories(
 	${PROJECT_SOURCE_DIR}/extlibs/irrlicht-1.8.4/lib/${PLATFORM}
 	${PROJECT_SOURCE_DIR}/extlibs/lua-5.3.4/lib/${PLATFORM}
 	${PROJECT_SOURCE_DIR}/extlibs/bullet3-2.83.7/lib/${PLATFORM}
+	${PROJECT_SOURCE_DIR}/extlibs/freetype-2.8.1/lib/${PLATFORM}
 	)
 
 
@@ -73,7 +74,7 @@ set(WINDOWS_ONLY_LIBS
 	)
 
 set(GENERAL_LIBS
-	${FREETYPE_LIBRARIES}
+	freetype
 	Irrlicht
 	lua
 	BulletDynamics
