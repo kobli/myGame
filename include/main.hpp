@@ -5,8 +5,9 @@
 #include <lua5.3/lua.hpp>
 #include <vector>
 #include <functional>
-#include "config.hpp"
 #include <map>
+#include <cassert>
+#include "config.hpp"
 
 #ifndef MAIN_HPP_16_11_18_13_20_24
 #define MAIN_HPP_16_11_18_13_20_24 
