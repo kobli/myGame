@@ -1,7 +1,9 @@
 #ifndef GUI_HPP_17_09_14_21_57_18
 #define GUI_HPP_17_09_14_21_57_18 
+#include <stack>
 #include "world.hpp"
 #include "progressBar.hpp"
+
 enum GUIElementID
 {
 	ChatInput,
@@ -11,12 +13,18 @@ enum GUIElementID
 class GUIPanel: public irr::gui::IGUIElement
 {
 	public:
-		GUIPanel(irr::gui::IGUIEnvironment* environment, IGUIElement* parent = nullptr, s32 id = -1, core::rect<s32> rectangle = core::rect<s32>(0,0,0,0)): IGUIElement(irr::gui::EGUIET_ELEMENT, environment, parent, id, rectangle), _drawBackground{false}
+		GUIPanel(irr::gui::IGUIEnvironment* environment, IGUIElement* parent = nullptr, s32 id = -1, core::rect<s32> rectangle = core::rect<s32>(0,0,0,0)): IGUIElement(irr::gui::EGUIET_ELEMENT, environment, parent, id, rectangle), _drawBackground{false}, _padding{0}
 	{}
 
 		void addChild(IGUIElement* e)
 		{
 			IGUIElement::addChild(e);
+			recalculateElementPositions();
+		}
+
+		void setPadding(int padding)
+		{
+			_padding = padding;
 			recalculateElementPositions();
 		}
 
@@ -56,20 +64,18 @@ class GUIPanel: public irr::gui::IGUIElement
 		bool _drawBackground;
 		video::SColor _backgroundColor;
 
+	protected:
 		virtual void recalculateElementPositions() = 0;
+		int _padding;
 };
 
 class GUIPanelFlowHorizontal: public GUIPanel
 {
 	public:
-		GUIPanelFlowHorizontal(irr::gui::IGUIEnvironment* environment, IGUIElement* parent = nullptr, s32 id = -1, core::rect<s32> rectangle = core::rect<s32>(0,0,0,0)): GUIPanel(environment, parent, id, rectangle), _padding{0}
+		GUIPanelFlowHorizontal(irr::gui::IGUIEnvironment* environment, IGUIElement* parent = nullptr, s32 id = -1, core::rect<s32> rectangle = core::rect<s32>(0,0,0,0)): GUIPanel(environment, parent, id, rectangle)
 	{}
-		void setPadding(int padding)
-		{
-			_padding = padding;
-			recalculateElementPositions();
-		}
 
+	protected:
 		virtual void recalculateElementPositions()
 		{
 			int xPos = 0;
@@ -80,22 +86,15 @@ class GUIPanelFlowHorizontal: public GUIPanel
 				e->setRelativePosition(pos);
 			}
 		}
-
-	private:
-		int _padding;
 };
 
 class GUIPanelFlowVertical: public GUIPanel
 {
 	public:
-		GUIPanelFlowVertical(irr::gui::IGUIEnvironment* environment, IGUIElement* parent = nullptr, s32 id = -1, core::rect<s32> rectangle = core::rect<s32>(0,0,0,0)): GUIPanel(environment, parent, id, rectangle), _padding{0}
+		GUIPanelFlowVertical(irr::gui::IGUIEnvironment* environment, IGUIElement* parent = nullptr, s32 id = -1, core::rect<s32> rectangle = core::rect<s32>(0,0,0,0)): GUIPanel(environment, parent, id, rectangle)
 	{}
-		void setPadding(int padding)
-		{
-			_padding = padding;
-			recalculateElementPositions();
-		}
 
+	protected:
 		virtual void recalculateElementPositions()
 		{
 			int yPos = 0;
@@ -106,9 +105,37 @@ class GUIPanelFlowVertical: public GUIPanel
 				e->setRelativePosition(pos);
 			}
 		}
+};
 
-	private:
-		int _padding;
+class GUIChat: public GUIPanelFlowVertical
+{
+	public:
+		GUIChat(irr::gui::IGUIEnvironment* environment, IGUIElement* parent = nullptr, s32 id = -1, core::rect<s32> rectangle = core::rect<s32>(0,0,0,0)): GUIPanelFlowVertical(environment, parent, id, rectangle)
+	{}
+
+	protected:
+		virtual void recalculateElementPositions()
+		{
+			int yBot = getRelativePosition().getHeight();
+			int panelWidth = getAbsolutePosition().getWidth();
+			std::stack<IGUIElement*> childrenReverse;
+			for(IGUIElement* e : getChildren())
+				childrenReverse.push(e);
+			while(!childrenReverse.empty()) {
+				IGUIElement* e = childrenReverse.top();
+				yBot -= e->getAbsolutePosition().getHeight();
+				vec2i pos(0, yBot);
+				yBot -= _padding;
+				if(pos.Y < 0)
+					break;
+				e->setRelativePosition(pos);
+				childrenReverse.pop();
+			}
+			while(!childrenReverse.empty()) {
+				removeChild(childrenReverse.top());
+				childrenReverse.pop();
+			}
+		}
 };
 
 

@@ -92,8 +92,10 @@ GUI::GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedR
 	chat->setRelativePosition(vec2i(20, screenSize.Height-chatBoxHeight-20));
 	chat->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT, gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT, gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT);
 
-	auto chatContent = env->addListBox(core::rect<s32>(0, 0, chatBoxWidth, chatBoxHeight-chatInputHeight), nullptr, GUIElementID::ChatContent);
-	chatContent->setAutoScrollEnabled(true);
+	auto chatContent = new GUIChat(env, nullptr, GUIElementID::ChatContent, core::rect<s32>(0, 0, chatBoxWidth, chatBoxHeight-chatInputHeight));
+	chatContent->setDrawBackground(true);
+	chatContent->setBackgroundColor(video::SColor(155, 255, 255, 255));
+	chatContent->setPadding(5);
 	auto chatInput = env->addEditBox(L"", core::rect<s32>(0, 0, chatBoxWidth, chatInputHeight), false, nullptr, GUIElementID::ChatInput);
 	chat->addChild(chatContent);
 	chat->addChild(chatInput);
@@ -110,12 +112,44 @@ void GUI::update(float timeDelta)
 	updateGameModeInfo();
 }
 
+unsigned breakStringToWidthAndGetTotalHeight(std::wstring& s, unsigned maxWidth, IGUIFont* f)
+{
+	size_t head = 0;
+	std::wstring r;
+	core::dimension2du dim;
+	while(head < s.length()) {
+		size_t wordEnd = s.find(L" ", head);
+		std::wstring w = s.substr(head, wordEnd-head);
+		dim = f->getDimension((r+L" "+w).c_str());
+		if(dim.Width > maxWidth) {
+			//TODO break word if its longer than maxWidth
+			while(f->getDimension((r+L" "+w).c_str()).Width > maxWidth)
+				w.pop_back();
+			r += w+L"\n";
+			head += w.length();
+		}
+		else {
+			r += L" "+w;
+			if(wordEnd == string::npos)
+				head = string::npos;
+			else
+				head += wordEnd-head+1;
+		}
+	}
+	s = r;
+	return dim.Height;	
+}
+
 void GUI::displayMessage(std::string message, std::string /*tag*/)
 {
-	auto chatContent = static_cast<gui::IGUIListBox*>(_device->getGUIEnvironment()->getRootGUIElement()->getElementFromId(GUIElementID::ChatContent, true));
-	chatContent->addItem(std::wstring(message.begin(), message.end()).c_str());
-	chatContent->setSelected(chatContent->getItemCount()-1);
-	chatContent->setSelected(-1);
+	auto chatContent = static_cast<GUIChat*>(_device->getGUIEnvironment()->getRootGUIElement()->getElementFromId(GUIElementID::ChatContent, true));
+	std::wstring m(message.begin(), message.end());
+	auto t = _device->getGUIEnvironment()->addStaticText(m.c_str(), core::rect<s32>(0, 0, chatContent->getRelativePosition().getWidth(), 10));
+	t->setWordWrap(true);
+	auto s = core::dimension2du(chatContent->getRelativePosition().getWidth(), t->getTextHeight());
+	t->setMaxSize(s);
+	t->setMinSize(s);
+	chatContent->addChild(t);
 }
 
 void GUI::updateGameModeInfo()
