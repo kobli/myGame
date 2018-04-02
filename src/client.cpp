@@ -405,6 +405,7 @@ void ClientApplication::bindCameraToControlledEntity()
 			camera->bindTargetAndRotation(false);
 			_cameraElevation = PI_2;
 			_cameraYAngle = 0;
+			_device->getSceneManager()->getSceneNodeFromName("graphicsMesh", controlledCharSceneNode)->setVisible(false);
 		}
 	}
 }
