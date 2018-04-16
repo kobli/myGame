@@ -368,6 +368,8 @@ void Physics::onMsg(const EntityEvent& m)
 			body->setActivationState(DISABLE_DEACTIVATION);
 			body->setAngularFactor(btVector3(0,0,0));
 			body->setGravity(btVector3(0,col->getGravity(),0));
+			if(col->isSlippery())
+				body->setAnisotropicFriction(btVector3(0,0,0));
 		}
 	}
 }

@@ -196,6 +196,8 @@ class CollisionComponent: public ObservableComponentBase
 		bool isKinematic();
 		float getMass();
 		float getGravity();
+		void setSlippery(bool slippery);
+		bool isSlippery();
 
 		virtual void serDes(SerDesBase& s);
 		template <typename T>
@@ -207,6 +209,7 @@ class CollisionComponent: public ObservableComponentBase
 				t & _kinematic;
 				t & _mass;
 				t & _gravity;
+				t & _slippery;
 			}
 
 	private:
@@ -216,6 +219,7 @@ class CollisionComponent: public ObservableComponentBase
 		float _mass;
 		bool _kinematic;
 		float _gravity;
+		bool _slippery;
 };
 
 ////////////////////////////////////////////////////////////

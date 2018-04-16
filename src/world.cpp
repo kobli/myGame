@@ -216,7 +216,7 @@ CollisionComponent::CollisionComponent(ID parentEntID, float radius,
 	 	float height, vec3f posOffset, float mass, bool kinematic, float gravity)
 	: ObservableComponentBase(parentEntID, ComponentType::Collision)
 		, _radius{radius}, _height{height}, _posOff{posOffset}
-		, _mass{mass}, _kinematic{kinematic}, _gravity{gravity}
+		, _mass{mass}, _kinematic{kinematic}, _gravity{gravity}, _slippery{false}
 {}
 
 float CollisionComponent::getRadius() const
@@ -267,6 +267,16 @@ float CollisionComponent::getMass()
 float CollisionComponent::getGravity()
 {
 	return _gravity;
+}
+
+void CollisionComponent::setSlippery(bool slippery)
+{
+	_slippery = slippery;
+}
+
+bool CollisionComponent::isSlippery()
+{
+	return _slippery;
 }
 
 ////////////////////////////////////////////////////////////

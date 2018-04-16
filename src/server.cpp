@@ -349,6 +349,7 @@ void Game::loadMap()
 		te.addComponent<BodyComponent>(t.position);
 		te.addComponent<MeshGraphicsComponent>("Tree1.obj", false);
 		te.addComponent<CollisionComponent>(0.5, 10, vec3f(0,-5.5,0), 0);
+		te.getComponent<CollisionComponent>()->setSlippery(true);
 	}
 	for(const Spawnpoint& s: _map.getSpawnpoints()) {
 		Entity& te = _gameWorld.createAndGetEntity();
