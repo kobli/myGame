@@ -110,6 +110,7 @@ std::ostream& operator >>(std::ostream& /*o*/, std::pair<K,V>& /*p*/) {
 	assert(false); //TODO
 }
 
+float lerp(float a, float b, float m);
 
 extern ImageDumper SAVEIMAGE;
 #endif /* MAIN_HPP_16_11_18_13_20_24 */

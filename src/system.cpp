@@ -3,6 +3,9 @@
 #include "heightmapMesh.hpp"
 #include "terrainTexturer.hpp"
 
+const float CHARACTER_MAX_STRAFE_FORCE = 900000;
+const float CHARACTER_MAX_VELOCITY = 5;
+
 class DebugDrawer: public btIDebugDraw
 {
 	public:
@@ -184,7 +187,7 @@ Physics::Physics(World& world, scene::ISceneManager* smgr): System{world}, _tAcc
 	btRigidBody* terrB = new btRigidBody(terrCI);
 	_physicsWorld->addRigidBody(terrB);
 	terrB->setUserIndex(ObjStaticID::Map);
-	terrB->setAnisotropicFriction(btVector3(0.8,0.3,0.8));
+	terrB->setAnisotropicFriction(btVector3(0.8,0.1,0.8));
 	//terrB->setFriction(1);
 }
 
@@ -224,8 +227,6 @@ void Physics::update(float timeDelta)
 
 void Physics::bodyDoStrafe(float timeDelta)
 {
-	for(auto& od : _objData)
-		od.second.walkTimer += timeDelta;
 	//TODO do this only for the bodies that collide with terrain (could be called from collision checking)
 	for(auto& e: _world.getEntities())
 	{
@@ -238,40 +239,36 @@ void Physics::bodyDoStrafe(float timeDelta)
 		btRigidBody* b = dynamic_cast<btRigidBody*>(o);
 		if(!b)
 			continue;
-		float& t = _objData[e.getID()].walkTimer;
-		
-		float fMul = 800;
-		{
-			vec2f strDir = bc->getStrafeDir();
-			vec3f dir{strDir.X, 0, strDir.Y};
-			vec3f rot;
-			bc->getRotation().toEuler(rot);
-			rot *= 180/PI;
-			dir.rotateYZBy(-rot.X);
-			dir.rotateXZBy(-rot.Y);
-			dir.rotateXYBy(-rot.Z);
-			dir.Y = 0;
-			dir.normalize();
+		float vel = b->getLinearVelocity().length();
+		float velRoof = max(0.f, CHARACTER_MAX_VELOCITY-vel)/CHARACTER_MAX_VELOCITY;
+		vec3f currentDir = (btV3f2V3f(b->getLinearVelocity())*vec3f(1,0,1)).normalize();
 
-			if(dir.getLength() > 0.1 && _objData[e.getID()].onGround)
-			{
-				b->setDamping(0.41, 0);
-				if(getObjVelocity(e.getID()).getLength() < 2)
-				{
-					fMul *= 1.5;
-				}
-				b->setFriction(1.0);
-				//b->setMassProps(mass, fallInertia);
-				b->applyCentralImpulse(btVector3(dir.X, 0., dir.Z)*fMul*timeDelta);
+		vec2f strDir = bc->getStrafeDir();
+		vec3f dir{strDir.X, 0, strDir.Y};
+		vec3f rot;
+		bc->getRotation().toEuler(rot);
+		rot *= 180/PI;
+		dir.rotateYZBy(-rot.X);
+		dir.rotateXZBy(-rot.Y);
+		dir.rotateXYBy(-rot.Z);
+		dir.Y = 0;
+		dir.normalize();
+
+		if(dir.getLength() > 0.1 && _objData[e.getID()].onGround)
+		{
+			b->setFriction(1);
+			// if holding WD and already going forward at full speed, try to turn as much as possible
+			float changingDir = 1-max(0.f, currentDir.dotProduct(dir));
+			if(changingDir > 0.1) {
+				dir = dir-currentDir;
+				changingDir = 1-max(0.f, currentDir.dotProduct(dir));
 			}
-			else
-			{
-				t = 0;
-				b->setFriction(10);
-				//if(getObjVelocity(e.getID()).getLength() < 0.1)
-					//b->setDamping(50, 0);
-				//b->setMassProps(mass2, fallInertia);
-			}
+			float force = CHARACTER_MAX_STRAFE_FORCE*lerp(velRoof, 1, changingDir);
+			b->applyCentralForce(btVector3(dir.X, 0., dir.Z)*force*timeDelta);
+		}
+		else
+		{
+			b->setFriction(20);
 		}
 	}
 }

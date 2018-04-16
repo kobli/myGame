@@ -84,3 +84,8 @@ Table lua_loadTable(lua_State* l, int index)
 	}
 	return t;
 }
+
+float lerp(float a, float b, float m)
+{
+	return a*(1-m) + b*m;
+}
