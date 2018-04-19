@@ -189,6 +189,13 @@ Physics::Physics(World& world, scene::ISceneManager* smgr): System{world}, _tAcc
 	terrB->setUserIndex(ObjStaticID::Map);
 	terrB->setAnisotropicFriction(btVector3(0.8,0.1,0.8));
 	//terrB->setFriction(1);
+	
+	// create fence around the map
+	const float padding = 1;
+	_physicsWorld->addCollisionObject(new btRigidBody(0, nullptr, new btStaticPlaneShape(btVector3(1, 0, 0), padding)));
+	_physicsWorld->addCollisionObject(new btRigidBody(0, nullptr, new btStaticPlaneShape(btVector3(-1, 0, 0), -int(w)+1+padding)));
+	_physicsWorld->addCollisionObject(new btRigidBody(0, nullptr, new btStaticPlaneShape(btVector3(0, 0, 1), padding)));
+	_physicsWorld->addCollisionObject(new btRigidBody(0, nullptr, new btStaticPlaneShape(btVector3(0, 0, -1), -int(w)+1+padding)));
 }
 
 vec3f Physics::getObjVelocity(ID objID)
