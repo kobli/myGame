@@ -141,7 +141,8 @@ void ClientApplication::run()
 				camera->setTarget(camera->getAbsolutePosition()+cameraLookDir*10000);
 				if(_sharedRegistry.hasKey("controlled_object_id")) {
 					auto controlledCharSceneNode = _device->getSceneManager()->getSceneNodeFromId(_sharedRegistry.getValue<ID>("controlled_object_id"));
-					if(controlledCharSceneNode)
+					if(controlledCharSceneNode) {
+						controlledCharSceneNode->setVisible(false);
 						camera->setPosition(interpolate(
 									camera->getPosition(),
 									controlledCharSceneNode->getPosition() + vec3f(0,1.6,0) + 0.23f*(cameraLookDir*vec3f(1,0,1)).normalize(),
@@ -149,6 +150,7 @@ void ClientApplication::run()
 									10,
 									1
 									));
+					}
 				}
 			}
 		}
@@ -407,7 +409,6 @@ void ClientApplication::bindCameraToControlledEntity()
 			camera->bindTargetAndRotation(false);
 			_cameraElevation = PI_2;
 			_cameraYAngle = 0;
-			_device->getSceneManager()->getSceneNodeFromName("graphicsMesh", controlledCharSceneNode)->setVisible(false);
 		}
 	}
 }
