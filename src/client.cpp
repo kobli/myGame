@@ -98,6 +98,8 @@ ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ 
 	_controller.setScreenSizeGetter([this](){ auto ss = _device->getVideoDriver()->getScreenSize(); return vec2i(ss.Width, ss.Height); });
 	_controller.setExit([this](){ _device->closeDevice(); });
 	_controller.setDevice(_device.get());
+
+	_device->getSceneManager()->addSkyDomeSceneNode(_device->getVideoDriver()->getTexture("media/skydome.jpg"), 16,8,0.95f,2.0f);
 }
 
 bool ClientApplication::connect(string host, unsigned short port)
