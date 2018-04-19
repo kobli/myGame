@@ -40,7 +40,7 @@ Config.Spell.speedMultiplier = 20
 Config.Spell.radiusMultiplier = 2
 Config.Spell.powerMultiplier = 1
 Config.Spell.maxSpeed = 60
-Config.Spell.maxRadius = 20
+Config.Spell.maxRadius = 5
 Config.Spell.maxPower = 5
 
 BODYEFFECTID = 0
