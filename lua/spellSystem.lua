@@ -35,12 +35,13 @@ Config.Wizard = {}
 
 Config.Body.invocT = 0.6				-- invocation time [seconds]
 Config.Body.minRadiusCoef = 0.1 -- minimum radius coefficient of the spell body sphere [?]
-Config.Body.baseSpeed = 20			-- base traveling speed of the body [?]
-Config.Body.baseRadius = 2			-- base radius of the body sphere [?]
 
-Config.Spell.maxSpeed = 60			-- maximum traveling speed of the spell[?]
-Config.Spell.maxRadius = 20			-- maximum radius of the spell body sphere [?]
-Config.Spell.maxPower = 5				-- maximum power of the spell [?]
+Config.Spell.speedMultiplier = 20
+Config.Spell.radiusMultiplier = 2
+Config.Spell.powerMultiplier = 1
+Config.Spell.maxSpeed = 60
+Config.Spell.maxRadius = 20
+Config.Spell.maxPower = 5
 
 BODYEFFECTID = 0
 Config.Effects = {}
@@ -248,11 +249,11 @@ function Body:getPower()
 end
 
 function Body:getRadius()
-	return self.radiusCoef*Config.Body.baseRadius
+	return self.radiusCoef
 end
 
 function Body:getSpeed()
-	return self.speedCoef*Config.Body.baseSpeed
+	return self.speedCoef
 end
 
 function Body:dieOnCollisionWith(str)
@@ -351,7 +352,7 @@ function Spell:getPower()
 	for k,v in pairs(self.bodies) do
 		s = s + v:getPower()
 	end
-	return math.min(stackedBodiesMultipltier(#self.bodies)*s, Config.Spell.maxPower)
+	return math.min(stackedBodiesMultipltier(#self.bodies)*Config.Spell.powerMultiplier*s, Config.Spell.maxPower)
 end
 
 function Spell:getRadius()
@@ -359,7 +360,7 @@ function Spell:getRadius()
 	for k,v in pairs(self.bodies) do
 		s = s + v:getRadius()
 	end
-	return math.min(stackedBodiesMultipltier(#self.bodies)*s, Config.Spell.maxRadius)
+	return math.min(stackedBodiesMultipltier(#self.bodies)*Config.Spell.radiusMultiplier*s, Config.Spell.maxRadius)
 end
 
 function Spell:getSpeed()
@@ -367,7 +368,7 @@ function Spell:getSpeed()
 	for k,v in pairs(self.bodies) do
 		s = s + v:getSpeed()
 	end
-	return math.min(stackedBodiesMultipltier(#self.bodies)*s, Config.Spell.maxSpeed)
+	return math.min(stackedBodiesMultipltier(#self.bodies)*Config.Spell.speedMultiplier*s, Config.Spell.maxSpeed)
 end
 
 function Spell:die()
