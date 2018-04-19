@@ -128,7 +128,8 @@ function Wizard:updateStatus()
 			table.insert(effects, v.effectID)
 		end
 	end
-	updateWizardStatus(self.ID, self.invocIncantation or "", self.invocT, progress, 
+	local invocEffId = effectIdFromIncantation(self.invocIncantation)
+	updateWizardStatus(self.ID, self.invocIncantation or "", invocEffId or -1, self.invocT, progress, 
 	p, r, s, effects,
 	Config.Wizard.maxBodiesAlive-self.bodiesInUse, Config.Wizard.maxBodiesAlive,
 	self:getCommandQueueAsEffectIDs())
@@ -137,18 +138,26 @@ end
 function Wizard:getCommandQueueAsEffectIDs()
 	local r = {}
 	for k,v in pairs(List.asTable(self.incantationQ)) do
-		local c, args = incantationToCommandAndArgs(v)
-		local commandProductID = nil
-		if string.find(c, "spell_effect") then
-			commandProductID = Config.Effects[args].effectID
-		elseif string.find(c, "spell_body") then
-			commandProductID = 0
-		end
+		local commandProductID = effectIdFromIncantation(v)
 		if commandProductID ~= nil then
 			table.insert(r, commandProductID)
 		end
 	end
 	return r
+end
+
+function effectIdFromIncantation(inc)
+	if inc == nil then
+		return nil
+	end
+	local c, args = incantationToCommandAndArgs(inc)
+	if string.find(c, "spell_effect") then
+		return Config.Effects[args].effectID
+	elseif string.find(c, "spell_body") then
+		return 0
+	else
+		return nil
+	end
 end
 
 function incantationToCommandAndArgs(inc)

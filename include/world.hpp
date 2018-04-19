@@ -233,6 +233,7 @@ class WizardComponent: public ObservableComponentBase
 			void doSerDes(T& t)
 			{
 				t & _currentJob;
+				t & _currentJobEffectId;
 				t & _currentJobDuration;
 				t & _currentJobProgress;
 				t & _spellInHandsPower;
@@ -244,11 +245,12 @@ class WizardComponent: public ObservableComponentBase
 				t & _commandQueue;
 			}
 
-		void setCurrentJobStatus(std::string job, float duration, float progress);
+		void setCurrentJobStatus(std::string job, int jobEffectId, float duration, float progress);
 		void setSpellInHandsData(float power, float radius, float speed, std::vector<unsigned> effects);
 		void setBodyStatus(unsigned available, unsigned total);
 		void setCommandQueue(std::vector<unsigned> commands);
 		std::string getCurrentJob();
+		int getCurrentJobEffectId();
 		float getCurrentJobDuration();
 		float getCurrentJobProgress();
 		bool hasSpellInHands();
@@ -262,6 +264,7 @@ class WizardComponent: public ObservableComponentBase
 
 	private:
 		std::string _currentJob;
+		int _currentJobEffectId;
 		float _currentJobDuration;
 		float _currentJobProgress;
 		float _spellInHandsPower;

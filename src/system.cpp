@@ -871,26 +871,27 @@ void SpellSystem::init()
 
 	auto updateWizardStatus = [](lua_State* s)->int {
 		int argc = lua_gettop(s);
-		if(argc != 11)
+		if(argc != 12)
 		{
 			std::cerr << "updateWizardStatus: wrong number of arguments\n";
 			return 0;		
 		}
 		ID eID = lua_tointeger(s, 1);
 		std::string currentJob = lua_tostring(s, 2);
-		float currentJobDuration = lua_tonumber(s, 3);
-		float currentJobProgress = lua_tonumber(s, 4);
-		float spellInHandsPower = lua_tonumber(s, 5);
-		float spellInHandsRadius = lua_tonumber(s, 6);
-		float spellInHandsSpeed = lua_tonumber(s, 7);
+		int currentJobEffectId = lua_tointeger(s, 3);
+		float currentJobDuration = lua_tonumber(s, 4);
+		float currentJobProgress = lua_tonumber(s, 5);
+		float spellInHandsPower = lua_tonumber(s, 6);
+		float spellInHandsRadius = lua_tonumber(s, 7);
+		float spellInHandsSpeed = lua_tonumber(s, 8);
 		std::vector<unsigned> effects;
-		Table effectsTable = lua_loadTable(s, 8);
+		Table effectsTable = lua_loadTable(s, 9);
 		for(const auto& e: effectsTable)
 			effects.push_back(std::stoul(e.second));
-		unsigned availableBodyC = lua_tonumber(s, 9);
-		unsigned totalBodyC = lua_tonumber(s, 10);
+		unsigned availableBodyC = lua_tonumber(s, 10);
+		unsigned totalBodyC = lua_tonumber(s, 11);
 		std::vector<unsigned> commandQueue;
-		Table commandQueueTable = lua_loadTable(s, 11);
+		Table commandQueueTable = lua_loadTable(s, 12);
 		for(const auto& c: commandQueueTable)
 			commandQueue.push_back(std::stoul(c.second));
 		World* world = (World*)lua_touserdata(s, lua_upvalueindex(1));
@@ -898,7 +899,7 @@ void SpellSystem::init()
 		if(e != nullptr) {
 			WizardComponent* wc = e->getComponent<WizardComponent>();
 			if(wc != nullptr) {
-				wc->setCurrentJobStatus(currentJob, currentJobDuration, currentJobProgress);
+				wc->setCurrentJobStatus(currentJob, currentJobEffectId, currentJobDuration, currentJobProgress);
 				wc->setSpellInHandsData(spellInHandsPower, spellInHandsRadius, spellInHandsSpeed, effects);
 				wc->setBodyStatus(availableBodyC, totalBodyC);
 				wc->setCommandQueue(commandQueue);

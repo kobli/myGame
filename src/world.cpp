@@ -291,10 +291,11 @@ void WizardComponent::serDes(SerDesBase& s)
 	s.serDes(*this);
 }
 
-void WizardComponent::setCurrentJobStatus(std::string job, float duration, float progress)
+void WizardComponent::setCurrentJobStatus(std::string job, int jobEffectId, float duration, float progress)
 {
-	bool changed = _currentJob != job || _currentJobDuration != duration || _currentJobProgress != progress;
+	bool changed = _currentJob != job || _currentJobEffectId != jobEffectId || _currentJobDuration != duration || _currentJobProgress != progress;
 	_currentJob = job;
+	_currentJobEffectId = jobEffectId;
 	_currentJobDuration = duration;
 	_currentJobProgress = progress;
 	if(changed)
@@ -332,6 +333,11 @@ void WizardComponent::setCommandQueue(std::vector<unsigned> commands)
 std::string WizardComponent::getCurrentJob()
 {
 	return _currentJob;
+}
+
+int WizardComponent::getCurrentJobEffectId()
+{
+	return _currentJobEffectId;
 }
 
 float WizardComponent::getCurrentJobDuration()

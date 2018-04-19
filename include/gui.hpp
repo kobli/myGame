@@ -158,6 +158,7 @@ class GUI: public Observer<EntityEvent>
 
 		gui::ProgressBar* _healthBar;
 		gui::ProgressBar* _castingIndicator;
+		gui::IGUIImage* _castingEffect;
 		gui::IGUIElement* _spellInHandsInfo;
 
 		irr::gui::ProgressBar* _spellAttrPowInfo;

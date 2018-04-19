@@ -4,6 +4,8 @@
 #include "CGUITTFont.h"
 #include "crosshair.hpp"
 
+const std::map<unsigned, std::string> EFFECT_ICONS{{0, "body"}, {1,"fire"}, {3, "heal"}};
+
 using namespace irr::gui;
 
 GUI::GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedRegistry, const KeyValueStore& gameRegistry)
@@ -32,6 +34,12 @@ GUI::GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedR
 	_castingIndicator->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT, gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT);
 	_castingIndicator->setColors(video::SColor(155, 255,255,255), video::SColor(255, 255,140,70));
 	_castingIndicator->setLabel(L"Casting ...");
+
+	_castingEffect = env->addImage(
+								_device->getVideoDriver()->getTexture(("./media/spell_icon_"+EFFECT_ICONS.at(0)+"_32.png").c_str()),
+								vec2i(0,0), false);
+	_castingEffect->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT, gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT);
+	_castingEffect->setRelativePosition(_castingIndicator->getAbsolutePosition().UpperLeftCorner-vec2i(32, 0));
 
 	int spellAttributesInfoPanelWidth = castIndLen;
 	int spellAttributeProgBarHeight = 20;
@@ -180,7 +188,6 @@ void GUI::updateGameModeInfo()
 void GUI::onMsg(const EntityEvent& m)
 {
 	auto env = _device->getGUIEnvironment();
-	static std::map<unsigned, std::string> effectIcons{{0, "body"}, {1,"fire"}, {3, "heal"}};
 	Entity* controlledE = nullptr;
 	if(_sharedRegistry.hasKey("controlled_object_id")) {
 		ID id = _sharedRegistry.getValue<ID>("controlled_object_id");
@@ -214,7 +221,7 @@ void GUI::onMsg(const EntityEvent& m)
 					for(unsigned effectID: wc->getSpellInHandsEffects())
 						_spellEffectsInfo->addChild(
 								env->addImage(
-									_device->getVideoDriver()->getTexture(("./media/spell_icon_"+effectIcons[effectID]+"_64.png").c_str()),
+									_device->getVideoDriver()->getTexture(("./media/spell_icon_"+EFFECT_ICONS.at(effectID)+"_64.png").c_str()),
 									vec2i(0,0)
 									));
 					_spellInHandsInfo->setVisible(true);
@@ -226,16 +233,20 @@ void GUI::onMsg(const EntityEvent& m)
 				for(unsigned effectID : wc->getCommandQueue())
 					_spellCommandQInfo->addChild(
 							env->addImage(
-								_device->getVideoDriver()->getTexture(("./media/spell_icon_"+effectIcons[effectID]+"_32.png").c_str()),
+								_device->getVideoDriver()->getTexture(("./media/spell_icon_"+EFFECT_ICONS.at(effectID)+"_32.png").c_str()),
 								vec2i(0,0)
 								));
 
 				if(!wc->getCurrentJob().empty()) {
 					_castingIndicator->setVisible(true);
 					_castingIndicator->setProgress(wc->getCurrentJobProgress()/wc->getCurrentJobDuration());
+					_castingEffect->setVisible(true);
+					_castingEffect->setImage(_device->getVideoDriver()->getTexture(("./media/spell_icon_"+EFFECT_ICONS.at(wc->getCurrentJobEffectId())+"_32.png").c_str()));
 				}
-				else
+				else {
 					_castingIndicator->setVisible(false);
+					_castingEffect->setVisible(false);
+				}
 			}
 		}
 }
