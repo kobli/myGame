@@ -440,7 +440,8 @@ function log(n, base)
 end
 
 function stackedBodiesMultipltier(bodyC)
-	return (log(bodyC+1, 1.5)-0.71)/bodyC
+	return 1
+	--return (log(bodyC+1, 1.5)-0.71)/bodyC
 end
 
 -------------------- Cpp interface --------------------
