@@ -1,4 +1,5 @@
 #define _USE_MATH_DEFINES
+#include "CGUITTFont.h"
 #include "system.hpp"
 #include "heightmapMesh.hpp"
 #include "terrainTexturer.hpp"
@@ -440,10 +441,30 @@ void ViewSystem::onMsg(const EntityEvent& m)
 		m.componentT == ComponentType::GraphicsMesh || 
 		m.componentT == ComponentType::GraphicsSphere ||
 		m.componentT == ComponentType::GraphicsParticleSystem;
-	if(bodyComponentAdded || graphicsComponentChanged)  {
-		auto e = _world.getEntity(m.entityID);
-		if(!e)
+	auto e = _world.getEntity(m.entityID);
+	if(!e)
+		return;
+	if(bodyComponentAdded || m.componentT == ComponentType::AttributeStore) {
+		if(!e->hasComponent(ComponentType::AttributeStore))
 			return;
+		auto bsn = _smgr->getSceneNodeFromId(m.entityID);
+		if(!bsn)
+			return;
+		auto sn = _smgr->getSceneNodeFromName("name", bsn);
+		if(sn) {
+			sn->remove();
+			sn = nullptr;
+		}
+		AttributeStoreComponent* asc = e->getComponent<AttributeStoreComponent>();
+		if(asc->hasAttribute("name")) {
+			std::string name = asc->getAttribute<std::string>("name");
+			gui::IGUIFont* font = gui::CGUITTFont::createTTFont(_smgr->getGUIEnvironment(), "./media/OpenSans-Bold.ttf", 15);
+			sn = _smgr->addTextSceneNode(font, core::stringw(name.c_str()).c_str(), video::SColor(200, 255, 255, 255), bsn, vec3f(0, 2, 0));
+			if(sn)
+				sn->setName("name");
+		}
+	}
+	if(bodyComponentAdded || graphicsComponentChanged)  {
 		if(!e->hasComponent(ComponentType::Body))
 			return;
 		auto bsn = _smgr->getSceneNodeFromId(m.entityID);
