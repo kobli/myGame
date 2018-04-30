@@ -7,6 +7,42 @@
 const float CHARACTER_MAX_STRAFE_FORCE = 900000;
 const float CHARACTER_MAX_VELOCITY = 5;
 
+class CSceneNodeAnimatorVisibilityTimeout: public scene::ISceneNodeAnimator
+{
+	public:
+		CSceneNodeAnimatorVisibilityTimeout(u32 timeout): _timeout{timeout}, _lastTime{0}
+		{}
+
+	private:
+		virtual void animateNode(scene::ISceneNode* node, u32 timeMs) override
+		{
+			if(_lastTime) {
+				u32 tick = timeMs-_lastTime;
+				if(_timeout > tick)
+					_timeout -= tick;
+				else {
+					_timeout = 0;
+					node->setVisible(false);
+				}
+			}
+			_lastTime = timeMs;
+		}
+
+		virtual ISceneNodeAnimator* createClone(scene::ISceneNode* /*node*/, scene::ISceneManager* /*newManager*/ = 0) override
+		{
+			assert(false);
+		}
+
+		virtual bool hasFinished(void) const override
+		{
+			return _timeout == 0;
+		}
+
+	private:
+		u32 _timeout;
+		u32 _lastTime;
+};
+
 class DebugDrawer: public btIDebugDraw
 {
 	public:
@@ -428,12 +464,6 @@ void ViewSystem::onMsg(const EntityEvent& m)
 			sn->remove();
 			return;
 		}
-		else if(!sn && !m.destroyed)
-		{
-			sn = _smgr->addEmptySceneNode(nullptr, m.entityID);
-			sn->setName("body");
-			//sn->setDebugDataVisible(scene::EDS_FULL);
-		}
 		_transformedEntities.insert(m.entityID);
 	}
 	bool bodyComponentAdded = m.created && m.componentT == ComponentType::Body;
@@ -447,54 +477,62 @@ void ViewSystem::onMsg(const EntityEvent& m)
 	if(bodyComponentAdded || m.componentT == ComponentType::AttributeStore) {
 		if(!e->hasComponent(ComponentType::AttributeStore))
 			return;
-		auto bsn = _smgr->getSceneNodeFromId(m.entityID);
-		if(!bsn)
-			return;
-		auto sn = _smgr->getSceneNodeFromName("name", bsn);
-		if(sn) {
-			sn->remove();
-			sn = nullptr;
-		}
 		AttributeStoreComponent* asc = e->getComponent<AttributeStoreComponent>();
-		if(asc->hasAttribute("name")) {
+		if(asc && asc->hasAttribute("name")) {
+			auto bsn = getOrCreateBaseSceneNode(m.entityID);
+			if(!bsn)
+				return;
+			auto sn = _smgr->getSceneNodeFromName("name", bsn);
+			if(sn) {
+				sn->remove();
+				sn = nullptr;
+			}
 			std::string name = asc->getAttribute<std::string>("name");
 			gui::IGUIFont* font = gui::CGUITTFont::createTTFont(_smgr->getGUIEnvironment(), "./media/OpenSans-Bold.ttf", 15);
-			sn = _smgr->addTextSceneNode(font, core::stringw(name.c_str()).c_str(), video::SColor(200, 255, 255, 255), bsn, vec3f(0, 2, 0));
-			if(sn)
+			sn = _smgr->addTextSceneNode(font, core::stringw(name.c_str()).c_str(), video::SColor(200, 255, 255, 255), bsn, vec3f(0, 2, 0), ObjStaticID::NULLOBJ);
+			if(sn) {
 				sn->setName("name");
+				sn->setVisible(false);
+			}
 		}
 	}
 	if(bodyComponentAdded || graphicsComponentChanged)  {
 		if(!e->hasComponent(ComponentType::Body))
 			return;
-		auto bsn = _smgr->getSceneNodeFromId(m.entityID);
-		if(!bsn)
-			return;
 		if(auto sgc = e->getComponent<SphereGraphicsComponent>())
 		{
+			auto bsn = getOrCreateBaseSceneNode(m.entityID);
+			if(!bsn)
+				return;
 			auto sn = _smgr->getSceneNodeFromName("graphicsSphere", bsn);
 			if(sn)
 				sn->remove();
 			if(graphicsComponentChanged && m.destroyed)
 				return;
-			sn = _smgr->addSphereSceneNode(sgc->getRadius(), 64, bsn, -1, sgc->getPosOffset());
+			sn = _smgr->addSphereSceneNode(sgc->getRadius(), 64, bsn, ObjStaticID::OBJCHILD, sgc->getPosOffset());
 			sn->setMaterialFlag(video::EMF_LIGHTING, false);
 			sn->setMaterialFlag(video::EMF_WIREFRAME, true);
 			sn->setName("graphicsSphere");
 		}
 		if(auto psgc = e->getComponent<ParticleSystemGraphicsComponent>())
 		{
+			auto bsn = getOrCreateBaseSceneNode(m.entityID);
+			if(!bsn)
+				return;
 			auto sn = static_cast<scene::IParticleSystemSceneNode*>(_smgr->getSceneNodeFromName("graphicsParticleSystem", bsn));
 			if(sn)
 				sn->remove();
 			if(graphicsComponentChanged && m.destroyed)
 				return;
-			sn = _smgr->addParticleSystemSceneNode(true, bsn, -1, psgc->getPosOffset(), psgc->getRotOffset(), psgc->getScale());
+			sn = _smgr->addParticleSystemSceneNode(true, bsn, ObjStaticID::NULLOBJ, psgc->getPosOffset(), psgc->getRotOffset(), psgc->getScale());
 			addParticleEffect(psgc->getEffectID(), sn);
 			sn->setName("graphicsParticleSystem");
 		}
 		if(auto mgc = e->getComponent<MeshGraphicsComponent>())
 		{
+			auto bsn = getOrCreateBaseSceneNode(m.entityID);
+			if(!bsn)
+				return;
 			auto sn = _smgr->getSceneNodeFromName("graphicsMesh", bsn);
 			if(sn)
 				sn->remove();
@@ -503,9 +541,9 @@ void ViewSystem::onMsg(const EntityEvent& m)
 			if(mgc->getFileName() == "")
 				return;
 			if(mgc->isAnimated())
-				sn = _smgr->addAnimatedMeshSceneNode(_smgr->getMesh(("./media/" + mgc->getFileName()).c_str()), bsn, -1, mgc->getPosOffset(), mgc->getRotOffset(), mgc->getScale());
+				sn = _smgr->addAnimatedMeshSceneNode(_smgr->getMesh(("./media/" + mgc->getFileName()).c_str()), bsn, ObjStaticID::OBJCHILD, mgc->getPosOffset(), mgc->getRotOffset(), mgc->getScale());
 			else
-				sn = _smgr->addMeshSceneNode(_smgr->getMesh(("./media/" + mgc->getFileName()).c_str()), bsn, -1, mgc->getPosOffset(), mgc->getRotOffset(), mgc->getScale());
+				sn = _smgr->addMeshSceneNode(_smgr->getMesh(("./media/" + mgc->getFileName()).c_str()), bsn, ObjStaticID::OBJCHILD, mgc->getPosOffset(), mgc->getRotOffset(), mgc->getScale());
 			sn->setMaterialFlag(video::EMF_LIGHTING, false);
 			sn->setName("graphicsMesh");
 			//sn->setDebugDataVisible(scene::EDS_FULL);
@@ -516,6 +554,61 @@ void ViewSystem::onMsg(const EntityEvent& m)
 void ViewSystem::update(float timeDelta)
 {
 	updateTransforms(timeDelta);
+	spotObjects();
+}
+
+void ViewSystem::spotObjects()
+{
+	core::dimension2du screenSize = _smgr->getVideoDriver()->getScreenSize();
+	scene::ISceneNode* sn = _smgr->getSceneCollisionManager()->getSceneNodeFromScreenCoordinatesBB(vec2i(screenSize.Width, screenSize.Height)/2, ObjStaticID::OBJCHILD);
+	if(sn)
+		onObjectLookAt(sn);
+}
+
+void ViewSystem::onObjectLookAt(scene::ISceneNode* sn)
+{
+	scene::ISceneNode* bsn = nullptr;
+	if(sn)
+		bsn = sn->getParent();
+	if(!bsn)
+		return;
+
+	scene::ISceneNode* nsn = _smgr->getSceneNodeFromName("name", bsn);
+	if(nsn) {
+		bool visible = isSceneNodeVisible((scene::IMeshSceneNode*)sn);
+		if(visible)
+			showObjectName(nsn);
+	}
+}
+
+void ViewSystem::showObjectName(scene::ISceneNode* nsn)
+{
+	nsn->setVisible(true);
+	nsn->removeAnimators();
+	nsn->addAnimator(new CSceneNodeAnimatorVisibilityTimeout(5000));
+}
+
+scene::ISceneNode* ViewSystem::getOrCreateBaseSceneNode(ID entityID)
+{
+	scene::ISceneNode* sn = _smgr->getSceneNodeFromId(entityID);
+	if(!sn) {
+		sn = _smgr->addEmptySceneNode(nullptr, entityID);
+		sn->setName("body");
+		//sn->setDebugDataVisible(scene::EDS_FULL);
+	}
+	return sn;
+}
+
+// TODO ... move the check?
+// this may return incorrect result for the first time
+bool ViewSystem::isSceneNodeVisible(scene::IMeshSceneNode* sn)
+{
+	if(!sn || (sn->getType() != scene::ESCENE_NODE_TYPE::ESNT_MESH && sn->getType() != scene::ESCENE_NODE_TYPE::ESNT_ANIMATED_MESH))
+		return false;
+	video::IVideoDriver* driver = _smgr->getVideoDriver();
+	u32 r = driver->getOcclusionQueryResult(sn);
+	driver->addOcclusionQuery(sn);
+	return r>0;
 }
 
 void ViewSystem::updateTransforms(float timeDelta)
@@ -663,7 +756,7 @@ void ViewSystem::loadTerrain()
 
 	HeightmapMesh mesh;
 	mesh.init(_world.getMap().getTerrain(), TerrainTexturer::texture, driver);
-	scene::IMeshSceneNode* terrain = _smgr->addMeshSceneNode(mesh.Mesh, nullptr);
+	scene::IMeshSceneNode* terrain = _smgr->addMeshSceneNode(mesh.Mesh, nullptr, ObjStaticID::Map);
 
 	terrain->setMaterialFlag(video::EMF_BACK_FACE_CULLING, true);
 	terrain->setMaterialFlag(video::EMF_LIGHTING, false);

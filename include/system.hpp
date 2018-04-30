@@ -56,6 +56,11 @@ class ViewSystem: public System
 		irr::scene::ISceneManager* _smgr;
 		std::set<ID> _transformedEntities;
 		
+		void spotObjects();
+		void onObjectLookAt(scene::ISceneNode* sn);
+		void showObjectName(scene::ISceneNode* nsn);
+		scene::ISceneNode* getOrCreateBaseSceneNode(ID entityID);
+		bool isSceneNodeVisible(scene::IMeshSceneNode* sn);
 		void updateTransforms(float timeDelta);
 		scene::IParticleEmitter* addParticleEffect(ID effectID, scene::IParticleSystemSceneNode* sn);
 		void loadTerrain();

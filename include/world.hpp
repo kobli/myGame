@@ -14,12 +14,13 @@
 using ec::ID;
 using ec::NULLID;
 enum ObjStaticID: ID {
-	FIRST,
-	Map = 10,
-	Camera = 20,
-	FIRSTFREE = 30
+	NULLOBJ = 0,
+	Camera = 1<<0,
+	Map = 1<<1,
+	Skybox = 1<<2,
+	OBJCHILD = 1<<3,
+	FIRSTFREE = 1<<4,
 };
-static_assert(ObjStaticID::FIRST != NULLID, "");
 
 enum ComponentType: u8
 {
