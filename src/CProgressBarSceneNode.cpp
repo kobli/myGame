@@ -12,7 +12,7 @@ CProgressBarSceneNode::CProgressBarSceneNode(scene::ISceneNode* parent, scene::I
 void CProgressBarSceneNode::OnRegisterSceneNode()
 {
 	if(IsVisible)
-		SceneManager->registerNodeForRendering(this);
+		SceneManager->registerNodeForRendering(this, irr::scene::E_SCENE_NODE_RENDER_PASS::ESNRP_TRANSPARENT_EFFECT);
 
 	irr::scene::ISceneNode::OnRegisterSceneNode();
 }
