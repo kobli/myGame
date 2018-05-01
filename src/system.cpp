@@ -496,6 +496,28 @@ void ViewSystem::onMsg(const EntityEvent& m)
 				sn->setVisible(false);
 			}
 		}
+		if(asc && asc->hasAttribute("health")) {
+			auto bsn = getOrCreateBaseSceneNode(m.entityID);
+			if(!bsn)
+				return;
+			CProgressBarSceneNode* sn = static_cast<CProgressBarSceneNode*>(_smgr->getSceneNodeFromName("health", bsn));
+			if(!sn) {
+				gui::IGUIFont* font = gui::CGUITTFont::createTTFont(_smgr->getGUIEnvironment(), "./media/OpenSans-Bold.ttf", 10);
+				sn = new CProgressBarSceneNode(bsn, _smgr, ObjStaticID::NULLOBJ, vec3f(0, 1.8, 0), vec2i(50, 3), font);
+				if(sn) {
+					sn->setName("health");
+					sn->setColors(video::SColor(255, 255, 255, 255), video::SColor(255, 255, 0, 0));
+				}
+			}
+			if(sn) {
+				int health = asc->getAttribute<int>("health");
+				int maxHealth = asc->getAttribute<int>("max-health");
+				sn->setProgress(float(health)/maxHealth);
+				sn->setMaxValue(maxHealth);
+			}
+		}
+
+
 	}
 	if(bodyComponentAdded || graphicsComponentChanged)  {
 		if(!e->hasComponent(ComponentType::Body))
