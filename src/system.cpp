@@ -514,6 +514,7 @@ void ViewSystem::onMsg(const EntityEvent& m)
 				int maxHealth = asc->getAttribute<int>("max-health");
 				sn->setProgress(float(health)/maxHealth);
 				sn->setMaxValue(maxHealth);
+				sn->setVisible(false);
 			}
 		}
 
@@ -596,19 +597,20 @@ void ViewSystem::onObjectLookAt(scene::ISceneNode* sn)
 	if(!bsn)
 		return;
 
-	scene::ISceneNode* nsn = _smgr->getSceneNodeFromName("name", bsn);
-	if(nsn) {
-		bool visible = isSceneNodeVisible((scene::IMeshSceneNode*)sn);
-		if(visible)
-			showObjectName(nsn);
+	if(isSceneNodeVisible((scene::IMeshSceneNode*)sn)) {
+		removeAnimatorsAndTemporarilyShowChildByName(bsn, "name", 5000);
+		removeAnimatorsAndTemporarilyShowChildByName(bsn, "health", 5000);
 	}
 }
 
-void ViewSystem::showObjectName(scene::ISceneNode* nsn)
+void ViewSystem::removeAnimatorsAndTemporarilyShowChildByName(scene::ISceneNode* sn, std::string childName, u32 visibilityTimeoutMs)
 {
-	nsn->setVisible(true);
-	nsn->removeAnimators();
-	nsn->addAnimator(new CSceneNodeAnimatorVisibilityTimeout(5000));
+	scene::ISceneNode* csn = _smgr->getSceneNodeFromName(childName.c_str(), sn);
+	if(csn) {
+		csn->setVisible(true);
+		csn->removeAnimators();
+		csn->addAnimator(new CSceneNodeAnimatorVisibilityTimeout(visibilityTimeoutMs));
+	}
 }
 
 scene::ISceneNode* ViewSystem::getOrCreateBaseSceneNode(ID entityID)

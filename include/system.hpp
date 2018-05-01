@@ -58,7 +58,7 @@ class ViewSystem: public System
 		
 		void spotObjects();
 		void onObjectLookAt(scene::ISceneNode* sn);
-		void showObjectName(scene::ISceneNode* nsn);
+		void removeAnimatorsAndTemporarilyShowChildByName(scene::ISceneNode* sn, std::string childName, u32 visibilityTimeoutMs);
 		scene::ISceneNode* getOrCreateBaseSceneNode(ID entityID);
 		bool isSceneNodeVisible(scene::IMeshSceneNode* sn);
 		void updateTransforms(float timeDelta);
