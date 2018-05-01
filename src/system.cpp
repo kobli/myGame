@@ -3,6 +3,7 @@
 #include "system.hpp"
 #include "heightmapMesh.hpp"
 #include "terrainTexturer.hpp"
+#include "CProgressBarSceneNode.hpp"
 
 const float CHARACTER_MAX_STRAFE_FORCE = 900000;
 const float CHARACTER_MAX_VELOCITY = 5;

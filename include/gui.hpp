@@ -2,7 +2,7 @@
 #define GUI_HPP_17_09_14_21_57_18 
 #include <stack>
 #include "world.hpp"
-#include "progressBar.hpp"
+#include "CGUIProgressBar.hpp"
 
 enum GUIElementID
 {
@@ -156,14 +156,14 @@ class GUI: public Observer<EntityEvent>
 		typedef std::function<void(const wchar_t* l)> TextSetter;
 		std::map<std::string, TextSetter> _textSetters;
 
-		gui::ProgressBar* _healthBar;
-		gui::ProgressBar* _castingIndicator;
+		gui::CGUIProgressBar* _healthBar;
+		gui::CGUIProgressBar* _castingIndicator;
 		gui::IGUIImage* _castingEffect;
 		gui::IGUIElement* _spellInHandsInfo;
 
-		irr::gui::ProgressBar* _spellAttrPowInfo;
-		irr::gui::ProgressBar* _spellAttrSpeedInfo;
-		irr::gui::ProgressBar* _spellAttrSizeInfo;
+		irr::gui::CGUIProgressBar* _spellAttrPowInfo;
+		irr::gui::CGUIProgressBar* _spellAttrSpeedInfo;
+		irr::gui::CGUIProgressBar* _spellAttrSizeInfo;
 		GUIPanelFlowHorizontal* _spellEffectsInfo;
 		GUIPanelFlowHorizontal* _spellCommandQInfo;
 		GUIPanelFlowHorizontal* _gameModeInfo;

@@ -23,13 +23,13 @@ GUI::GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedR
 	skin->setFont(font);
 	font->drop();
 
-	_healthBar = new gui::ProgressBar(env, core::rect<s32>(20, 20, 220, 60), env->getRootGUIElement());
+	_healthBar = new gui::CGUIProgressBar(env, core::rect<s32>(20, 20, 220, 60), env->getRootGUIElement());
 	_healthBar->setColors(video::SColor(155, 255,255,255), video::SColor(200, 255,0,0));
 	_healthBar->setLabel(L"HP:");
-	_healthBar->setValueDisplayMode(irr::gui::ProgressBar::ValueDisplayMode::Abs);
+	_healthBar->setValueDisplayMode(irr::gui::CGUIProgressBar::ValueDisplayMode::Abs);
 
 	int castIndLen = 200;
-	_castingIndicator = new gui::ProgressBar(env, core::rect<s32>(0, 0, castIndLen, 20), env->getRootGUIElement());
+	_castingIndicator = new gui::CGUIProgressBar(env, core::rect<s32>(0, 0, castIndLen, 20), env->getRootGUIElement());
 	_castingIndicator->setRelativePosition(vec2i((screenSize.Width-castIndLen)/2, screenSize.Height-165));
 	_castingIndicator->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT, gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT);
 	_castingIndicator->setColors(video::SColor(155, 255,255,255), video::SColor(255, 255,140,70));
@@ -45,17 +45,17 @@ GUI::GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedR
 	int spellAttributeProgBarHeight = 20;
 	auto spellAttributesInfo = new GUIPanelFlowVertical(env, env->getRootGUIElement(), -1, core::rect<s32>(0, 0, spellAttributesInfoPanelWidth, spellAttributeProgBarHeight*3));
 	
-	_spellAttrPowInfo = new ProgressBar(env, core::rect<s32>(0, 0, spellAttributesInfoPanelWidth, spellAttributeProgBarHeight));
+	_spellAttrPowInfo = new CGUIProgressBar(env, core::rect<s32>(0, 0, spellAttributesInfoPanelWidth, spellAttributeProgBarHeight));
 	_spellAttrPowInfo->setColors(video::SColor(155, 255,255,255), video::SColor(200, 255,100,100));
 	_spellAttrPowInfo->setLabel(L"Power");
 	spellAttributesInfo->addChild(_spellAttrPowInfo);
 
-	_spellAttrSizeInfo = new ProgressBar(env, core::rect<s32>(0, 0, spellAttributesInfoPanelWidth, spellAttributeProgBarHeight));
+	_spellAttrSizeInfo = new CGUIProgressBar(env, core::rect<s32>(0, 0, spellAttributesInfoPanelWidth, spellAttributeProgBarHeight));
 	_spellAttrSizeInfo->setColors(video::SColor(155, 255,255,255), video::SColor(200, 100,255,100));
 	_spellAttrSizeInfo->setLabel(L"Size");
 	spellAttributesInfo->addChild(_spellAttrSizeInfo);
 
-	_spellAttrSpeedInfo = new ProgressBar(env, core::rect<s32>(0, 0, spellAttributesInfoPanelWidth, spellAttributeProgBarHeight));
+	_spellAttrSpeedInfo = new CGUIProgressBar(env, core::rect<s32>(0, 0, spellAttributesInfoPanelWidth, spellAttributeProgBarHeight));
 	_spellAttrSpeedInfo->setColors(video::SColor(155, 255,255,255), video::SColor(200, 100,100,255));
 	_spellAttrSpeedInfo->setLabel(L"Speed");
 	spellAttributesInfo->addChild(_spellAttrSpeedInfo);
