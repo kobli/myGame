@@ -490,7 +490,7 @@ void ViewSystem::onMsg(const EntityEvent& m)
 			}
 			std::string name = asc->getAttribute<std::string>("name");
 			gui::IGUIFont* font = gui::CGUITTFont::createTTFont(_smgr->getGUIEnvironment(), "./media/OpenSans-Bold.ttf", 15);
-			sn = _smgr->addTextSceneNode(font, core::stringw(name.c_str()).c_str(), video::SColor(200, 255, 255, 255), bsn, vec3f(0, 2, 0), ObjStaticID::NULLOBJ);
+			sn = _smgr->addTextSceneNode(font, core::stringw(name.c_str()).c_str(), video::SColor(200, 255, 255, 255), bsn, vec3f(0, 2.2, 0), ObjStaticID::NULLOBJ);
 			if(sn) {
 				sn->setName("name");
 				sn->setVisible(false);
@@ -503,7 +503,7 @@ void ViewSystem::onMsg(const EntityEvent& m)
 			CProgressBarSceneNode* sn = static_cast<CProgressBarSceneNode*>(_smgr->getSceneNodeFromName("health", bsn));
 			if(!sn) {
 				gui::IGUIFont* font = gui::CGUITTFont::createTTFont(_smgr->getGUIEnvironment(), "./media/OpenSans-Bold.ttf", 10);
-				sn = new CProgressBarSceneNode(bsn, _smgr, ObjStaticID::NULLOBJ, vec3f(0, 1.8, 0), vec2i(50, 3), font);
+				sn = new CProgressBarSceneNode(bsn, _smgr, ObjStaticID::NULLOBJ, vec3f(0, 2, 0), vec2i(50, 3), font);
 				if(sn) {
 					sn->setName("health");
 					sn->setColors(video::SColor(255, 255, 255, 255), video::SColor(255, 255, 0, 0));
@@ -517,8 +517,6 @@ void ViewSystem::onMsg(const EntityEvent& m)
 				sn->setVisible(false);
 			}
 		}
-
-
 	}
 	if(bodyComponentAdded || graphicsComponentChanged)  {
 		if(!e->hasComponent(ComponentType::Body))
