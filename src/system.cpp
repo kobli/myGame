@@ -448,6 +448,7 @@ void Physics::registerPairCollisionCallback(std::function<void(ID, ID)> callback
 
 ViewSystem::ViewSystem(irr::scene::ISceneManager* smgr, World& world): System{world}, _smgr{smgr}
 {
+	smgr->addSkyDomeSceneNode(smgr->getVideoDriver()->getTexture("media/skydome.jpg"), 16,8,0.95f,2.0f,1000, nullptr, ObjStaticID::Skybox);
 	loadTerrain();
 }
 
