@@ -349,11 +349,12 @@ void Physics::callCollisionCBs()
 		int numContacts = contactManifold->getNumContacts();
 		if(numContacts > 0)
 		{
-			// set onGround flags
-			int obj0ID = min(obA->getUserIndex(), obB->getUserIndex());
-			int obj1ID = max(obA->getUserIndex(), obB->getUserIndex());
+			int obj0ID = obA->getUserIndex();
+			int obj1ID = obB->getUserIndex();
 			if(obj0ID == ObjStaticID::Map)
 				_objData[obj1ID].onGround = true;	
+			if(obj1ID == ObjStaticID::Map)
+				_objData[obj0ID].onGround = true;	
 			for(auto& colCB : _collCallbacks)
 				colCB(obj0ID, obj1ID);
 		}
