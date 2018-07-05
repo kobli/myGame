@@ -1101,7 +1101,6 @@ ID SpellSystem::launchSpell(float radius, float speed, float elevation, ID wizar
 	wBody->getRotation().toEuler(rot);
 	vec3f dir = ((rot/PI*180)+vec3f(-elevation,0,0)).rotationToDirection().normalize();
 	dir.rotateXZBy(-90);
-	std::cout << "dir: " << dir << std::endl;
 	vec3f pos = wBody->getPosition() + vec3f(0,1.5,0) + dir*(radius + 0.6 + abs(dir.Y));
 	spellE.addComponent<BodyComponent>(pos, quaternion(), dir*speed);
 	spellE.addComponent<CollisionComponent>(radius, 0, vec3f(0), 1, true, 0);
