@@ -306,17 +306,19 @@ void Physics::bodyDoStrafe(float timeDelta)
 		dir.Y = 0;
 		dir.normalize();
 
-		if(dir.getLength() > 0.1 && _objData[e.getID()].onGround)
+		if(dir.getLength() > 0.1)
 		{
 			b->setFriction(1);
-			// if holding WD and already going forward at full speed, try to turn as much as possible
-			float changingDir = 1-max(0.f, currentDir.dotProduct(dir));
-			if(changingDir > 0.1) {
-				dir = dir-currentDir;
-				changingDir = 1-max(0.f, currentDir.dotProduct(dir));
+			if(_objData[e.getID()].onGround) {
+				// if holding WD and already going forward at full speed, try to turn as much as possible
+				float changingDir = 1-max(0.f, currentDir.dotProduct(dir));
+				if(changingDir > 0.1) {
+					dir = dir-currentDir;
+					changingDir = 1-max(0.f, currentDir.dotProduct(dir));
+				}
+				float force = CHARACTER_MAX_STRAFE_FORCE*lerp(velRoof, 1, changingDir);
+				b->applyCentralForce(btVector3(dir.X, 0., dir.Z)*force*timeDelta);
 			}
-			float force = CHARACTER_MAX_STRAFE_FORCE*lerp(velRoof, 1, changingDir);
-			b->applyCentralForce(btVector3(dir.X, 0., dir.Z)*force*timeDelta);
 		}
 		else
 		{
