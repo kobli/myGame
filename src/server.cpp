@@ -254,7 +254,7 @@ Updater::Updater(Sender s, EntityResolver getEntity): _send{s}, _getEntity{getEn
 void Updater::tick(float delta)
 {
 	_timeSinceLastUpdateSent += delta;
-	if(_timeSinceLastUpdateSent >= 0.2) {
+	if(_timeSinceLastUpdateSent >= 0.01) {
 		_timeSinceLastUpdateSent = 0;
 		while(!_updateEventQueue.empty()) {
 			sendEvent(*_updateEventQueue.begin());
