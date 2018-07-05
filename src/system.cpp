@@ -5,7 +5,7 @@
 #include "terrainTexturer.hpp"
 #include "CProgressBarSceneNode.hpp"
 
-const float CHARACTER_MAX_STRAFE_FORCE = 900000;
+const float CHARACTER_MAX_STRAFE_FORCE = 600000;
 const float CHARACTER_MAX_VELOCITY = 5;
 
 class CSceneNodeAnimatorVisibilityTimeout: public scene::ISceneNodeAnimator
