@@ -18,7 +18,7 @@ class TreePlanter {
 
 			std::vector<Tree> r;
 
-			const int avgTreeSpace = 10;
+			const int avgTreeSpace = 20;
 			for(unsigned y = 0; y < t.size().Y; y += avgTreeSpace)
 				for(unsigned x = 0; x < t.size().X; x += avgTreeSpace)
 					if(forestMap.val(x,y) > 0.5)
