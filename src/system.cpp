@@ -89,9 +89,10 @@ class MyMotionState : public btMotionState
 {
 	protected:
 		std::function<Entity*()> _getEntity;
+		btRigidBody* _body;
 
 	public:
-		MyMotionState(std::function<Entity*()> getEntity): _getEntity{getEntity}
+		MyMotionState(std::function<Entity*()> getEntity): _getEntity{getEntity}, _body{nullptr}
 		{}
 
 		virtual ~MyMotionState()
@@ -129,7 +130,13 @@ class MyMotionState : public btMotionState
 			bc->setRotation(r*180/M_PI);
 			*/
 			bc->setRotation(btQ2Q(worldTrans.getRotation()));
-			bc->setPosition(btV3f2V3f(worldTrans.getOrigin()) + cc->getPosOffset());
+			assert(_body != nullptr);
+			bc->setPosition(btV3f2V3f(_body->getCenterOfMassPosition()) + cc->getPosOffset());
+		}
+
+		void setBody(btRigidBody* body)
+		{
+			_body = body;
 		}
 };
 
@@ -407,6 +414,7 @@ void Physics::onMsg(const EntityEvent& m)
 			MyMotionState* motionState = new MyMotionState([this, eID]()->Entity* { return _world.getEntity(eID); });
 			btRigidBody::btRigidBodyConstructionInfo bodyCI(mass,motionState,pShape,fallInertia);
 			btRigidBody* body = new btRigidBody(bodyCI);
+			motionState->setBody(body);
 			_physicsWorld->addRigidBody(body);
 			body->setUserIndex(eID);
 			if(col->isKinematic())
