@@ -232,7 +232,7 @@ Physics::Physics(World& world, scene::ISceneManager* smgr): System{world}, _tAcc
 	btRigidBody* terrB = new btRigidBody(terrCI);
 	_physicsWorld->addRigidBody(terrB);
 	terrB->setUserIndex(ObjStaticID::Map);
-	terrB->setAnisotropicFriction(btVector3(0.8,0.1,0.8));
+	terrB->setAnisotropicFriction(btVector3(0.4,0.01,0.4));
 	//terrB->setFriction(1);
 	
 	// create fence around the map
@@ -322,7 +322,7 @@ void Physics::bodyDoStrafe(float timeDelta)
 		}
 		else
 		{
-			b->setFriction(20);
+			b->setFriction(5);
 		}
 	}
 }
