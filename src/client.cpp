@@ -141,13 +141,7 @@ void ClientApplication::run()
 					auto controlledCharSceneNode = _device->getSceneManager()->getSceneNodeFromId(_sharedRegistry.getValue<ID>("controlled_object_id"));
 					if(controlledCharSceneNode) {
 						controlledCharSceneNode->setVisible(false);
-						camera->setPosition(interpolate(
-									camera->getPosition(),
-									controlledCharSceneNode->getPosition() + vec3f(0,1.6,0) + 0.23f*(cameraLookDir*vec3f(1,0,1)).normalize(),
-									timeDelta,
-									10,
-									1
-									));
+						camera->setPosition(controlledCharSceneNode->getPosition() + vec3f(0,1.6,0) + 0.23f*(cameraLookDir*vec3f(1,0,1)).normalize());
 					}
 				}
 			}
