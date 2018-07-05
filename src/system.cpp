@@ -667,13 +667,16 @@ void ViewSystem::updateTransforms(float timeDelta)
 			vec3f resPos;
 			vec3f d = newPos - oldPos;
 			float snapThreshold = 5;
-			float interpolSpeed = d.getLength()*8;
-			if(d.getLength() > snapThreshold)
+			float interpolSpeed = 10*d.getLength();
+			float step = interpolSpeed*timeDelta;
+			if(d.getLength() > snapThreshold) {
 				resPos = newPos;
-			else if(d.getLength() < interpolSpeed*timeDelta)
-				resPos = oldPos;
+			}
+			else if(d.getLength() < step) {
+				resPos = newPos;
+			}
 			else
-				resPos = oldPos + d.normalize()*interpolSpeed*timeDelta;
+				resPos = oldPos + d.normalize()*step;
 			sn->setPosition(resPos);
 			sn->updateAbsolutePosition();
 			if(resPos != newPos || resRot != newRot) {
