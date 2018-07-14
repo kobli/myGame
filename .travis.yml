@@ -38,7 +38,7 @@ install:
 
 # Build steps
 script:
-  - ls /usr/bin
+  - x86_64-linux-gnu-ld --version
   - mkdir build
   - cd build
   - ${DEPS_DIR}/cmake/bin/cmake .. -DPLATFORM=lin_64 && make
