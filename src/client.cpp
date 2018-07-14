@@ -3,16 +3,16 @@
 #include "network.hpp"
 #include "serdes.hpp"
 
-Animator::Animator(scene::ISceneManager* smgr, function<Entity*(u32)> entityResolver, function<vec3f(u32)> entityVelocityGetter)
+Animator::Animator(scene::ISceneManager* smgr, function<Entity*(ID)> entityResolver, function<vec3f(ID)> entityVelocityGetter)
 	: _smgr{smgr}, _entityResolver{entityResolver}, _velGetter{entityVelocityGetter}
 {}
 
-void Animator::setEntityResolver(std::function<Entity*(u32 ID)> entityResolver)
+void Animator::setEntityResolver(std::function<Entity*(ID)> entityResolver)
 {
 	_entityResolver = entityResolver;
 }
 
-void Animator::setEntityVelocityGetter(std::function<vec3f(u32 ID)> entityVelocityGetter)
+void Animator::setEntityVelocityGetter(std::function<vec3f(ID)> entityVelocityGetter)
 {
 	_velGetter = entityVelocityGetter;
 }
@@ -75,9 +75,8 @@ void Animator::onMsg(const EntityEvent& m)
 
 ////////////////////////////////////////////////////////////
 
-ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ if(d) d->drop(); }),
-	_yAngleSetCommandFilter{0.1, [](float& oldObj, float& newObj)->float&{ if(std::fabs(oldObj-newObj) > 0.1) return newObj; else return oldObj; }},
-	_healthBar{nullptr}
+ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ if(d) d->drop(); }), _controller{nullptr},
+	_yAngleSetCommandFilter{0.2, [](float& oldObj, float& newObj)->float&{ if(std::fabs(oldObj-newObj) > 0.01) return newObj; else return oldObj; }}
 {
 	irr::SIrrlichtCreationParameters params;
 	params.DriverType=video::E_DRIVER_TYPE::EDT_OPENGL;
@@ -92,41 +91,13 @@ ClientApplication::ClientApplication(): _device(nullptr, [](IrrlichtDevice* d){ 
 
 	_device->getCursorControl()->setVisible(false);
 	_device->setResizable(true);
-
-	createWorld();
-	createCamera();
-
-	auto screenSize = _device->getVideoDriver()->getScreenSize();
-	gui::IGUIEnvironment* env = _device->getGUIEnvironment();
-
-	auto* skin = env->getSkin();
-	auto* font = env->getFont("./media/fontlucida.png");
-	if(!font)
-		std::cerr << "FAILED TO LOAD THE FONT\n";
-	skin->setFont(font);
-
-	_healthBar = new gui::ProgressBar(env, core::rect<s32>(20, 20, 220, 60), env->getRootGUIElement());
-	_healthBar->setColors(video::SColor(155, 255,255,255), video::SColor(200, 255,0,0));
-	env->addStaticText(L"", core::rect<s32>(0, 0, _healthBar->getRelativePosition().getWidth(), _healthBar->getRelativePosition().getHeight()), false, false, _healthBar);
-	_healthBar->drop();
-
-	int castIndLen = 200;
-	_castingIndicator = new gui::ProgressBar(env, core::rect<s32>(0, 0, castIndLen, 40), env->getRootGUIElement());
-	_castingIndicator->setRelativePosition(vec2i((screenSize.Width-castIndLen)/2, 30));
-	_castingIndicator->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT);
-	_castingIndicator->setColors(video::SColor(155, 255,255,255), video::SColor(200, 0,0,255));
-	env->addStaticText(L"", core::rect<s32>(0, 0, _castingIndicator->getRelativePosition().getWidth(), _castingIndicator->getRelativePosition().getHeight()), false, false, _castingIndicator);
-	_castingIndicator->drop();
-
-	int spellInHandsInfoPanelWidth = 100;
-	_spellInHandsInfo = _device->getGUIEnvironment()->addStaticText(L"SIH info", core::rect<s32>(0, 0, spellInHandsInfoPanelWidth, 80), false, false, env->getRootGUIElement(), -1, true);
-	_spellInHandsInfo->setBackgroundColor(video::SColor(200, 255,255,255));
-	_spellInHandsInfo->setRelativePosition(vec2i(screenSize.Width-spellInHandsInfoPanelWidth-30, 30));
-	_spellInHandsInfo->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT, gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT);
+	
+	SAVEIMAGE = ImageDumper(_device->getVideoDriver());
 
 	_controller.setCommandHandler(std::bind(&ClientApplication::commandHandler, ref(*this), std::placeholders::_1));
 	_controller.setScreenSizeGetter([this](){ auto ss = _device->getVideoDriver()->getScreenSize(); return vec2i(ss.Width, ss.Height); });
 	_controller.setExit([this](){ _device->closeDevice(); });
+	_controller.setDevice(_device.get());
 }
 
 bool ClientApplication::connect(string host, unsigned short port)
@@ -134,7 +105,19 @@ bool ClientApplication::connect(string host, unsigned short port)
 	std::cout << "Connecting to " << host << ":" << port << std::endl;
 	auto r = _server.connect(host, port);
 	_server.setBlocking(false);
+	sendHello();
 	return r == sf::Socket::Done;
+}
+
+vec3f interpolate(vec3f current, vec3f target, float timeDelta, float maxSpeed, float maxDistance)
+{
+	float distance = current.getDistanceFrom(target);
+	if(distance > maxDistance)
+		return target;
+	else {
+		float d = std::min(distance, (distance/maxDistance)*maxSpeed*timeDelta);
+		return current + (target-current).normalize()*d;
+	}
 }
 
 void ClientApplication::run()
@@ -145,16 +128,22 @@ void ClientApplication::run()
 	sf::Clock c;
 	while(_device->run())
 	{
-		if(_camera->isInputReceiverEnabled())
-			bindCameraToControlledEntity();
-		if(!_camera->isInputReceiverEnabled()) {
-			vec3f cameraLookDir((_cameraElevation-PI_2)/PI*180,(_cameraYAngle+PI_2)/PI*180,0);
-			cameraLookDir = cameraLookDir.rotationToDirection().normalize();
-			_camera->setTarget(_camera->getAbsolutePosition()+cameraLookDir*10000);
-			if(_sharedRegistry.hasKey("controlled_object_id")) {
-				auto controlledCharSceneNode = _device->getSceneManager()->getSceneNodeFromId(_sharedRegistry.getValue("controlled_object_id"));
-				if(controlledCharSceneNode)
-					_camera->setPosition(controlledCharSceneNode->getPosition() + vec3f(0,1.6,0) + 0.23f*(cameraLookDir*vec3f(1,0,1)).normalize());
+		float timeDelta = c.restart().asSeconds();
+		scene::ICameraSceneNode* camera = getCamera();
+		if(camera) {
+			if(camera->isInputReceiverEnabled() && !_controller.isCameraFree())
+				bindCameraToControlledEntity();
+			if(!camera->isInputReceiverEnabled()) {
+				vec3f cameraLookDir((_cameraElevation-PI_2)/PI*180,(_cameraYAngle+PI_2)/PI*180,0);
+				cameraLookDir = cameraLookDir.rotationToDirection().normalize();
+				camera->setTarget(camera->getAbsolutePosition()+cameraLookDir*10000);
+				if(_sharedRegistry.hasKey("controlled_object_id")) {
+					auto controlledCharSceneNode = _device->getSceneManager()->getSceneNodeFromId(_sharedRegistry.getValue<ID>("controlled_object_id"));
+					if(controlledCharSceneNode) {
+						controlledCharSceneNode->setVisible(false);
+						camera->setPosition(controlledCharSceneNode->getPosition() + vec3f(0,1.6,0) + 0.23f*(cameraLookDir*vec3f(1,0,1)).normalize());
+					}
+				}
 			}
 		}
 
@@ -164,11 +153,11 @@ void ClientApplication::run()
 		{
 			if(_device->isWindowActive())
 				_device->getCursorControl()->setPosition(vec2f(0.5));
-			driver->beginScene();
+			driver->beginScene(/*true,true,video::SColor(255,255,255,255)*/);
 			f32 ar = (float)driver->getScreenSize().Width/(float)driver->getScreenSize().Height;
-			if(ar != _camera->getAspectRatio() && _camera)
-				_camera->setAspectRatio(ar);
-			float timeDelta = c.restart().asSeconds();
+			camera = getCamera();
+			if(camera && ar != camera->getAspectRatio())
+				camera->setAspectRatio(ar);
 			//std::cout << "number of scene nodes: " << _device->getSceneManager()->getRootSceneNode()->getChildren().size() << std::endl;
 				
 			if(_yAngleSetCommandFilter.tick(timeDelta) && _yAngleSetCommandFilter.objUpdated()) {
@@ -181,17 +170,22 @@ void ClientApplication::run()
 				_physics->update(timeDelta);
 			if(_vs)
 				_vs->update(timeDelta);
-			updateCastingIndicator(timeDelta);
+			if(_gui)
+				_gui->update(timeDelta);
 
 			_device->getSceneManager()->drawAll();
 			_device->getGUIEnvironment()->drawAll();
+
+			driver->runAllOcclusionQueries(false);
+			driver->updateAllOcclusionQueries();
+
 			driver->endScene();
 
 			// display frames per second in window title
 			int fps = driver->getFPS();
 			if (lastFPS != fps)
 			{
-				core::stringw str = L"Terrain Renderer - Irrlicht Engine [";
+				core::stringw str = L"MyGame [";
 				str += driver->getName();
 				str += "] FPS:";
 				str += fps;
@@ -204,19 +198,30 @@ void ClientApplication::run()
 	}
 }
 
-void ClientApplication::createWorld()
+void ClientApplication::startGame()
 {
-	_worldMap.reset(new WorldMap(70, _device->getSceneManager()));
+	std::cout << "GAME STARTING\n";
 	_gameWorld.reset(new World(*_worldMap));
+	_vs.reset();
 	_vs.reset(new ViewSystem(_device->getSceneManager(), *_gameWorld));
 	_physics.reset(new Physics(*_gameWorld, _device->getSceneManager()));
 	_animator.setEntityResolver(bind(&World::getEntity, ref(*_gameWorld), placeholders::_1));
 	_animator.setSceneManager(_device->getSceneManager());
-	_animator.setEntityVelocityGetter([this](u32 ID)->vec3f {	return _physics->getObjVelocity(ID); });
+	_animator.setEntityVelocityGetter([this](ID id)->vec3f {	return _physics->getObjVelocity(id); });
 	_gameWorld->addObserver(_animator);
 	_gameWorld->addObserver(*_physics);
 	_gameWorld->addObserver(*_vs);
-	_gameWorld->addObserver(*this);
+	_gui.reset();
+	_gui.reset(new GUI(_device.get(), *_gameWorld.get(), _sharedRegistry, _gameRegistry));
+	_gameWorld->addObserver(*_gui);
+	createCamera();
+
+	if(_controller.getSettings().hasKey("NAME")) {
+		Command c;
+		c._type = Command::Type::STR;
+		c._str = "NAME "+_controller.getSettings().getValue<std::string>("NAME");
+		sendCommand(c);
+	}
 }
 
 void ClientApplication::createCamera()
@@ -241,28 +246,17 @@ void ClientApplication::createCamera()
 	keyMap[8].Action = EKA_JUMP_UP;
 	keyMap[8].KeyCode = KEY_SPACE;
 	f32 camWalkSpeed = 0.05f;
-	_camera = 
+	auto camera = 
 		_device->getSceneManager()->addCameraSceneNodeFPS(nullptr,100.0f,camWalkSpeed,ObjStaticID::Camera,keyMap,9,false);
 	
-	_camera->setPosition(core::vector3df(0,10,50));
-	//_camera->setTarget(core::vector3df(2397*2,343*2,2700*2));
-	_camera->setFarValue(42000.0f);
-
-	if(!_worldMap)
-		return;
-	// create collision response animator and attach it to the camera
-	
-//	scene::ISceneNodeAnimatorCollisionResponse* anim = _device->getSceneManager()->createCollisionResponseAnimator(
-//		_worldMap->getMetaTriangleSelector(), _camera, core::vector3df(40,100,40),
-//		core::vector3df(0,-50,0),
-//		core::vector3df(0,50,0),
-//		0.1);
-//	_camera->addAnimator(anim);
+	camera->setPosition(core::vector3df(0,10,50));
+	camera->setTarget(core::vector3df(0));
+	camera->setFarValue(42000.0f);
 }
 
 void ClientApplication::commandHandler(Command& c)
 {
-	if(c._type == Command::Type::ROT_diff && !_camera->isInputReceiverEnabled()) {
+	if(c._type == Command::Type::ROT_diff && getCamera() && !getCamera()->isInputReceiverEnabled()) {
 		_cameraYAngle += c._vec2f.X;
 		_cameraYAngle = std::fmod(_cameraYAngle, PI*2);
 		_cameraElevation = std::min(PI-0.2f, std::max(0.3f, _cameraElevation+c._vec2f.Y));
@@ -355,6 +349,7 @@ void ClientApplication::handlePacket(sf::Packet& p)
 						entity->removeComponent(event.componentT);
 					if((modifiedComponent = entity->getComponent(event.componentT)) != nullptr) {
 						p >> Deserializer<sf::Packet>(*modifiedComponent);
+						//std::cout << Serializer<std::ostream>(*modifiedComponent) << std::endl;
 						modifiedComponent->notifyObservers();
 					}
 				}
@@ -366,6 +361,34 @@ void ClientApplication::handlePacket(sf::Packet& p)
 					cout << "shared reg update: " << Serializer<ostream>(_sharedRegistry) << endl;
 				break;
 			}
+		case PacketType::GameRegistryUpdate:
+			{
+					p >> Deserializer<sf::Packet>(_gameRegistry);
+					cout << "game reg update: " << Serializer<ostream>(_gameRegistry) << endl;
+				break;
+			}
+		case PacketType::GameInit:
+			{
+				_worldMap.reset(new WorldMap());
+				p >> Deserializer<sf::Packet>(*_worldMap);
+				startGame();
+				break;
+			}
+		case PacketType::Message:
+			{
+				string message;
+				p >> message;
+				displayMessage(message);
+				break;
+			}
+			case PacketType::GameOver:
+			{
+				sf::sleep(sf::seconds(1));
+				sf::Packet p;
+				p << PacketType::JoinGame;
+				sendPacket(p);
+				break;
+			}
 		default:
 			cerr << "Received packet of unknown type.\n";
 	}
@@ -374,76 +397,40 @@ void ClientApplication::handlePacket(sf::Packet& p)
 void ClientApplication::bindCameraToControlledEntity()
 {
 	if(_sharedRegistry.hasKey("controlled_object_id")) {
-		auto controlledCharSceneNode = _device->getSceneManager()->getSceneNodeFromId(_sharedRegistry.getValue("controlled_object_id"));
+		auto controlledCharSceneNode = _device->getSceneManager()->getSceneNodeFromId(_sharedRegistry.getValue<ID>("controlled_object_id"));
+		auto camera = getCamera();
 		if(controlledCharSceneNode) {
-			_camera->setInputReceiverEnabled(false);
-			_camera->setRotation(vec3f());
-			_camera->bindTargetAndRotation(false);
+			camera->setInputReceiverEnabled(false);
+			camera->setRotation(vec3f());
+			camera->bindTargetAndRotation(false);
 			_cameraElevation = PI_2;
 			_cameraYAngle = 0;
 		}
 	}
 }
 
-void ClientApplication::onMsg(const EntityEvent& m)
+void ClientApplication::sendHello()
 {
-	Entity* controlledE = nullptr;
-	if(_sharedRegistry.hasKey("controlled_object_id")) {
-		ID id = _sharedRegistry.getValue("controlled_object_id");
-		controlledE = _gameWorld->getEntity(id);
-	}
-	if(m.componentT == ComponentType::AttributeStore) {
-		_healthBar->setProgress(0);
-		if(controlledE != nullptr) {
-			AttributeStoreComponent* as = controlledE->getComponent<AttributeStoreComponent>();
-			if(as != nullptr) {
-				if(as->hasAttribute("health") && as->hasAttribute("max-health")) {
-					_healthBar->setProgress(as->getAttribute("health")/as->getAttribute("max-health"));
-					std::wstring w = std::to_wstring(int(as->getAttribute("health"))) + L" / " + std::to_wstring(int(as->getAttribute("max-health")));
-					auto text = static_cast<gui::IGUIStaticText*>(*_healthBar->getChildren().begin());
-					text->setText(w.c_str());
-					vec2i hbSize(_healthBar->getAbsolutePosition().getWidth(), _healthBar->getAbsolutePosition().getHeight());
-					text->setRelativePosition((hbSize-vec2i(text->getTextWidth(), text->getTextHeight()))/2);
-					return;
-				}
-			}
-		}
-	}
-	else if(m.componentT == ComponentType::Wizard)
-		if(controlledE != nullptr) {
-			WizardComponent* wc = controlledE->getComponent<WizardComponent>();
-			if(wc != nullptr) {
-				_spellInHandsInfo->setText(std::wstring(
-						L"Power:   "+std::to_wstring(wc->getSpellInHandsPower()) + L"\n" +
-						L"Radius:  "+std::to_wstring(wc->getSpellInHandsRadius()) + L"\n" +
-						L"Speed:   "+std::to_wstring(wc->getSpellInHandsSpeed())
-						).c_str());
-				if(!wc->getCurrentJob().empty()) {
-					_castingIndicator->setVisible(true);
-					_castingIndicator->setProgress(wc->getCurrentJobProgress()/wc->getCurrentJobDuration());
-					std::string job = wc->getCurrentJob();
-					std::wstring w;
-					w.assign(job.begin(), job.end());
-					auto text = static_cast<gui::IGUIStaticText*>(*_castingIndicator->getChildren().begin());
-					text->setText(w.c_str());
-					vec2i ciSize(_castingIndicator->getAbsolutePosition().getWidth(), _castingIndicator->getAbsolutePosition().getHeight());
-					text->setRelativePosition((ciSize-vec2i(text->getTextWidth(), text->getTextHeight()))/2);
-				}
-				else
-					_castingIndicator->setVisible(false);
-			}
-		}
+	sf::Packet p;
+	p << PacketType::ClientHello << u16(myGame_VERSION_MAJOR) << u16(myGame_VERSION_MINOR);
+	sendPacket(p);
 }
 
-void ClientApplication::updateCastingIndicator(float timeDelta)
+void ClientApplication::displayMessage(std::string message)
 {
-	if(_sharedRegistry.hasKey("controlled_object_id")) {
-		ID id = _sharedRegistry.getValue("controlled_object_id");
-		Entity* e = _gameWorld->getEntity(id);
-		if(e != nullptr) {
-			WizardComponent* wc = e->getComponent<WizardComponent>();
-			if(wc != nullptr)
-				_castingIndicator->setProgress(_castingIndicator->getProgress() + timeDelta/wc->getCurrentJobDuration());
-		}
+	std::string tag;
+	if(message.find("{") == 0) {
+		int end = message.find("}");
+		tag = message.substr(1, end-1);
+		message = message.substr(end+1);
 	}
+	if(_gui)
+		_gui->displayMessage(message, tag);
+	//else
+		std::cout << "Message" << (tag.length()?std::string(" (")+tag+std::string(")"):std::string())	<< ": " << message << std::endl;
+}
+
+scene::ICameraSceneNode* ClientApplication::getCamera()
+{
+	return static_cast<scene::ICameraSceneNode*>(_device->getSceneManager()->getSceneNodeFromId(ObjStaticID::Camera));
 }

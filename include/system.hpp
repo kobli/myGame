@@ -36,6 +36,7 @@ class Physics: public System
 		std::vector<std::function<void(ID, ID)>> _collCallbacks;
 		float _tAcc;
 		bool _updating;
+		std::unique_ptr<float[]> _heightMap;
 
 		btCollisionObject* getCollisionObjectByID(ID objID);
 		void bodyDoStrafe(float timeDelta);
@@ -47,6 +48,7 @@ class ViewSystem: public System
 {
 	public:
 		ViewSystem(irr::scene::ISceneManager* smgr, World& world);
+		~ViewSystem();
 		virtual void onMsg(const EntityEvent& m);
 		virtual void update(float timeDelta);
 
@@ -54,8 +56,14 @@ class ViewSystem: public System
 		irr::scene::ISceneManager* _smgr;
 		std::set<ID> _transformedEntities;
 		
+		void spotObjects();
+		void onObjectLookAt(scene::ISceneNode* sn);
+		void removeAnimatorsAndTemporarilyShowChildByName(scene::ISceneNode* sn, std::string childName, u32 visibilityTimeoutMs);
+		scene::ISceneNode* getOrCreateBaseSceneNode(ID entityID);
+		bool isSceneNodeVisible(scene::IMeshSceneNode* sn);
 		void updateTransforms(float timeDelta);
 		scene::IParticleEmitter* addParticleEffect(ID effectID, scene::IParticleSystemSceneNode* sn);
+		void loadTerrain();
 };
 
 class SpellSystem: public System
@@ -80,7 +88,7 @@ class SpellSystem: public System
 		void deinit();
 		ID launchSpell(float radius, float speed, float elevation, ID wizard, ID spellEffectID);
 		void removeSpell(ID spell);
-		ID addAttributeAffectorTo(ID eID, std::string attributeName
+		ID addAttributeAffectorTo(ID eID, ID authorID, std::string attributeName
 				, AttributeAffector::ModifierType modifierType
 				, float modifierValue, bool permanent, float period);
 };

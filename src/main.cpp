@@ -4,7 +4,8 @@
 #include "world.hpp"
 #include "server.hpp"
 #include "client.hpp"
-#include "config.hpp"
+
+ImageDumper SAVEIMAGE(nullptr);
 
 bool hasCmdOption(const int argc, char* argv[], const std::string& option, std::string* outArg = nullptr)
 {
@@ -34,6 +35,7 @@ int main(int argc, char* argv[]) {
 		irr::SIrrlichtCreationParameters params;
 		params.DriverType = video::E_DRIVER_TYPE::EDT_NULL;
 		IrrlichtDevice* device = createDeviceEx(params);
+		SAVEIMAGE = ImageDumper(device->getVideoDriver());
 		ServerApplication s(device);
 		if(!s.listen(std::stoi(port))) {
 			cerr << "Cannot listen on port " << port << ".\n";

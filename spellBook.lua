@@ -4,8 +4,8 @@
 -- order of spell_body_create coefficients: power radius speed
 staticBody = "spell_body_create 1 1 0 die{player}"
 bigMovingBody = "spell_body_create 2 3 1 die{player}"
-fastMovingBody = "spell_body_create 1 1 3 die{terrain,player}"
-fastestBodyNoPower = "spell_body_create 0 1 9 die{terrain,player}"
+fastMovingBody = "spell_body_create 1 1 3 die{map,player}"
+fastestBodyNoPower = "spell_body_create 0 1 9 die{map,player}"
 fireEffect = "spell_effect_create fire"
 
 

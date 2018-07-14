@@ -9,7 +9,7 @@ set(CMAKE_INSTALL_RPATH "$ORIGIN")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH false)
 
 set(${PROJECT_NAME}_VERSION_MAJOR 0)
-set(${PROJECT_NAME}_VERSION_MINOR 1)
+set(${PROJECT_NAME}_VERSION_MINOR 4)
 configure_file(
 	"${PROJECT_SOURCE_DIR}/include/config.hpp.in"
 	"${PROJECT_BINARY_DIR}/config.hpp"
@@ -25,12 +25,14 @@ file(GLOB CPP_SOURCES
 	)
 include_directories(
 	${PROJECT_SOURCE_DIR}/include
+	${FREETYPE_INCLUDE_DIRS}
 	/usr/X11R6/include
 	${PROJECT_SOURCE_DIR}/extlibs/irrlicht-1.8.4/include
 	${PROJECT_SOURCE_DIR}/extlibs/SFML-2.3.2/include
 	${PROJECT_SOURCE_DIR}/extlibs/bullet3-2.83.7/include
 	${PROJECT_SOURCE_DIR}/extlibs/bullet3-2.83.7/include/bullet
 	${PROJECT_SOURCE_DIR}/extlibs/lua-5.3.4/include
+	${PROJECT_SOURCE_DIR}/extlibs/freetype-2.8.1/include
 	)
 set(PLATFORM CACHE STRING "The destination platform.")
 set(PLATFORMS lin_64 lin_32 win_gcc_32)
@@ -42,6 +44,7 @@ link_directories(
 	${PROJECT_SOURCE_DIR}/extlibs/irrlicht-1.8.4/lib/${PLATFORM}
 	${PROJECT_SOURCE_DIR}/extlibs/lua-5.3.4/lib/${PLATFORM}
 	${PROJECT_SOURCE_DIR}/extlibs/bullet3-2.83.7/lib/${PLATFORM}
+	${PROJECT_SOURCE_DIR}/extlibs/freetype-2.8.1/lib/${PLATFORM}
 	)
 
 
@@ -71,6 +74,7 @@ set(WINDOWS_ONLY_LIBS
 	)
 
 set(GENERAL_LIBS
+	freetype
 	Irrlicht
 	lua
 	BulletDynamics

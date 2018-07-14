@@ -212,11 +212,11 @@ ID ParticleSystemGraphicsComponent::getEffectID()
 
 ////////////////////////////////////////////////////////////
 
-CollisionComponent::CollisionComponent(ID parentEntID
-		, float radius, float height, vec3f posOffset, bool kinematic)
+CollisionComponent::CollisionComponent(ID parentEntID, float radius,
+	 	float height, vec3f posOffset, float mass, bool kinematic, float gravity)
 	: ObservableComponentBase(parentEntID, ComponentType::Collision)
 		, _radius{radius}, _height{height}, _posOff{posOffset}
-		, _kinematic{kinematic}
+		, _mass{mass}, _kinematic{kinematic}, _gravity{gravity}, _slippery{false}
 {}
 
 float CollisionComponent::getRadius() const
@@ -259,10 +259,30 @@ bool CollisionComponent::isKinematic()
 	return _kinematic;
 }
 
+float CollisionComponent::getMass()
+{
+	return _mass;
+}
+
+float CollisionComponent::getGravity()
+{
+	return _gravity;
+}
+
+void CollisionComponent::setSlippery(bool slippery)
+{
+	_slippery = slippery;
+}
+
+bool CollisionComponent::isSlippery()
+{
+	return _slippery;
+}
+
 ////////////////////////////////////////////////////////////
 
 WizardComponent::WizardComponent(ID parentEntID):
- 	ObservableComponentBase(parentEntID, ComponentType::Wizard)
+ 	ObservableComponentBase(parentEntID, ComponentType::Wizard), _availableBodyC{0}, _totalBodyC{0}
 {
 }
 
@@ -271,22 +291,41 @@ void WizardComponent::serDes(SerDesBase& s)
 	s.serDes(*this);
 }
 
-void WizardComponent::setCurrentJobStatus(std::string job, float duration, float progress)
+void WizardComponent::setCurrentJobStatus(std::string job, int jobEffectId, float duration, float progress)
 {
-	bool changed = _currentJob != job || _currentJobDuration != duration || _currentJobProgress != progress;
+	bool changed = _currentJob != job || _currentJobEffectId != jobEffectId || _currentJobDuration != duration || _currentJobProgress != progress;
 	_currentJob = job;
+	_currentJobEffectId = jobEffectId;
 	_currentJobDuration = duration;
 	_currentJobProgress = progress;
 	if(changed)
 		notifyObservers();
 }
 
-void WizardComponent::setSpellInHandsData(float power, float radius, float speed)
+void WizardComponent::setSpellInHandsData(float power, float radius, float speed, std::vector<unsigned> effects)
 {
-	bool changed = _spellInHandsPower != power || _spellInHandsRadius != radius || _spellInHandsSpeed != speed;
+	bool changed = _spellInHandsPower != power || _spellInHandsRadius != radius || _spellInHandsSpeed != speed || _spellInHandsEffects != effects;
 	_spellInHandsPower = power;
 	_spellInHandsRadius = radius;
 	_spellInHandsSpeed = speed;
+	_spellInHandsEffects = effects;
+	if(changed)
+		notifyObservers();
+}
+
+void WizardComponent::setBodyStatus(unsigned available, unsigned total)
+{
+	bool changed = _availableBodyC != available || _totalBodyC != total;
+	_availableBodyC = available;
+	_totalBodyC = total;
+	if(changed)
+		notifyObservers();
+}
+
+void WizardComponent::setCommandQueue(std::vector<unsigned> commands)
+{
+	bool changed = _commandQueue != commands;
+	_commandQueue = commands;
 	if(changed)
 		notifyObservers();
 }
@@ -294,6 +333,11 @@ void WizardComponent::setSpellInHandsData(float power, float radius, float speed
 std::string WizardComponent::getCurrentJob()
 {
 	return _currentJob;
+}
+
+int WizardComponent::getCurrentJobEffectId()
+{
+	return _currentJobEffectId;
 }
 
 float WizardComponent::getCurrentJobDuration()
@@ -304,6 +348,11 @@ float WizardComponent::getCurrentJobDuration()
 float WizardComponent::getCurrentJobProgress()
 {
 	return _currentJobProgress;
+}
+
+bool WizardComponent::hasSpellInHands()
+{
+	return getSpellInHandsPower() || getSpellInHandsSpeed() || getSpellInHandsRadius();
 }
 
 float WizardComponent::getSpellInHandsPower()
@@ -321,12 +370,32 @@ float WizardComponent::getSpellInHandsSpeed()
 	return _spellInHandsSpeed;
 }
 
+const std::vector<unsigned>& WizardComponent::getSpellInHandsEffects()
+{
+	return _spellInHandsEffects;
+}
+
+unsigned WizardComponent::getAvailableBodyC()
+{
+	return _availableBodyC;
+}
+
+unsigned WizardComponent::getTotalBodyC()
+{
+	return _totalBodyC;
+}
+
+const std::vector<unsigned>& WizardComponent::getCommandQueue()
+{
+	return _commandQueue;
+}
+
 ////////////////////////////////////////////////////////////
 
-AttributeAffector::AttributeAffector(std::string attribute, ModifierType modifierType
-				, float modifierValue, bool permanent, float period): 
+AttributeAffector::AttributeAffector(ID author, std::string attribute, ModifierType modifierType
+				, float modifierValue, bool permanent): 
 	_attribute{attribute}, _modifierType{modifierType}, _modifierValue{modifierValue},
-	_permanent{permanent}, _period{period} {
+	_permanent{permanent}, _author{author} {
 	}
 
 std::string AttributeAffector::getAffectedAttribute() {
@@ -345,16 +414,22 @@ bool AttributeAffector::isPermanent() {
 	return _permanent;
 }
 
-float AttributeAffector::getPeriod() {
-	return _period;
+ID AttributeAffector::getAuthor() {
+	return _author;
 }
 
 // // // // // // // // // // // // // // // // // // // // 
 
-AttributeStoreComponent::AttributeStoreComponent(ID parentEntID): ObservableComponentBase(parentEntID, ComponentType::AttributeStore)
+AttributeStoreComponent::AttributeStoreComponent(ID parentEntID): ObservableComponentBase(parentEntID, ComponentType::AttributeStore), _attributeAffectorHistory{10}
 {}
 
 void AttributeStoreComponent::addAttribute(std::string key, float value)
+{
+	addPair(key, value);
+	notifyObservers();
+}
+
+void AttributeStoreComponent::addAttribute(std::string key, std::string value)
 {
 	addPair(key, value);
 	notifyObservers();
@@ -365,12 +440,13 @@ bool AttributeStoreComponent::hasAttribute(std::string key)
 	return hasKey(key);
 }
 
-float AttributeStoreComponent::getAttribute(std::string key)
+void AttributeStoreComponent::setAttribute(std::string key, float value)
 {
-	return getValue(key);
+	setValue(key, value);
+	notifyObservers();
 }
 
-void AttributeStoreComponent::setAttribute(std::string key, float value)
+void AttributeStoreComponent::setAttribute(std::string key, std::string value)
 {
 	setValue(key, value);
 	notifyObservers();
@@ -384,11 +460,20 @@ void AttributeStoreComponent::setOrAddAttribute(std::string key, float value)
 		setAttribute(key, value);
 }
 
+void AttributeStoreComponent::setOrAddAttribute(std::string key, std::string value)
+{
+	if(!hasAttribute(key))
+		addAttribute(key, value);
+	else
+		setAttribute(key, value);
+}
+
 ID AttributeStoreComponent::addAttributeAffector(AttributeAffector aa)
 {
+	_attributeAffectorHistory.push_back(aa);
 	if(aa.isPermanent()) {
 		assert(hasAttribute(aa.getAffectedAttribute()));
-		float attr = getAttribute(aa.getAffectedAttribute());
+		float attr = getAttribute<float>(aa.getAffectedAttribute());
 		if(aa.getModifierType() == AttributeAffector::ModifierType::Mul)
 			attr *= aa.getModifierValue();
 		else if(aa.getModifierType() == AttributeAffector::ModifierType::Add)
@@ -397,8 +482,11 @@ ID AttributeStoreComponent::addAttributeAffector(AttributeAffector aa)
 		setAttribute(aa.getAffectedAttribute(), attr);
 		return NULLID;
 	}
-	else
-		return _attributeAffectors.insert(std::move(aa));
+	else {
+		ID r = _attributeAffectors.insert(std::move(aa));
+		notifyObservers();
+		return r;
+	}
 }
 
 bool AttributeStoreComponent::removeAttributeAffector(ID affectorID)
@@ -417,7 +505,7 @@ float AttributeStoreComponent::getAttributeAffected(std::string key)
 	if(!hasAttribute(key))
 		return -1;
 	else {
-		float base = getAttribute(key);
+		float base = getAttribute<float>(key);
 		float add = 0;
 		float mul = 1;
 		for(auto& a : _attributeAffectors)
@@ -431,6 +519,13 @@ float AttributeStoreComponent::getAttributeAffected(std::string key)
 	}
 }
 
+std::vector<AttributeAffector> AttributeStoreComponent::getAttributeAffectorHistory()
+{
+	auto h = _attributeAffectorHistory.data();
+	std::reverse(h.begin(), h.end());
+	return h;
+}
+
 void AttributeStoreComponent::serDes(SerDesBase& s)
 {
 	s.serDes(*static_cast<KeyValueStore*>(this));
@@ -439,79 +534,7 @@ void AttributeStoreComponent::serDes(SerDesBase& s)
 
 ////////////////////////////////////////////////////////////
 
-WorldMap::WorldMap(float patchSize, scene::ISceneManager* scene)
-	: _patchSize{patchSize}, _scene{scene}, _heightScale{0.05}
-{
-	scene::ITerrainSceneNode* terrain = _scene->addTerrainSceneNode(
-		"./media/terrain-heightmap.bmp",
-		nullptr,					// parent node
-		ObjStaticID::Map,			// node id
-		core::vector3df(0),		// position
-		core::vector3df(0),		// rotation
-		core::vector3df(1)		// scale
-		);
-	terrain->setScale(core::vector3df(_patchSize/terrain->getBoundingBox().getExtent().X, 
-				_heightScale,
-				_patchSize/terrain->getBoundingBox().getExtent().Z));
-	terrain->setPosition(terrain->getBoundingBox().getCenter()*core::vector3df(-1,0,-1));
-
-
-	terrain->setMaterialFlag(video::EMF_LIGHTING, false);
-	terrain->setMaterialTexture(0, _scene->getVideoDriver()->getTexture("./media/terrain-texture.jpg"));
-	terrain->setMaterialTexture(1, _scene->getVideoDriver()->getTexture("./media/detailmap3.jpg"));
-	terrain->setMaterialType(video::EMT_DETAIL_MAP);
-	terrain->scaleTexture(1.0f, 40.0f);
-
-	scene::CDynamicMeshBuffer* buffer = new scene::CDynamicMeshBuffer(video::EVT_2TCOORDS, video::EIT_16BIT);
-	terrain->getMeshBufferForLOD(*buffer, 0);
-	video::S3DVertex2TCoords* data = (video::S3DVertex2TCoords*)buffer->getVertexBuffer().getData();
-	_vertexC = buffer->getVertexBuffer().size();
-	unsigned w = sqrt(_vertexC);
-	_heightMap.reset(new float[_vertexC]);
-	assert((((w-1) & ((w-1)-1)) == 0) && "heightmap size must be 2^n+1");
-	float min = data[0].Pos.Y;
-	float max = data[0].Pos.Y;
-	for(unsigned y = 0; y<w; y++)
-	{
-		for(unsigned x = 0; x<w; x++)
-		{
-			// data is stored top-to-bottom, right-to-left
-			core::vector3df p = data[x*w + y].Pos;
-			// need to remap it back to left-to-right, top-to-bottom
-			(_heightMap.get())[x + y*w] = p.Y;
-
-			if(p.Y > max)
-				max = p.Y;
-			if(p.Y < min)
-				min = p.Y;
-		}
-	}
-}
-
-float WorldMap::getPatchSize()
-{
-	return _patchSize;
-}
-
-float WorldMap::getHeightScale()
-{
-	return _heightScale;
-}
-
-float* WorldMap::getHeightMap()
-{
-	return _heightMap.get();
-}
-
-unsigned WorldMap::getVertexCount()
-{
-	return _vertexC;
-}
-
-////////////////////////////////////////////////////////////
-
-
-World::World(WorldMap& wm): _map{wm}, _entManager{ObjStaticID::FIRSTFREE}
+World::World(const WorldMap& wm): _map{wm}, _entManager{ObjStaticID::FIRSTFREE}
 {
 	_entManager.registerComponentType<BodyComponent>(ComponentType::Body);
 	_entManager.registerComponentType<SphereGraphicsComponent>(ComponentType::GraphicsSphere);
@@ -553,15 +576,15 @@ ID World::createCharacter(vec3f position)
 	ID eID = createEntity();
 	Entity& e = *getEntity(eID);
 
-	e.addComponent<BodyComponent>(position);
 	e.addComponent<MeshGraphicsComponent>("ninja.b3d", true, vec3f(0), vec3f(0,90,0), vec3f(0.2));
-	e.addComponent<CollisionComponent>(0.4, 1, vec3f(0, -0.9, 0));
+	e.addComponent<CollisionComponent>(0.4, 1, vec3f(0, -0.9, 0), 80);
 	e.addComponent<WizardComponent>();
 	e.addComponent<AttributeStoreComponent>();
+	e.addComponent<BodyComponent>(position);
 	return eID;
 }
 
-WorldMap& World::getMap()
+const WorldMap& World::getMap()
 {
 	return _map;
 }

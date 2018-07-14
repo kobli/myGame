@@ -8,16 +8,20 @@
 #include "serializable.hpp"
 #include "observableEntityComponent.hpp"
 #include "keyValueStore.hpp"
+#include "worldMap.hpp"
+#include "ringBuffer.hpp"
 
 using ec::ID;
 using ec::NULLID;
 enum ObjStaticID: ID {
-	FIRST,
-	Map = 10,
-	Camera = 20,
-	FIRSTFREE = 30
+	NULLOBJ = 0,
+	FIRSTFREE = 1,
+	Camera = 		1<<12,
+	Map = 			1<<13,
+	Skybox = 		1<<14,
+	OBJCHILD = 	1<<15,
 };
-static_assert(ObjStaticID::FIRST != NULLID, "");
+static_assert(OBJCHILD == u64(1<<15));
 
 enum ComponentType: u8
 {
@@ -63,7 +67,7 @@ typedef ec::ObservableEntityManager<ObservableComponentBase,ComponentType,Entity
 class BodyComponent: public ObservableComponentBase
 {
 	public:
-		BodyComponent(ID parentEntID, vec3f position = vec3f(0), quaternion rotation = quaternion(0,0,0,0), vec3f velocity = vec3f(0));
+		BodyComponent(ID parentEntID, vec3f position = vec3f(0), quaternion rotation = quaternion(0,0,0,1), vec3f velocity = vec3f(0));
 		vec3f getPosition() const;
 		quaternion getRotation() const;
 		vec3f getVelocity() const;
@@ -184,7 +188,7 @@ class ParticleSystemGraphicsComponent: public GraphicsComponent
 class CollisionComponent: public ObservableComponentBase
 {
 	public:
-		CollisionComponent(ID parentEntID, float radius = 1, float height = 0, vec3f posOffset = vec3f(0,0,0), bool kinematic = false);
+		CollisionComponent(ID parentEntID, float radius = 1, float height = 0, vec3f posOffset = vec3f(0,0,0), float mass = 0, bool kinematic = false, float gravity = -10);
 		float getRadius() const;
 		void setRadius(float);
 		float getHeight() const;
@@ -192,6 +196,10 @@ class CollisionComponent: public ObservableComponentBase
 		vec3f getPosOffset() const;
 		void setPosOffset(vec3f);
 		bool isKinematic();
+		float getMass();
+		float getGravity();
+		void setSlippery(bool slippery);
+		bool isSlippery();
 
 		virtual void serDes(SerDesBase& s);
 		template <typename T>
@@ -201,13 +209,19 @@ class CollisionComponent: public ObservableComponentBase
 				t & _height;
 				t & _posOff;
 				t & _kinematic;
+				t & _mass;
+				t & _gravity;
+				t & _slippery;
 			}
 
 	private:
 		float _radius;
 		float _height;
 		vec3f _posOff;
+		float _mass;
 		bool _kinematic;
+		float _gravity;
+		bool _slippery;
 };
 
 ////////////////////////////////////////////////////////////
@@ -221,29 +235,47 @@ class WizardComponent: public ObservableComponentBase
 			void doSerDes(T& t)
 			{
 				t & _currentJob;
+				t & _currentJobEffectId;
 				t & _currentJobDuration;
 				t & _currentJobProgress;
 				t & _spellInHandsPower;
 				t & _spellInHandsRadius;
 				t & _spellInHandsSpeed;
+				t & _availableBodyC;
+				t & _totalBodyC;
+				t & _spellInHandsEffects;
+				t & _commandQueue;
 			}
 
-		void setCurrentJobStatus(std::string job, float duration, float progress);
-		void setSpellInHandsData(float power, float radius, float speed);
+		void setCurrentJobStatus(std::string job, int jobEffectId, float duration, float progress);
+		void setSpellInHandsData(float power, float radius, float speed, std::vector<unsigned> effects);
+		void setBodyStatus(unsigned available, unsigned total);
+		void setCommandQueue(std::vector<unsigned> commands);
 		std::string getCurrentJob();
+		int getCurrentJobEffectId();
 		float getCurrentJobDuration();
 		float getCurrentJobProgress();
+		bool hasSpellInHands();
 		float getSpellInHandsPower();
 		float getSpellInHandsRadius();
 		float getSpellInHandsSpeed();
+		const std::vector<unsigned>& getSpellInHandsEffects();
+		unsigned getAvailableBodyC();
+		unsigned getTotalBodyC();
+		const std::vector<unsigned>& getCommandQueue();
 
 	private:
 		std::string _currentJob;
+		int _currentJobEffectId;
 		float _currentJobDuration;
 		float _currentJobProgress;
 		float _spellInHandsPower;
 		float _spellInHandsRadius;
 		float _spellInHandsSpeed;
+		std::vector<unsigned> _spellInHandsEffects;
+		std::vector<unsigned> _commandQueue;
+		unsigned _availableBodyC;
+		unsigned _totalBodyC;
 };
 
 ////////////////////////////////////////////////////////////
@@ -254,21 +286,21 @@ class AttributeAffector {
 			Mul = 1,
 		};
 
-		AttributeAffector(std::string attribute, ModifierType modifierType
-				, float modifierValue, bool permanent, float period = 0);
+		AttributeAffector(ID author, std::string attribute, ModifierType modifierType
+				, float modifierValue, bool permanent);
 
 		std::string getAffectedAttribute();
 		ModifierType getModifierType();
 		float getModifierValue();
 		bool isPermanent();
-		float getPeriod();
+		ID getAuthor();
 
 	private:
 		std::string _attribute;
 		ModifierType _modifierType;
 		float _modifierValue;
 		bool _permanent;
-	 	float _period;
+		ID _author;
 };
 
 class AttributeStoreComponent: public ObservableComponentBase, KeyValueStore
@@ -277,14 +309,22 @@ class AttributeStoreComponent: public ObservableComponentBase, KeyValueStore
 		AttributeStoreComponent(ID parentEntID);
 
 		void addAttribute(std::string key, float value);
+		void addAttribute(std::string key, std::string value);
 		bool hasAttribute(std::string key);
-		float getAttribute(std::string key);
+		template <typename T>
+		T getAttribute(std::string key) const
+		{
+			return getValue<T>(key);
+		}
 		void setAttribute(std::string key, float value);
+		void setAttribute(std::string key, std::string value);
 		void setOrAddAttribute(std::string key, float value);
+		void setOrAddAttribute(std::string key, std::string value);
 
 		ID addAttributeAffector(AttributeAffector aa);
 		bool removeAttributeAffector(ID affectorID);
 		float getAttributeAffected(std::string key);
+		std::vector<AttributeAffector> getAttributeAffectorHistory();
 
 		virtual void serDes(SerDesBase& s);
 		template <typename T>
@@ -294,25 +334,7 @@ class AttributeStoreComponent: public ObservableComponentBase, KeyValueStore
 
 	private:
 		SolidVector<AttributeAffector, ID, NULLID> _attributeAffectors;
-};
-
-////////////////////////////////////////////////////////////
-
-class WorldMap
-{
-	public:
-		WorldMap(float patchSize, scene::ISceneManager* scene);
-		float* getHeightMap();
-		unsigned getVertexCount();
-		float getPatchSize();
-		float getHeightScale();
-
-	private:
-		const float _patchSize;
-		scene::ISceneManager* _scene;
-		std::unique_ptr<float[]> _heightMap;
-		float _heightScale;
-		unsigned _vertexC;
+		RingBuffer<AttributeAffector> _attributeAffectorHistory;
 };
 
 ////////////////////////////////////////////////////////////
@@ -320,19 +342,21 @@ class WorldMap
 class World: public Observabler<EntityEvent>
 {
 	public:
-		World(WorldMap& wm);
+		World(const WorldMap& wm);
 		ID createEntity(ID hintEntID = NULLID);
 		Entity& createAndGetEntity(ID hintEntID = NULLID);
 		void removeEntity(ID entID);
 		Entity* getEntity(ID entID);
 		ID createCharacter(vec3f position);
-		WorldMap& getMap();
+		const WorldMap& getMap();
 		IterateOnly<SolidVector<Entity,ID,NULLID>> getEntities();
 
 	private:
-		WorldMap& _map;
+		const WorldMap& _map;
 		EntityManager _entManager;
 };
+
+////////////////////////////////////////////////////////////
 
 template <typename T>
 T& operator <<(T& t, const ObservableComponentBase& m)

@@ -5,6 +5,10 @@ ostream& operator<<(ostream& os, i8 i)
 	return os << int(i);
 }
 
+ostream& operator<<(ostream& os, vec2u v) {
+	return os << v.X << " " << v.Y;
+}
+
 ostream& operator<<(ostream& os, vec2f v) {
 	return os << v.X << " " << v.Y;
 }
@@ -47,6 +51,12 @@ btQuaternion Q2btQ(quaternion q)
 	return btQuaternion(q.X, q.Y, q.Z, q.W);
 }
 
+std::ostream& operator<<(std::ostream&, const Table& t)
+{
+	for(const auto& r : t)
+		std::cout << r.first << "\t\t" << r.second << std::endl;
+}
+
 std::string lua_valueAsStr(lua_State* L, int index)
 {
 	if(lua_isinteger(L, index))
@@ -59,11 +69,13 @@ std::string lua_valueAsStr(lua_State* L, int index)
 		return "";
 }
 
-Table lua_loadTable(lua_State* l)
+Table lua_loadTable(lua_State* l, int index)
 {
 	Table t;
 	lua_pushnil(l);
-	while(lua_next(l, -2) != 0)
+	if(index < 0)
+		index--;
+	while(lua_next(l, index) != 0)
 	{
 		std::string key = lua_valueAsStr(l, -2),
 			value = lua_valueAsStr(l, -1);
@@ -71,4 +83,9 @@ Table lua_loadTable(lua_State* l)
 		lua_pop(l, 1);
 	}
 	return t;
+}
+
+float lerp(float a, float b, float m)
+{
+	return a*(1-m) + b*m;
 }

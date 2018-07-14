@@ -10,6 +10,12 @@ enum PacketType: u8
 	PlayerCommand,
 	WorldUpdate,
 	RegistryUpdate,
+	GameRegistryUpdate,
+	JoinGame,
+	GameInit,
+	GameOver,
+	ClientHello,
+	Message,
 };
 
 /*
@@ -94,25 +100,24 @@ T& operator >>(T& t, std::pair<K,V>& p) {
 	return t >> p.first >> p.second;
 }
 
-template <typename K, typename V>
-std::ostream& operator <<(std::ostream& t, const std::map<K,V>& m) {
-	t << static_cast<u32>(m.size());
-	t << " ";
-	for(auto& p : m)
-		t << p;
-	return t;
+template <typename T, typename TT>
+T& operator<<(T& t, const std::vector<TT>& v)
+{
+	t << u32(v.size());
+	for(const auto& e : v)
+		t << e;
 }
-template <typename K, typename V>
-std::ostream& operator >>(std::ostream& /*t*/, std::map<K,V>& /*m*/) {
-	assert(false); //TODO
-}
-
-template <typename K, typename V>
-std::ostream& operator <<(std::ostream& o, const std::pair<K,V>& p) {
-	return o << p.first << ": " << p.second << "; ";
-}
-template <typename K, typename V>
-std::ostream& operator >>(std::ostream& /*o*/, std::pair<K,V>& /*p*/) {
-	assert(false); //TODO
+template <typename T, typename TT>
+T& operator>>(T& t, std::vector<TT>& v)
+{
+	v.clear();
+	u32 size;
+	t >> size;
+	v.reserve(size);
+	for(u32 i = 0; i < size; i++) {
+		TT e;
+		t >> e;
+		v.push_back(e);
+	}
 }
 #endif /* NETWORK_HPP_16_11_27_11_45_29 */

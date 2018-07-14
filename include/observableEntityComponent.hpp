@@ -48,7 +48,6 @@ class ObservableEntity : public Entity<ComponentBase,ComponentType>, public Obse
 			assert(c != nullptr || !t);
 			if(c) {
 				c->addObserver(*this); 
-				std::cout << "component of type " << t << " added to entity #" << this->getID() << std::endl;
 			}
 		}
 

@@ -1,39 +1,69 @@
 #include "progressBar.hpp"
 #include <algorithm>
+#include <cassert>
 
-irr::gui::ProgressBar::ProgressBar(IGUIEnvironment* guiEnv, const irr::core::rect<s32>& rectangle, IGUIElement* parent, s32 id):
-	irr::gui::IGUIElement(EGUIET_ELEMENT, guiEnv, parent, id, rectangle), _bar{rectangle}, _vdriver{guiEnv->getVideoDriver()}
+ProgressBar::ProgressBar(const irr::core::vector2di& size):
+	_size{size}, _maxVal{0}, _valDisplayMode{ValueDisplayMode::None}
 {
 	setColors();
 }
 
-void irr::gui::ProgressBar::setProgress(float progress)
+void ProgressBar::setProgress(float progress)
 {
 	_progress = std::max(0.f, std::min(1.f, progress));
 }
 
-float irr::gui::ProgressBar::getProgress()
+float ProgressBar::getProgress()
 {
 	return _progress;
 }
 
-void irr::gui::ProgressBar::setColors(irr::video::SColor background, irr::video::SColor progress)
+void ProgressBar::setColors(irr::video::SColor background, irr::video::SColor progress)
 {
 	_backgroundColor = background;
 	_progressColor = progress;
 }
 
-void irr::gui::ProgressBar::draw()
+void ProgressBar::setMaxValue(int maxVal)
 {
-	if(!this->IsVisible)
-		return;
+	_maxVal = maxVal;
+}
 
-	irr::core::rect<s32> bar(this->getAbsolutePosition().UpperLeftCorner, this->getAbsolutePosition().UpperLeftCorner+core::vector2di(_bar.getWidth(),_bar.getHeight()));
-	irr::core::rect<s32> progress(bar.UpperLeftCorner, bar.UpperLeftCorner+core::vector2di(bar.getWidth()*_progress,bar.getHeight()));
-		
-	_vdriver->draw2DRectangle(_backgroundColor,bar);
-	_vdriver->draw2DRectangle(_progressColor,progress);
+int ProgressBar::getMaxValue()
+{
+	return _maxVal;
+}
 
-	for(auto& c: this->getChildren())
-		c->draw();
+void ProgressBar::setValueDisplayMode(ValueDisplayMode m)
+{
+	_valDisplayMode = m;
+}
+
+std::wstring ProgressBar::getValueString()
+{
+	std::wstring w;
+	if(_valDisplayMode == None)
+		w = L"";
+	else if(_valDisplayMode  == Perc)
+		w = std::to_wstring(int(getProgress()*100)) + L" %";
+	else if(_valDisplayMode == Abs)
+		w = std::to_wstring(int(getProgress()*getMaxValue())) + L" / " + std::to_wstring(int(getMaxValue()));
+	else
+		assert(false);
+	return w;
+}
+
+irr::core::vector2di ProgressBar::getSize()
+{
+	return _size;
+}
+
+irr::video::SColor ProgressBar::getBackgroundColor()
+{
+	return _backgroundColor;
+}
+
+irr::video::SColor ProgressBar::getProgressColor()
+{
+	return _progressColor;
 }
