@@ -19,7 +19,7 @@ compiler:
 
 install:
   # C++14
-  - sudo apt-get install -qq g++-6
+  - sudo apt-get install -qq g++-6 binutils
   - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 90
   - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-6 90
 
