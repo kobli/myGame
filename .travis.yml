@@ -4,20 +4,24 @@ notifications:
     on_success: never
     on_failure: always
 
-language: cpp
-compiler: gcc
-dist: trusty
-
 before_install:
   - sudo apt-get install libxcursor-dev libgl1-mesa-dev
   # C++14
   - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
   - sudo apt-get update -qq
 
+# Enable C++ support
+language: cpp
+
+# Compiler selection
+compiler:
+  - gcc
+
 install:
   # C++14
   - sudo apt-get install -qq g++-6
   - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 90
+  - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-6 90
 
   - DEPS_DIR="${TRAVIS_BUILD_DIR}/deps"
   - mkdir ${DEPS_DIR} && cd ${DEPS_DIR}
