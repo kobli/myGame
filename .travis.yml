@@ -22,7 +22,6 @@ install:
   - sudo apt-get install -qq g++-6
   - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 90
   - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-6 90
-  - sudo update-alternatives --install /usr/bin/x86_64-linux-gnu-ld x86_64-linux-gnu-ld /usr/bin/x86_64-linux-gnu-ld 90
 
   - DEPS_DIR="${TRAVIS_BUILD_DIR}/deps"
   - mkdir ${DEPS_DIR} && cd ${DEPS_DIR}
@@ -39,6 +38,7 @@ install:
 
 # Build steps
 script:
+  - ls /usr/bin
   - mkdir build
   - cd build
   - ${DEPS_DIR}/cmake/bin/cmake .. -DPLATFORM=lin_64 && make
