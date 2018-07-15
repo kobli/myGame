@@ -25,7 +25,7 @@ int main(int argc, char* argv[]) {
 #ifdef DEBUG_BUILD
 	std::cout << "DEBUG BUILD!\n";
 #endif
-	std::cout << "version: " << myGame_VERSION_MAJOR << "." << myGame_VERSION_MINOR << std::endl;
+	std::cout << "version: " << myGame_VERSION_STRING << std::endl;
 	auto getCmdOption = [&](const std::string& option, std::string* outArg = nullptr) {
 		return hasCmdOption(argc-1, argv+1, option, outArg);
 	};

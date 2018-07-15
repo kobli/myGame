@@ -137,10 +137,10 @@ void Session::handlePacket(sf::Packet& p)
 		}
 		case PacketType::ClientHello:
 		{
-			u16 vMajor, vMinor;
-			p >> vMajor >> vMinor;
-			if(vMajor != u16(myGame_VERSION_MAJOR) || vMinor != u16(myGame_VERSION_MINOR))
-				disconnectUnauthorized("Version mismatch.");
+			std::string versionString;
+			p >> versionString;
+			if(versionString != myGame_VERSION_STRING)
+				disconnectUnauthorized(std::string("Version mismatch. Server version: ", myGame_VERSION_STRING));
 			else {
 				_authorized = true;
 				onAuthorized();

@@ -8,8 +8,10 @@ set(CMAKE_BUILD_WITH_INSTALL_RPATH true)
 set(CMAKE_INSTALL_RPATH "$ORIGIN")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH false)
 
-set(${PROJECT_NAME}_VERSION_MAJOR 0)
-set(${PROJECT_NAME}_VERSION_MINOR 4)
+execute_process(COMMAND git rev-parse --abbrev-ref HEAD OUTPUT_VARIABLE BRANCH)
+execute_process(COMMAND git describe --tags OUTPUT_VARIABLE TAG)
+string(STRIP ${BRANCH} BRANCH)
+string(STRIP ${TAG} TAG)
 configure_file(
 	"${PROJECT_SOURCE_DIR}/include/config.hpp.in"
 	"${PROJECT_BINARY_DIR}/config.hpp"
@@ -104,10 +106,37 @@ if(${TARGET_OS} MATCHES "Linux")
 		"libsfml-system.so*"
 		"libsfml-network.so*"
 		)
+	file(GLOB SCRIPTS
+		${PROJECT_SOURCE_DIR}/scripts/*.sh
+		)
 elseif(${TARGET_OS} MATCHES "Windows")
 	set(SYSTEM_SPECIFIC_LIBS ${WINDOWS_ONLY_LIBS})
-	set(CLIENT_ONLY_PACKAGE_FILES "run.bat")
+	file(GLOB SCRIPTS
+		${PROJECT_SOURCE_DIR}/scripts/*.bat
+		${PROJECT_SOURCE_DIR}/scripts/*.exe
+		)
 endif()
+file(COPY
+	${SCRIPTS}
+	${PROJECT_SOURCE_DIR}/media
+	${PROJECT_SOURCE_DIR}/config
+	${PROJECT_SOURCE_DIR}/lua
+	DESTINATION ${PROJECT_BINARY_DIR}
+	)
+
+file(GLOB PACKAGED_SCRIPTS
+	${PROJECT_BINARY_DIR}/*.bat
+	${PROJECT_BINARY_DIR}/*.sh
+	)
+file(GLOB PACKAGED_UTILS
+	${PROJECT_BINARY_DIR}/*.exe
+	)
+execute_process(COMMAND sed -i "s/<PORT>/${CLIENT_DEFAULT_PORT}/g; s/<HOST>/kobl.eu/g; s/<BRANCH>/${BRANCH}/g; s/<ARCH>/${PLATFORM}/g" ${PACKAGED_SCRIPTS})
+set(CLIENT_ONLY_PACKAGE_FILES
+	${CLIENT_ONLY_PACKAGE_FILES}
+	${PACKAGED_SCRIPTS}
+	${PACKAGED_UTILS}
+	)
 
 target_link_libraries(${PROJECT_NAME}
 	${GENERAL_LIBS}
@@ -117,21 +146,25 @@ target_link_libraries(${PROJECT_NAME}
 set(GENERAL_PACKAGE_FILES
 	${GENERAL_PACKAGE_FILES}
 	"$<TARGET_FILE:${PROJECT_NAME}>"
-	"${PROJECT_SOURCE_DIR}/media"
-	"${PROJECT_SOURCE_DIR}/controls.lua"
-	"${PROJECT_SOURCE_DIR}/keymap.lua" 
-	"${PROJECT_SOURCE_DIR}/spellBook.lua"
+	"${PROJECT_BINARY_DIR}/media"
+	"${PROJECT_BINARY_DIR}/config"
 	)
 set(SERVER_ONLY_PACKAGE_FILES
-	"${PROJECT_SOURCE_DIR}/lua/spellSystem.lua" 
-	"${PROJECT_SOURCE_DIR}/lua/gamemode_dm.lua"
-	"${PROJECT_SOURCE_DIR}/lua/list.lua"
+	"${PROJECT_BINARY_DIR}/lua/spellSystem.lua" 
+	"${PROJECT_BINARY_DIR}/lua/gamemode_dm.lua"
+	"${PROJECT_BINARY_DIR}/lua/list.lua"
 	)
 
-file(WRITE "${PROJECT_BINARY_DIR}/run.bat" "myGame.exe -c -a kobl.eu -p 55555")
+file(WRITE "${PROJECT_BINARY_DIR}/version" ${TAG})
+set(GENERAL_PACKAGE_FILES
+	${GENERAL_PACKAGE_FILES}
+	"${PROJECT_BINARY_DIR}/version"
+	)
+
+
 add_custom_target(package-client COMMAND
-	${CMAKE_COMMAND} -E tar "cvf" "${PROJECT_NAME}-client-${${PROJECT_NAME}_VERSION_MAJOR}.${${PROJECT_NAME}_VERSION_MINOR}-${PLATFORM}.zip" --format=zip ${GENERAL_PACKAGE_FILES} ${CLIENT_ONLY_PACKAGE_FILES}
+	${CMAKE_COMMAND} -E tar "cvf" "${PROJECT_NAME}-client-${TAG}-${PLATFORM}.zip" --format=zip ${GENERAL_PACKAGE_FILES} ${CLIENT_ONLY_PACKAGE_FILES}
 	)
 add_custom_target(package-server COMMAND
-	${CMAKE_COMMAND} -E tar "cvf" "${PROJECT_NAME}-server-${${PROJECT_NAME}_VERSION_MAJOR}.${${PROJECT_NAME}_VERSION_MINOR}-${PLATFORM}.zip" --format=zip ${GENERAL_PACKAGE_FILES} ${SERVER_ONLY_PACKAGE_FILES}
+	${CMAKE_COMMAND} -E tar "cvf" "${PROJECT_NAME}-server-${TAG}-${PLATFORM}.zip" --format=zip ${GENERAL_PACKAGE_FILES} ${SERVER_ONLY_PACKAGE_FILES}
 	)

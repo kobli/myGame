@@ -412,7 +412,7 @@ void ClientApplication::bindCameraToControlledEntity()
 void ClientApplication::sendHello()
 {
 	sf::Packet p;
-	p << PacketType::ClientHello << u16(myGame_VERSION_MAJOR) << u16(myGame_VERSION_MINOR);
+	p << PacketType::ClientHello << std::string(myGame_VERSION_STRING);
 	sendPacket(p);
 }
 

@@ -1,2 +1,1 @@
-#define myGame_VERSION_MAJOR @myGame_VERSION_MAJOR@
-#define myGame_VERSION_MINOR @myGame_VERSION_MINOR@
+#define myGame_VERSION_STRING "@TAG@"

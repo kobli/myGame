@@ -1,4 +1,4 @@
-require "keymap"
+require "./config/keymap"
 -- You can edit this file to adjust controlls.
 -- See keymap.lua for key names.
 

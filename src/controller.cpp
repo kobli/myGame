@@ -9,8 +9,8 @@ Command::Command(Type type): _type{type}
 
 Controller::Controller(IrrlichtDevice* device): _device{device}, _commandHandler{[](Command&){}}, _lastSentMovD{0,0}, _freeCamera{false}
 {
-	loadSpellBook("spellBook.lua");
-	loadControls("controls.lua");
+	loadSpellBook("config/spellBook.lua");
+	loadControls("config/controls.lua");
 	for(u32 i=0; i<KEY_KEY_CODES_COUNT; ++i)
 		_keyPressed[i] = false;
 	_LMBdown = false;
