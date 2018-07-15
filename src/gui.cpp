@@ -73,9 +73,9 @@ GUI::GUI(irr::IrrlichtDevice* device, World& world, const KeyValueStore& sharedR
 	_spellCommandQInfo->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT, gui::EGUI_ALIGNMENT::EGUIA_LOWERRIGHT);
 
 	int gameModeInfoXMargin = 300;
-	int gameModeInfoSizeX = 700;
+	int gameModeInfoSizeX = 500;
 	_gameModeInfo = new GUIPanelFlowHorizontal(env, env->getRootGUIElement(), -1, core::rect<s32>(0, 0, gameModeInfoSizeX, 25));
-	_gameModeInfo->setRelativePosition(vec2i((screenSize.Width-gameModeInfoSizeX)/2., 30));
+	_gameModeInfo->setRelativePosition(vec2i((int(screenSize.Width)-gameModeInfoSizeX)/2., 30));
 	_gameModeInfo->setAlignment(gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_CENTER, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT, gui::EGUI_ALIGNMENT::EGUIA_UPPERLEFT);
 	_gameModeInfo->setBackgroundColor(video::SColor(155, 255, 255, 255));
 	_gameModeInfo->setDrawBackground(true);
